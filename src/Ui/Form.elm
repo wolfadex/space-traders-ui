@@ -5,6 +5,7 @@ import Form
 import Form.Validation
 import Html exposing (Html)
 import Html.Attributes
+import Ui
 
 
 view :
@@ -19,13 +20,19 @@ view :
     -> Form.HtmlForm String parsed () msg
     -> Html msg
 view options config =
-    Html.div
+    Ui.column
         [ Html.Attributes.style "border" "0.125rem solid black"
         , Html.Attributes.style "border-radius" "0.5rem"
         , Html.Attributes.style "max-width" "50rem"
         , Html.Attributes.style "padding" "1rem"
+        , Ui.gap 1
         ]
-        [ Html.h3 [] [ Html.text options.title ]
+        [ Ui.header.three
+            [ Html.Attributes.style "border-bottom" "0.125rem solid black"
+
+            -- , Html.Attributes.style "height" "fit-content"
+            ]
+            [ Html.text options.title ]
         , Form.renderHtml
             { submitting = options.submitting
             , state = options.model
@@ -47,7 +54,6 @@ view options config =
                     )
             )
             [ Html.Attributes.style "display" "grid"
-            , Html.Attributes.style "grid-template-columns" "repeat(2, 1fr)"
             , Html.Attributes.style "gap" "1rem"
             ]
             config

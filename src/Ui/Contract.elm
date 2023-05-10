@@ -7,11 +7,12 @@ import SpaceTrader.Contract.Good
 import SpaceTrader.Contract.Term
 import SpaceTrader.Faction
 import Time
+import Time.Distance
 import Ui
 
 
-view : Time.Zone -> SpaceTrader.Contract.Contract -> Html msg
-view timeZone contract =
+view : Time.Zone -> Time.Posix -> SpaceTrader.Contract.Contract -> Html msg
+view timeZone currentTime contract =
     Html.div
         [ Html.Attributes.style "border" "0.125rem solid black"
         , Html.Attributes.style "border-radius" "0.25rem"
@@ -20,7 +21,31 @@ view timeZone contract =
         [ case contract.type_ of
             SpaceTrader.Contract.Porcurement ->
                 Html.p []
-                    [ Html.text "For "
+                    [ let
+                        isInFuture : Bool
+                        isInFuture =
+                            Time.posixToMillis currentTime < Time.posixToMillis contract.terms.deadline
+                      in
+                      Html.div
+                        [ Html.Attributes.style "float" "right"
+                        , Html.Attributes.style "margin-top" "-1rem"
+                        , Html.Attributes.style "color" <|
+                            if isInFuture then
+                                "green"
+
+                            else
+                                "red"
+                        ]
+                        [ Html.text <|
+                            (if isInFuture then
+                                "Expires "
+
+                             else
+                                "Expired"
+                            )
+                                ++ Time.Distance.inWords contract.terms.deadline currentTime
+                        ]
+                    , Html.text "For "
                     , important (SpaceTrader.Faction.groupToPrettyString contract.factionGroup)
                     , Html.br [] []
                     , Html.text " by "
@@ -52,6 +77,8 @@ view timeZone contract =
                     , Html.br [] []
                     , Html.text " by "
                     , important (Ui.dateTime timeZone contract.terms.deadline)
+
+                    -- , important (Time.Distance.inWords contract.terms.deadline currentTime)
                     , Html.br [] []
                     , Html.text "you must "
                     , important "transport"
@@ -79,6 +106,8 @@ view timeZone contract =
                     , Html.br [] []
                     , Html.text " by "
                     , important (Ui.dateTime timeZone contract.terms.deadline)
+
+                    -- , important (Time.Distance.inWords contract.terms.deadline currentTime)
                     , Html.br [] []
                     , Html.text "you must "
                     , important "shuttle"

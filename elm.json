@@ -16,6 +16,7 @@
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
             "elm-community/json-extra": "4.3.0",
+            "gingko/time-distance": "2.4.0",
             "lydell/elm-app-url": "1.0.3",
             "rtfeldman/elm-iso8601-date-strings": "1.1.4"
         },

@@ -11,22 +11,38 @@ column attrs =
     Html.div
         (attrs
             ++ [ Html.Attributes.style "display" "grid"
-               , Html.Attributes.style "grid-template-columns" "1fr"
+               , Html.Attributes.style "align-items" "start"
                ]
         )
 
 
-width : { fill : Html.Attribute msg }
-width =
-    { fill = Html.Attributes.style "width" "100%"
-    }
+row : List (Html.Attribute msg) -> List (Html msg) -> Html msg
+row attrs =
+    Html.div
+        (attrs
+            ++ [ Html.Attributes.style "display" "grid"
+               , Html.Attributes.style "grid-auto-flow" "column"
+               ]
+        )
+
+
+
+-- width : { fill : Html.Attribute msg }
+-- width =
+--     { fill = Html.Attributes.style "width" "100%"
+--     }
 
 
 center : { justify : Html.Attribute msg, align : Html.Attribute msg }
 center =
-    { justify = Html.Attributes.style "justify-content" "center"
-    , align = Html.Attributes.style "align-items" "center"
+    { justify = Html.Attributes.style "justify-self" "center"
+    , align = Html.Attributes.style "align-self" "center"
     }
+
+
+gap : Float -> Html.Attribute msg
+gap f =
+    Html.Attributes.style "gap" (String.fromFloat f ++ "rem")
 
 
 dateTime : Time.Zone -> Time.Posix -> String
@@ -107,13 +123,13 @@ monthToString month =
             "December"
 
 
-viewLabelGroup : String -> List { label : String, value : String } -> Html msg
+viewLabelGroup : Html msg -> List { label : String, value : String } -> Html msg
 viewLabelGroup title children =
     Html.div
         [ Html.Attributes.style "display" "grid"
         , Html.Attributes.style "grid-template-columns" "1fr 1fr"
         ]
-        (Html.h3 [] [ Html.text title ]
+        (Html.h3 [ Html.Attributes.style "column" "1 / 3" ] [ title ]
             :: List.concatMap viewLabeled children
         )
 
@@ -143,3 +159,15 @@ viewLabeled options =
         ]
         [ Html.text options.value ]
     ]
+
+
+header :
+    { one : List (Html.Attribute msg) -> List (Html msg) -> Html msg
+    , two : List (Html.Attribute msg) -> List (Html msg) -> Html msg
+    , three : List (Html.Attribute msg) -> List (Html msg) -> Html msg
+    }
+header =
+    { one = \attr -> Html.h1 (attr ++ [ Html.Attributes.style "margin" "0" ])
+    , two = \attr -> Html.h2 (attr ++ [ Html.Attributes.style "margin" "0" ])
+    , three = \attr -> Html.h3 (attr ++ [ Html.Attributes.style "margin" "0" ])
+    }

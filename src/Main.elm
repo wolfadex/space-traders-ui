@@ -22,6 +22,7 @@ import SpaceTrader.Waypoint
 import Task
 import Time
 import Ui
+import Ui.Button
 import Ui.Contract
 import Ui.Form
 import Ui.Form.Field
@@ -50,6 +51,7 @@ type alias UnregisteredModel =
     , submittingLogin : Bool
     , loginServerError : Maybe String
     , timeZone : Time.Zone
+    , currentTime : Time.Posix
     }
 
 
@@ -59,6 +61,7 @@ type alias RegisteredModel =
     , waypoints : Dict String SpaceTrader.Waypoint.Waypoint
     , myContracts : Dict String SpaceTrader.Contract.Contract
     , timeZone : Time.Zone
+    , currentTime : Time.Posix
     }
 
 
@@ -74,8 +77,12 @@ init flags =
                 , submittingLogin = False
                 , loginServerError = Nothing
                 , timeZone = Time.utc
+                , currentTime = Time.millisToPosix 0
                 }
-            , Task.perform TimeZoneReceived Time.here
+            , Task.map2 CurrentTimeAndZoneReceived
+                Time.now
+                Time.here
+                |> Task.perform identity
             )
 
         Ok { accessToken } ->
@@ -87,12 +94,16 @@ init flags =
                 , submittingLogin = True
                 , loginServerError = Nothing
                 , timeZone = Time.utc
+                , currentTime = Time.millisToPosix 0
                 }
             , Cmd.batch
                 [ SpaceTrader.Api.myAgent (LoginResponded accessToken)
                     { token = accessToken
                     }
-                , Task.perform TimeZoneReceived Time.here
+                , Task.map2 CurrentTimeAndZoneReceived
+                    Time.now
+                    Time.here
+                    |> Task.perform identity
                 ]
             )
 
@@ -109,14 +120,19 @@ decodeFlags =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.none
+    Time.every (5 * 1000 * 60) CurrentTimeReceived
 
 
 port setToken : String -> Cmd msg
 
 
+port clearToken : () -> Cmd msg
+
+
 type Msg
-    = TimeZoneReceived Time.Zone
+    = CurrentTimeReceived Time.Posix
+    | CurrentTimeAndZoneReceived Time.Posix Time.Zone
+    | LogoutClicked
     | RegistrationFormMsg (Form.Msg Msg)
     | RegistrationFormSubmitted (Ui.Form.Submission String RegisterForm)
     | RegistrationResponded
@@ -149,10 +165,19 @@ update msg model =
 updateUnregistered : Msg -> UnregisteredModel -> ( Model, Cmd Msg )
 updateUnregistered msg model =
     case msg of
-        TimeZoneReceived zone ->
+        CurrentTimeReceived time ->
             ( Unregistered
                 { model
-                    | timeZone = zone
+                    | currentTime = time
+                }
+            , Cmd.none
+            )
+
+        CurrentTimeAndZoneReceived time zone ->
+            ( Unregistered
+                { model
+                    | currentTime = time
+                    , timeZone = zone
                 }
             , Cmd.none
             )
@@ -199,6 +224,7 @@ updateUnregistered msg model =
                 { accessToken = data.token
                 , agent = data.agent
                 , timeZone = model.timeZone
+                , currentTime = model.currentTime
                 }
             , setToken data.token
             )
@@ -242,6 +268,7 @@ updateUnregistered msg model =
                 { accessToken = accessToken
                 , agent = agent
                 , timeZone = model.timeZone
+                , currentTime = model.currentTime
                 }
             , Cmd.batch
                 [ SpaceTrader.Api.myContracts MyContractsResponded
@@ -258,6 +285,7 @@ initRegistered :
     { accessToken : String
     , agent : SpaceTrader.Agent.Agent
     , timeZone : Time.Zone
+    , currentTime : Time.Posix
     }
     -> Model
 initRegistered opt =
@@ -267,18 +295,42 @@ initRegistered opt =
         , waypoints = Dict.empty
         , myContracts = Dict.empty
         , timeZone = opt.timeZone
+        , currentTime = opt.currentTime
         }
 
 
 updateRegistered : Msg -> RegisteredModel -> ( Model, Cmd Msg )
 updateRegistered msg model =
     case msg of
-        TimeZoneReceived zone ->
+        CurrentTimeReceived time ->
             ( Registered
                 { model
-                    | timeZone = zone
+                    | currentTime = time
                 }
             , Cmd.none
+            )
+
+        CurrentTimeAndZoneReceived time zone ->
+            ( Registered
+                { model
+                    | currentTime = time
+                    , timeZone = zone
+                }
+            , Cmd.none
+            )
+
+        LogoutClicked ->
+            ( Unregistered
+                { registerFormModel = Form.init
+                , submittingRegistration = False
+                , registrationServerError = Nothing
+                , loginFormModel = Form.init
+                , submittingLogin = False
+                , loginServerError = Nothing
+                , timeZone = model.timeZone
+                , currentTime = model.currentTime
+                }
+            , clearToken ()
             )
 
         WaypointResponded _ (Err err) ->
@@ -317,12 +369,13 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "SpaceTrader"
     , body =
-        [ -- Ui.column
-          -- [ Ui.width.fill
-          -- , Ui.center.justify
-          -- ]
-          Html.div [ Html.Attributes.style "display" "inline-grid" ]
-            [ Html.text "SpaceTrader"
+        [ Ui.column
+            []
+            [ Ui.header.one
+                [ Ui.center.justify
+                , Html.Attributes.style "padding" "1rem"
+                ]
+                [ Html.text "SpaceTrader" ]
             , case model of
                 Unregistered m ->
                     viewUnregistered m
@@ -336,10 +389,10 @@ view model =
 
 viewUnregistered : UnregisteredModel -> Html Msg
 viewUnregistered model =
-    -- Ui.column
-    --     [ Ui.center.justify
-    --     ]
-    Html.div []
+    Ui.row
+        [ Ui.center.justify
+        , Ui.gap 1
+        ]
         [ Ui.Form.view
             { submitting = model.submittingRegistration
             , title = "Register"
@@ -486,16 +539,27 @@ viewField formState label field =
 
 viewRegistered : RegisteredModel -> Html Msg
 viewRegistered model =
-    Html.div
-        []
-        [ Ui.viewLabelGroup "Agent"
+    Ui.column
+        [ Html.Attributes.style "justify-self" "start"
+        , Html.Attributes.style "padding" "1rem"
+        ]
+        [ Ui.viewLabelGroup
+            (Html.div []
+                [ Html.text "Agent"
+                , Ui.Button.view
+                    [ Html.Attributes.style "float" "right" ]
+                    { label = Html.text "Logout"
+                    , onClick = Just LogoutClicked
+                    }
+                ]
+            )
             [ { label = "Callsign", value = model.agent.callsign }
             , { label = "Headquarters", value = model.agent.headquarters }
             , { label = "Credits", value = String.fromInt model.agent.credits }
             ]
         , model.myContracts
             |> Dict.values
-            |> List.map (Ui.Contract.view model.timeZone)
+            |> List.map (Ui.Contract.view model.timeZone model.currentTime)
             |> (::) (Html.h3 [] [ Html.text "Contracts" ])
             |> Html.div []
         ]

@@ -8,6 +8,8 @@
 
       body {
         margin: 0;
+        font-family: "Gill Sans", "Gill Sans MT", Calibri, "Trebuchet MS",
+          sans-serif;
       }
     </style>
   </head>
@@ -22,6 +24,10 @@
 
       app.ports.setToken.subscribe(function (token) {
         localStorage.setItem(TOKEN_KEY, token);
+      });
+
+      app.ports.clearToken.subscribe(function () {
+        localStorage.removeItem(TOKEN_KEY);
       });
     </script>
   </body>
