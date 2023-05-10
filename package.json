@@ -1,0 +1,17 @@
+{
+  "name": "space-traders-ui",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "run-pty run-pty.json",
+    "dev:elm": "elm-watch hot",
+    "dev:server": "http-server",
+    "review": "elm-review --watch --fix"
+  },
+  "devDependencies": {
+    "elm-review": "^2.10.1",
+    "elm-test": "^0.19.1-revision12",
+    "elm-watch": "^1.1.2",
+    "http-server": "^14.1.1",
+    "run-pty": "^4.0.3"
+  }
+}

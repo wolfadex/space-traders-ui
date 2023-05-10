@@ -1,0 +1,62 @@
+module Ui.Form exposing (..)
+
+import Dict exposing (Dict)
+import Form
+import Form.Validation
+import Html exposing (Html)
+import Html.Attributes
+
+
+view :
+    { submitting : Bool
+    , title : String
+    , model : Form.Model
+    , toMsg : Form.Msg msg -> msg
+    , serverSideErrors : Maybe (Dict String (List String))
+    , onSubmit : Submission String parsed -> msg
+    , id : String
+    }
+    -> Form.HtmlForm String parsed () msg
+    -> Html msg
+view options config =
+    Html.div
+        [ Html.Attributes.style "border" "0.125rem solid black"
+        , Html.Attributes.style "border-radius" "0.5rem"
+        , Html.Attributes.style "max-width" "50rem"
+        , Html.Attributes.style "padding" "1rem"
+        ]
+        [ Html.h3 [] [ Html.text options.title ]
+        , Form.renderHtml
+            { submitting = options.submitting
+            , state = options.model
+            , toMsg = options.toMsg
+            }
+            (Form.options options.id
+                |> Form.withOnSubmit options.onSubmit
+                |> Form.withServerResponse
+                    (Maybe.map
+                        (\serverSideErrors ->
+                            { persisted =
+                                { fields = Nothing
+                                , clientSideErrors = Nothing
+                                }
+                            , serverSideErrors = serverSideErrors
+                            }
+                        )
+                        options.serverSideErrors
+                    )
+            )
+            [ Html.Attributes.style "display" "grid"
+            , Html.Attributes.style "grid-template-columns" "repeat(2, 1fr)"
+            , Html.Attributes.style "gap" "1rem"
+            ]
+            config
+        ]
+
+
+type alias Submission err a =
+    { fields : List ( String, String )
+    , method : Form.Method
+    , action : String
+    , parsed : Form.Validated err a
+    }
