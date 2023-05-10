@@ -12,14 +12,6 @@ import Ui
 
 view : Time.Zone -> SpaceTrader.Contract.Contract -> Html msg
 view timeZone contract =
-    -- { id : String
-    -- , factionGroup : SpaceTrader.Faction.Group
-    -- , type_ : Type
-    -- , terms : Term
-    -- , accepted : Bool
-    -- , fulfilled : Bool
-    -- , expiration : Time.Posix
-    -- }
     Html.div
         [ Html.Attributes.style "border" "0.125rem solid black"
         , Html.Attributes.style "border-radius" "0.25rem"
@@ -40,11 +32,6 @@ view timeZone contract =
                     , Html.ul []
                         (List.map
                             (\good ->
-                                -- { tradeSymbol : String
-                                -- , destinationSymbol : String
-                                -- , unitsRequired : Int
-                                -- , unitsFulfilled : Int
-                                -- }
                                 Html.li []
                                     [ important (String.fromInt good.unitsRequired)
                                     , Html.text " units of "
@@ -59,10 +46,58 @@ view timeZone contract =
                     ]
 
             SpaceTrader.Contract.Transport ->
-                Debug.todo ""
+                Html.p []
+                    [ Html.text "For "
+                    , important (SpaceTrader.Faction.groupToPrettyString contract.factionGroup)
+                    , Html.br [] []
+                    , Html.text " by "
+                    , important (Ui.dateTime timeZone contract.terms.deadline)
+                    , Html.br [] []
+                    , Html.text "you must "
+                    , important "transport"
+                    , Html.text " the following:"
+                    , Html.ul []
+                        (List.map
+                            (\good ->
+                                Html.li []
+                                    [ important (String.fromInt good.unitsRequired)
+                                    , Html.text " units of "
+                                    , important good.tradeSymbol
+                                    , Html.br [] []
+                                    , Html.text "to "
+                                    , important good.destinationSymbol
+                                    ]
+                            )
+                            contract.terms.deliver
+                        )
+                    ]
 
             SpaceTrader.Contract.Shuttle ->
-                Debug.todo ""
+                Html.p []
+                    [ Html.text "For "
+                    , important (SpaceTrader.Faction.groupToPrettyString contract.factionGroup)
+                    , Html.br [] []
+                    , Html.text " by "
+                    , important (Ui.dateTime timeZone contract.terms.deadline)
+                    , Html.br [] []
+                    , Html.text "you must "
+                    , important "shuttle"
+                    , Html.text " the following:"
+                    , Html.ul []
+                        (List.map
+                            (\good ->
+                                Html.li []
+                                    [ important (String.fromInt good.unitsRequired)
+                                    , Html.text " units of "
+                                    , important good.tradeSymbol
+                                    , Html.br [] []
+                                    , Html.text "to "
+                                    , important good.destinationSymbol
+                                    ]
+                            )
+                            contract.terms.deliver
+                        )
+                    ]
         ]
 
 
