@@ -26,6 +26,7 @@ import Ui.Button
 import Ui.Contract
 import Ui.Form
 import Ui.Form.Field
+import Ui.Ship
 
 
 main : Program Json.Encode.Value Model Msg
@@ -52,6 +53,7 @@ type alias UnregisteredModel =
     , loginServerError : Maybe String
     , timeZone : Time.Zone
     , currentTime : Time.Posix
+    , theme : String
     }
 
 
@@ -60,8 +62,10 @@ type alias RegisteredModel =
     , agent : SpaceTrader.Agent.Agent
     , waypoints : Dict String SpaceTrader.Waypoint.Waypoint
     , myContracts : Dict String SpaceTrader.Contract.Contract
+    , myShips : Dict String SpaceTrader.Ship.Ship
     , timeZone : Time.Zone
     , currentTime : Time.Posix
+    , theme : String
     }
 
 
@@ -78,6 +82,7 @@ init flags =
                 , loginServerError = Nothing
                 , timeZone = Time.utc
                 , currentTime = Time.millisToPosix 0
+                , theme = "theme-1"
                 }
             , Task.map2 CurrentTimeAndZoneReceived
                 Time.now
@@ -95,6 +100,7 @@ init flags =
                 , loginServerError = Nothing
                 , timeZone = Time.utc
                 , currentTime = Time.millisToPosix 0
+                , theme = "theme-1"
                 }
             , Cmd.batch
                 [ SpaceTrader.Api.myAgent (LoginResponded accessToken)
@@ -132,6 +138,7 @@ port clearToken : () -> Cmd msg
 type Msg
     = CurrentTimeReceived Time.Posix
     | CurrentTimeAndZoneReceived Time.Posix Time.Zone
+    | ThemeSelected String
     | LogoutClicked
     | RegistrationFormMsg (Form.Msg Msg)
     | RegistrationFormSubmitted (Ui.Form.Submission String RegisterForm)
@@ -150,6 +157,7 @@ type Msg
     | LoginResponded String (Result Http.Error SpaceTrader.Agent.Agent)
     | WaypointResponded String (Result Http.Error SpaceTrader.Waypoint.Waypoint)
     | MyContractsResponded (Result Http.Error (List SpaceTrader.Contract.Contract))
+    | MyShipsResponded (Result Http.Error (List SpaceTrader.Ship.Ship))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -179,6 +187,11 @@ updateUnregistered msg model =
                     | currentTime = time
                     , timeZone = zone
                 }
+            , Cmd.none
+            )
+
+        ThemeSelected theme ->
+            ( Unregistered { model | theme = theme }
             , Cmd.none
             )
 
@@ -225,6 +238,7 @@ updateUnregistered msg model =
                 , agent = data.agent
                 , timeZone = model.timeZone
                 , currentTime = model.currentTime
+                , theme = model.theme
                 }
             , setToken data.token
             )
@@ -269,9 +283,12 @@ updateUnregistered msg model =
                 , agent = agent
                 , timeZone = model.timeZone
                 , currentTime = model.currentTime
+                , theme = model.theme
                 }
             , Cmd.batch
                 [ SpaceTrader.Api.myContracts MyContractsResponded
+                    { token = accessToken }
+                , SpaceTrader.Api.myShips MyShipsResponded
                     { token = accessToken }
                 , setToken accessToken
                 ]
@@ -286,6 +303,7 @@ initRegistered :
     , agent : SpaceTrader.Agent.Agent
     , timeZone : Time.Zone
     , currentTime : Time.Posix
+    , theme : String
     }
     -> Model
 initRegistered opt =
@@ -294,8 +312,10 @@ initRegistered opt =
         , agent = opt.agent
         , waypoints = Dict.empty
         , myContracts = Dict.empty
+        , myShips = Dict.empty
         , timeZone = opt.timeZone
         , currentTime = opt.currentTime
+        , theme = opt.theme
         }
 
 
@@ -319,6 +339,11 @@ updateRegistered msg model =
             , Cmd.none
             )
 
+        ThemeSelected theme ->
+            ( Registered { model | theme = theme }
+            , Cmd.none
+            )
+
         LogoutClicked ->
             ( Unregistered
                 { registerFormModel = Form.init
@@ -329,6 +354,7 @@ updateRegistered msg model =
                 , loginServerError = Nothing
                 , timeZone = model.timeZone
                 , currentTime = model.currentTime
+                , theme = model.theme
                 }
             , clearToken ()
             )
@@ -361,6 +387,23 @@ updateRegistered msg model =
             , Cmd.none
             )
 
+        MyShipsResponded (Err err) ->
+            Debug.todo (Debug.toString err)
+
+        MyShipsResponded (Ok ships) ->
+            ( Registered
+                { model
+                    | myShips =
+                        List.foldl
+                            (\ship dict ->
+                                Dict.insert ship.id ship dict
+                            )
+                            Dict.empty
+                            ships
+                }
+            , Cmd.none
+            )
+
         _ ->
             ( Registered model, Cmd.none )
 
@@ -369,8 +412,26 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "SpaceTrader"
     , body =
-        [ Ui.column
-            []
+        [ Html.select
+            [ Html.Events.onInput ThemeSelected ]
+            (List.range 1 10
+                |> List.map
+                    (\i ->
+                        Html.option
+                            [ Html.Attributes.value ("theme-" ++ String.fromInt i) ]
+                            [ Html.text ("theme-" ++ String.fromInt i) ]
+                    )
+            )
+        , Ui.column
+            [ Html.Attributes.class <|
+                case model of
+                    Unregistered { theme } ->
+                        theme
+
+                    Registered { theme } ->
+                        theme
+            , Html.Attributes.style "height" "100vh"
+            ]
             [ Ui.header.one
                 [ Ui.center.justify
                 , Html.Attributes.style "padding" "1rem"
@@ -560,6 +621,11 @@ viewRegistered model =
         , model.myContracts
             |> Dict.values
             |> List.map (Ui.Contract.view model.timeZone model.currentTime)
-            |> (::) (Html.h3 [] [ Html.text "Contracts" ])
+            |> (::) (Html.h3 [] [ Html.text "My Contracts" ])
+            |> Html.div []
+        , model.myShips
+            |> Dict.values
+            |> List.map Ui.Ship.view
+            |> (::) (Ui.header.three [] [ Html.text "My Ships" ])
             |> Html.div []
         ]

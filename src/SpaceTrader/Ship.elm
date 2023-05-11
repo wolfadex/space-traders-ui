@@ -15,7 +15,7 @@ import SpaceTrader.Ship.Registration exposing (Registration)
 
 
 type alias Ship =
-    { symbol : String
+    { id : String
     , registration : Registration
     , nav : Nav
     , crew : Crew

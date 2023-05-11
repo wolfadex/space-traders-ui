@@ -10,6 +10,10 @@ import SpaceTrader.Ship exposing (Ship)
 import SpaceTrader.Waypoint exposing (Waypoint)
 
 
+
+-- AUTH
+
+
 register :
     (Result
         Http.Error
@@ -59,6 +63,10 @@ decodeRegister =
         (Json.Decode.field "token" Json.Decode.string)
 
 
+
+-- MY THINGS
+
+
 myAgent : (Result Http.Error SpaceTrader.Agent.Agent -> msg) -> { token : String } -> Cmd msg
 myAgent toMsg options =
     v2
@@ -79,6 +87,21 @@ myContracts toMsg options =
         , body = Http.emptyBody
         , expect = Http.expectJson toMsg (decodeSuccess (Json.Decode.list SpaceTrader.Contract.decode))
         }
+
+
+myShips : (Result Http.Error (List SpaceTrader.Ship.Ship) -> msg) -> { token : String } -> Cmd msg
+myShips toMsg options =
+    v2
+        { method = "GET"
+        , token = options.token
+        , url = [ "my", "ships" ]
+        , body = Http.emptyBody
+        , expect = Http.expectJson toMsg (decodeSuccess (Json.Decode.list SpaceTrader.Ship.decode))
+        }
+
+
+
+-- GENERAL
 
 
 getWaypoint : (Result Http.Error SpaceTrader.Waypoint.Waypoint -> msg) -> { token : String, systemId : String, waypointId : String } -> Cmd msg
