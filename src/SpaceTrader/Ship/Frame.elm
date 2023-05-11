@@ -20,7 +20,7 @@ type alias Frame =
 decode : Json.Decode.Decoder Frame
 decode =
     Json.Decode.map8 Frame
-        (Json.Decode.field "style" decodeStyle)
+        (Json.Decode.field "symbol" decodeStyle)
         (Json.Decode.field "name" Json.Decode.string)
         (Json.Decode.field "description" Json.Decode.string)
         (Json.Decode.field "condition" SpaceTrader.Ship.Condition.decode)

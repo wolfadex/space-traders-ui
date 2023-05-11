@@ -18,8 +18,8 @@ type alias Nav =
 decode : Json.Decode.Decoder Nav
 decode =
     Json.Decode.map5 Nav
-        (Json.Decode.field "system" Json.Decode.string)
-        (Json.Decode.field "waypoint" Json.Decode.string)
+        (Json.Decode.field "systemSymbol" Json.Decode.string)
+        (Json.Decode.field "waypointSymbol" Json.Decode.string)
         (Json.Decode.field "route" SpaceTrader.Ship.Nav.Route.decode)
         (Json.Decode.field "status" SpaceTrader.Ship.Nav.Status.decode)
         (Json.Decode.field "flightMode" SpaceTrader.Ship.Nav.FlightMode.decode)

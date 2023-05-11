@@ -16,7 +16,7 @@ type alias Module =
 decode : Json.Decode.Decoder Module
 decode =
     Json.Decode.map5 Module
-        (Json.Decode.field "style" decodeStyle)
+        (Json.Decode.field "symbol" decodeStyle)
         (Json.Decode.field "name" Json.Decode.string)
         (Json.Decode.field "requirements" SpaceTrader.Ship.Requirements.decode)
         (Json.Decode.maybe (Json.Decode.field "capacity" Json.Decode.int))

@@ -17,7 +17,7 @@ type alias Mount =
 decode : Json.Decode.Decoder Mount
 decode =
     Json.Decode.map6 Mount
-        (Json.Decode.field "style" decodeStyle)
+        (Json.Decode.field "symbol" decodeStyle)
         (Json.Decode.field "name" Json.Decode.string)
         (Json.Decode.field "requirements" SpaceTrader.Ship.Requirements.decode)
         (Json.Decode.maybe (Json.Decode.field "description" Json.Decode.string))

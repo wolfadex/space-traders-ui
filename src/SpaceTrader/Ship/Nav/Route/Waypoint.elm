@@ -17,7 +17,7 @@ decode =
     Json.Decode.map5 Waypoint
         (Json.Decode.field "symbol" Json.Decode.string)
         (Json.Decode.field "type" decodeType)
-        (Json.Decode.field "system" Json.Decode.string)
+        (Json.Decode.field "systemSymbol" Json.Decode.string)
         (Json.Decode.field "x" Json.Decode.int)
         (Json.Decode.field "y" Json.Decode.int)
 

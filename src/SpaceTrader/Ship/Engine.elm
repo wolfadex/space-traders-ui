@@ -25,7 +25,7 @@ type Style
 decode : Json.Decode.Decoder Engine
 decode =
     Json.Decode.map6 Engine
-        (Json.Decode.field "style" decodeStyle)
+        (Json.Decode.field "symbol" decodeStyle)
         (Json.Decode.field "name" Json.Decode.string)
         (Json.Decode.field "description" Json.Decode.string)
         (Json.Decode.field "condition" SpaceTrader.Ship.Condition.decode)

@@ -73,9 +73,7 @@
       let maybeSettings = localStorage.getItem(SETTINGS_KEY);
 
       if (maybeSettings) {
-        console.log("settings before", maybeSettings);
         maybeSettings = JSON.parse(maybeSettings);
-        console.log("settings after", maybeSettings);
       }
 
       const app = Elm.Main.init({
@@ -91,20 +89,18 @@
       });
 
       app.ports.storeSettings.subscribe(function (settings) {
-        console.log("settings saved", settings);
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
       });
 
       app.ports.openModal.subscribe(function (id) {
         const modalEl = document.getElementById(id);
-        console.log("open", modalEl);
 
         modalEl?.showModal();
       });
 
       app.ports.closeModal.subscribe(function (id) {
         const modalEl = document.getElementById(id);
-        console.log("close", modalEl);
+
         modalEl?.close();
       });
     </script>
