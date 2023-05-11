@@ -26,6 +26,7 @@ import Ui.Button
 import Ui.Contract
 import Ui.Form
 import Ui.Form.Field
+import Ui.Modal
 import Ui.Ship
 
 
@@ -39,7 +40,15 @@ main =
         }
 
 
-type Model
+type alias Model =
+    { timeZone : Time.Zone
+    , currentTime : Time.Posix
+    , theme : String
+    , authed : Authed
+    }
+
+
+type Authed
     = Unregistered UnregisteredModel
     | Registered RegisteredModel
 
@@ -51,9 +60,6 @@ type alias UnregisteredModel =
     , loginFormModel : Form.Model
     , submittingLogin : Bool
     , loginServerError : Maybe String
-    , timeZone : Time.Zone
-    , currentTime : Time.Posix
-    , theme : String
     }
 
 
@@ -63,9 +69,6 @@ type alias RegisteredModel =
     , waypoints : Dict String SpaceTrader.Waypoint.Waypoint
     , myContracts : Dict String SpaceTrader.Contract.Contract
     , myShips : Dict String SpaceTrader.Ship.Ship
-    , timeZone : Time.Zone
-    , currentTime : Time.Posix
-    , theme : String
     }
 
 
@@ -73,39 +76,53 @@ init : Json.Encode.Value -> ( Model, Cmd Msg )
 init flags =
     case Json.Decode.decodeValue decodeFlags flags of
         Err _ ->
-            ( Unregistered
-                { registerFormModel = Form.init
-                , submittingRegistration = False
-                , registrationServerError = Nothing
-                , loginFormModel = Form.init
-                , submittingLogin = False
-                , loginServerError = Nothing
-                , timeZone = Time.utc
-                , currentTime = Time.millisToPosix 0
-                , theme = "theme-1"
-                }
+            ( { timeZone = Time.utc
+              , currentTime = Time.millisToPosix 0
+              , theme = "theme-1"
+              , authed =
+                    Unregistered
+                        { registerFormModel = Form.init
+                        , submittingRegistration = False
+                        , registrationServerError = Nothing
+                        , loginFormModel = Form.init
+                        , submittingLogin = False
+                        , loginServerError = Nothing
+                        }
+              }
             , Task.map2 CurrentTimeAndZoneReceived
                 Time.now
                 Time.here
                 |> Task.perform identity
             )
 
-        Ok { accessToken } ->
-            ( Unregistered
-                { registerFormModel = Form.init
-                , submittingRegistration = False
-                , registrationServerError = Nothing
-                , loginFormModel = Form.init
-                , submittingLogin = True
-                , loginServerError = Nothing
-                , timeZone = Time.utc
-                , currentTime = Time.millisToPosix 0
-                , theme = "theme-1"
-                }
+        Ok { accessToken, settings } ->
+            ( { timeZone = Time.utc
+              , currentTime = Time.millisToPosix 0
+              , theme = settings.theme
+              , authed =
+                    Unregistered
+                        { registerFormModel = Form.init
+                        , submittingRegistration = False
+                        , registrationServerError = Nothing
+                        , loginFormModel = Form.init
+                        , submittingLogin =
+                            case accessToken of
+                                Nothing ->
+                                    False
+
+                                Just _ ->
+                                    True
+                        , loginServerError = Nothing
+                        }
+              }
             , Cmd.batch
-                [ SpaceTrader.Api.myAgent (LoginResponded accessToken)
-                    { token = accessToken
-                    }
+                [ case accessToken of
+                    Nothing ->
+                        Cmd.none
+
+                    Just token ->
+                        SpaceTrader.Api.myAgent (LoginResponded token)
+                            { token = token }
                 , Task.map2 CurrentTimeAndZoneReceived
                     Time.now
                     Time.here
@@ -114,14 +131,28 @@ init flags =
             )
 
 
-decodeFlags : Json.Decode.Decoder { accessToken : String }
+decodeFlags : Json.Decode.Decoder { accessToken : Maybe String, settings : { theme : String } }
 decodeFlags =
-    Json.Decode.map
-        (\accessToken ->
+    Json.Decode.map2
+        (\accessToken settings ->
             { accessToken = accessToken
+            , settings = settings
             }
         )
-        (Json.Decode.field "accessToken" Json.Decode.string)
+        (Json.Decode.maybe (Json.Decode.field "accessToken" Json.Decode.string))
+        (Json.Decode.field "settings" decodeSettings)
+
+
+decodeSettings : Json.Decode.Decoder { theme : String }
+decodeSettings =
+    Json.Decode.map
+        (\theme ->
+            { theme = theme
+            }
+        )
+        (Json.Decode.maybe (Json.Decode.field "theme" Json.Decode.string)
+            |> Json.Decode.map (Maybe.withDefault "theme-1")
+        )
 
 
 subscriptions : Model -> Sub Msg
@@ -135,10 +166,34 @@ port setToken : String -> Cmd msg
 port clearToken : () -> Cmd msg
 
 
-type Msg
+port openModal : String -> Cmd msg
+
+
+port closeModal : String -> Cmd msg
+
+
+port storeSettings : Json.Encode.Value -> Cmd msg
+
+
+saveSettings : Model -> Cmd msg
+saveSettings model =
+    storeSettings
+        (Json.Encode.object
+            [ ( "theme", Json.Encode.string model.theme )
+            ]
+        )
+
+
+type
+    Msg
+    -- time
     = CurrentTimeReceived Time.Posix
     | CurrentTimeAndZoneReceived Time.Posix Time.Zone
+      -- settings
+    | OpenSettingsClicked
+    | CloseSettingsClicked
     | ThemeSelected String
+      -- auth
     | LogoutClicked
     | RegistrationFormMsg (Form.Msg Msg)
     | RegistrationFormSubmitted (Ui.Form.Submission String RegisterForm)
@@ -155,136 +210,198 @@ type Msg
     | LoginFormMsg (Form.Msg Msg)
     | LoginFormSubmitted (Ui.Form.Submission String LoginForm)
     | LoginResponded String (Result Http.Error SpaceTrader.Agent.Agent)
+      -- game
     | WaypointResponded String (Result Http.Error SpaceTrader.Waypoint.Waypoint)
     | MyContractsResponded (Result Http.Error (List SpaceTrader.Contract.Contract))
     | MyShipsResponded (Result Http.Error (List SpaceTrader.Ship.Ship))
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
-    case model of
+updateWithUnregistered : (UnregisteredModel -> ( UnregisteredModel, Cmd Msg )) -> Model -> ( Model, Cmd Msg )
+updateWithUnregistered f model =
+    case model.authed of
         Unregistered m ->
-            updateUnregistered msg m
+            let
+                ( newAuthedModel, cmd ) =
+                    f m
+            in
+            ( { model | authed = Unregistered newAuthedModel }, cmd )
+
+        Registered _ ->
+            ( model, Cmd.none )
+
+
+updateWithRegistered : (RegisteredModel -> ( RegisteredModel, Cmd Msg )) -> Model -> ( Model, Cmd Msg )
+updateWithRegistered f model =
+    case model.authed of
+        Unregistered _ ->
+            ( model, Cmd.none )
 
         Registered m ->
-            updateRegistered msg m
+            let
+                ( newAuthedModel, cmd ) =
+                    f m
+            in
+            ( { model | authed = Registered newAuthedModel }, cmd )
 
 
-updateUnregistered : Msg -> UnregisteredModel -> ( Model, Cmd Msg )
-updateUnregistered msg model =
+update : Msg -> Model -> ( Model, Cmd Msg )
+update msg model =
     case msg of
+        -- time
         CurrentTimeReceived time ->
-            ( Unregistered
-                { model
-                    | currentTime = time
-                }
+            ( { model
+                | currentTime = time
+              }
             , Cmd.none
             )
 
         CurrentTimeAndZoneReceived time zone ->
-            ( Unregistered
-                { model
-                    | currentTime = time
-                    , timeZone = zone
-                }
+            ( { model
+                | currentTime = time
+                , timeZone = zone
+              }
             , Cmd.none
             )
 
+        -- settings
+        OpenSettingsClicked ->
+            ( model
+            , openModal modalIds.settings
+            )
+
+        CloseSettingsClicked ->
+            ( model
+            , Cmd.batch
+                [ closeModal modalIds.settings
+                , saveSettings model
+                ]
+            )
+
         ThemeSelected theme ->
-            ( Unregistered { model | theme = theme }
+            ( { model | theme = theme }
             , Cmd.none
+            )
+
+        ---- auth
+        LogoutClicked ->
+            ( { model
+                | authed =
+                    Unregistered
+                        { registerFormModel = Form.init
+                        , submittingRegistration = False
+                        , registrationServerError = Nothing
+                        , loginFormModel = Form.init
+                        , submittingLogin = False
+                        , loginServerError = Nothing
+                        }
+              }
+            , clearToken ()
             )
 
         -- registration
         RegistrationFormMsg msg_ ->
-            let
-                ( registerFormModel, formCmd ) =
-                    Form.update msg_ model.registerFormModel
-            in
-            ( Unregistered
-                { model
-                    | registerFormModel = registerFormModel
-                }
-            , formCmd
-            )
+            updateWithUnregistered
+                (\unregisteredModel ->
+                    let
+                        ( registerFormModel, formCmd ) =
+                            Form.update msg_ unregisteredModel.registerFormModel
+                    in
+                    ( { unregisteredModel
+                        | registerFormModel = registerFormModel
+                      }
+                    , formCmd
+                    )
+                )
+                model
 
         RegistrationFormSubmitted { parsed } ->
-            case parsed of
-                Form.Valid registerData ->
-                    ( Unregistered
-                        { model
-                            | submittingRegistration = True
-                        }
-                    , SpaceTrader.Api.register RegistrationResponded
-                        registerData
-                    )
+            updateWithUnregistered
+                (\unregisteredModel ->
+                    case parsed of
+                        Form.Valid registerData ->
+                            ( { unregisteredModel
+                                | submittingRegistration = True
+                              }
+                            , SpaceTrader.Api.register RegistrationResponded
+                                registerData
+                            )
 
-                Form.Invalid _ _ ->
-                    ( Unregistered model, Cmd.none )
+                        Form.Invalid _ _ ->
+                            ( unregisteredModel, Cmd.none )
+                )
+                model
 
         RegistrationResponded (Err err) ->
-            -- Debug.todo (Debug.toString err)
-            ( Unregistered
-                { model
-                    | submittingRegistration = False
-                    , registrationServerError = Just (Debug.toString err)
-                }
-            , Cmd.none
-            )
+            updateWithUnregistered
+                (\unregisteredModel ->
+                    ( { unregisteredModel
+                        | submittingRegistration = False
+                        , registrationServerError = Just (Debug.toString err)
+                      }
+                    , Cmd.none
+                    )
+                )
+                model
 
         RegistrationResponded (Ok data) ->
             ( initRegistered
                 { accessToken = data.token
                 , agent = data.agent
-                , timeZone = model.timeZone
-                , currentTime = model.currentTime
-                , theme = model.theme
                 }
+                model
             , setToken data.token
             )
 
         -- login
         LoginFormMsg msg_ ->
-            let
-                ( loginFormModel, formCmd ) =
-                    Form.update msg_ model.loginFormModel
-            in
-            ( Unregistered
-                { model
-                    | loginFormModel = loginFormModel
-                }
-            , formCmd
-            )
+            updateWithUnregistered
+                (\unregisteredModel ->
+                    let
+                        ( loginFormModel, formCmd ) =
+                            Form.update msg_ unregisteredModel.loginFormModel
+                    in
+                    ( { unregisteredModel
+                        | loginFormModel = loginFormModel
+                      }
+                    , formCmd
+                    )
+                )
+                model
 
         LoginFormSubmitted { parsed } ->
-            case parsed of
-                Form.Valid loginData ->
-                    ( Unregistered { model | submittingLogin = True }
-                    , SpaceTrader.Api.myAgent (LoginResponded loginData.accessToken)
-                        { token = loginData.accessToken
-                        }
-                    )
+            updateWithUnregistered
+                (\unregisteredModel ->
+                    case parsed of
+                        Form.Valid loginData ->
+                            ( { unregisteredModel | submittingLogin = True }
+                            , SpaceTrader.Api.myAgent (LoginResponded loginData.accessToken)
+                                { token = loginData.accessToken
+                                }
+                            )
 
-                Form.Invalid _ _ ->
-                    ( Unregistered model, Cmd.none )
+                        Form.Invalid _ _ ->
+                            ( unregisteredModel, Cmd.none )
+                )
+                model
 
         LoginResponded _ (Err err) ->
-            ( Unregistered
-                { model
-                    | submittingLogin = False
-                    , loginServerError = Just (Debug.toString err)
-                }
-            , Cmd.none
-            )
+            updateWithUnregistered
+                (\unregisteredModel ->
+                    ( { unregisteredModel
+                        | submittingLogin = False
+                        , loginServerError = Just (Debug.toString err)
+                      }
+                    , Cmd.none
+                    )
+                )
+                model
 
         LoginResponded accessToken (Ok agent) ->
             ( initRegistered
                 { accessToken = accessToken
                 , agent = agent
-                , timeZone = model.timeZone
-                , currentTime = model.currentTime
-                , theme = model.theme
                 }
+                model
             , Cmd.batch
                 [ SpaceTrader.Api.myContracts MyContractsResponded
                     { token = accessToken }
@@ -294,155 +411,141 @@ updateUnregistered msg model =
                 ]
             )
 
-        _ ->
-            ( Unregistered model, Cmd.none )
-
-
-initRegistered :
-    { accessToken : String
-    , agent : SpaceTrader.Agent.Agent
-    , timeZone : Time.Zone
-    , currentTime : Time.Posix
-    , theme : String
-    }
-    -> Model
-initRegistered opt =
-    Registered
-        { accessToken = opt.accessToken
-        , agent = opt.agent
-        , waypoints = Dict.empty
-        , myContracts = Dict.empty
-        , myShips = Dict.empty
-        , timeZone = opt.timeZone
-        , currentTime = opt.currentTime
-        , theme = opt.theme
-        }
-
-
-updateRegistered : Msg -> RegisteredModel -> ( Model, Cmd Msg )
-updateRegistered msg model =
-    case msg of
-        CurrentTimeReceived time ->
-            ( Registered
-                { model
-                    | currentTime = time
-                }
-            , Cmd.none
-            )
-
-        CurrentTimeAndZoneReceived time zone ->
-            ( Registered
-                { model
-                    | currentTime = time
-                    , timeZone = zone
-                }
-            , Cmd.none
-            )
-
-        ThemeSelected theme ->
-            ( Registered { model | theme = theme }
-            , Cmd.none
-            )
-
-        LogoutClicked ->
-            ( Unregistered
-                { registerFormModel = Form.init
-                , submittingRegistration = False
-                , registrationServerError = Nothing
-                , loginFormModel = Form.init
-                , submittingLogin = False
-                , loginServerError = Nothing
-                , timeZone = model.timeZone
-                , currentTime = model.currentTime
-                , theme = model.theme
-                }
-            , clearToken ()
-            )
-
         WaypointResponded _ (Err err) ->
             Debug.todo (Debug.toString err)
 
         WaypointResponded id (Ok waypoint) ->
-            ( Registered
-                { model
-                    | waypoints = Dict.insert id waypoint model.waypoints
-                }
-            , Cmd.none
-            )
+            updateWithRegistered
+                (\registeredModel ->
+                    ( { registeredModel
+                        | waypoints = Dict.insert id waypoint registeredModel.waypoints
+                      }
+                    , Cmd.none
+                    )
+                )
+                model
 
         MyContractsResponded (Err err) ->
             Debug.todo (Debug.toString err)
 
         MyContractsResponded (Ok contracts) ->
-            ( Registered
-                { model
-                    | myContracts =
-                        List.foldl
-                            (\contract dict ->
-                                Dict.insert contract.id contract dict
-                            )
-                            Dict.empty
-                            contracts
-                }
-            , Cmd.none
-            )
+            updateWithRegistered
+                (\registeredModel ->
+                    ( { registeredModel
+                        | myContracts =
+                            List.foldl
+                                (\contract dict ->
+                                    Dict.insert contract.id contract dict
+                                )
+                                Dict.empty
+                                contracts
+                      }
+                    , Cmd.none
+                    )
+                )
+                model
 
         MyShipsResponded (Err err) ->
             Debug.todo (Debug.toString err)
 
         MyShipsResponded (Ok ships) ->
-            ( Registered
-                { model
-                    | myShips =
-                        List.foldl
-                            (\ship dict ->
-                                Dict.insert ship.id ship dict
-                            )
-                            Dict.empty
-                            ships
-                }
-            , Cmd.none
-            )
+            updateWithRegistered
+                (\registeredModel ->
+                    ( { registeredModel
+                        | myShips =
+                            List.foldl
+                                (\ship dict ->
+                                    Dict.insert ship.id ship dict
+                                )
+                                Dict.empty
+                                ships
+                      }
+                    , Cmd.none
+                    )
+                )
+                model
 
-        _ ->
-            ( Registered model, Cmd.none )
+
+initRegistered :
+    { accessToken : String
+    , agent : SpaceTrader.Agent.Agent
+    }
+    -> Model
+    -> Model
+initRegistered opt model =
+    { model
+        | authed =
+            Registered
+                { accessToken = opt.accessToken
+                , agent = opt.agent
+                , waypoints = Dict.empty
+                , myContracts = Dict.empty
+                , myShips = Dict.empty
+                }
+    }
+
+
+modalIds : { settings : String }
+modalIds =
+    { settings = "settings" }
 
 
 view : Model -> Browser.Document Msg
 view model =
     { title = "SpaceTrader"
     , body =
-        [ Html.select
-            [ Html.Events.onInput ThemeSelected ]
-            (List.range 1 10
-                |> List.map
-                    (\i ->
-                        Html.option
-                            [ Html.Attributes.value ("theme-" ++ String.fromInt i) ]
-                            [ Html.text ("theme-" ++ String.fromInt i) ]
-                    )
-            )
-        , Ui.column
-            [ Html.Attributes.class <|
-                case model of
-                    Unregistered { theme } ->
-                        theme
-
-                    Registered { theme } ->
-                        theme
+        [ Ui.column
+            [ Html.Attributes.class model.theme
             , Html.Attributes.style "height" "100vh"
             ]
             [ Ui.header.one
-                [ Ui.center.justify
+                [ Ui.justify.center
                 , Html.Attributes.style "padding" "1rem"
                 ]
                 [ Html.text "SpaceTrader" ]
-            , case model of
+            , case model.authed of
                 Unregistered m ->
                     viewUnregistered m
 
                 Registered m ->
-                    viewRegistered m
+                    viewRegistered model m
+            , Ui.Button.view
+                [ Ui.justify.end
+                , Ui.align.end
+                , Html.Attributes.style "padding" "1rem"
+                ]
+                { label = Html.text "⚙️"
+                , onClick = Just OpenSettingsClicked
+                }
+            , Ui.Modal.view modalIds.settings
+                [ Html.Attributes.class model.theme ]
+                [ Ui.column
+                    [ Ui.gap 1 ]
+                    [ Html.label
+                        []
+                        [ Html.text "Theme: "
+                        , Html.select
+                            [ Html.Events.onInput ThemeSelected
+                            , Html.Attributes.value model.theme
+                            ]
+                            (List.range 1 10
+                                |> List.map
+                                    (\i ->
+                                        Html.option
+                                            [ Html.Attributes.value ("theme-" ++ String.fromInt i) ]
+                                            [ Html.text ("theme-" ++ String.fromInt i) ]
+                                    )
+                            )
+                        ]
+                    , Ui.Button.view
+                        [ Ui.justify.end
+                        , Ui.align.end
+                        ]
+                        { label = Html.text "Save Settings"
+                        , onClick = Just CloseSettingsClicked
+                        }
+                    ]
+                ]
             ]
         ]
     }
@@ -451,7 +554,7 @@ view model =
 viewUnregistered : UnregisteredModel -> Html Msg
 viewUnregistered model =
     Ui.row
-        [ Ui.center.justify
+        [ Ui.justify.center
         , Ui.gap 1
         ]
         [ Ui.Form.view
@@ -598,8 +701,8 @@ viewField formState label field =
         ]
 
 
-viewRegistered : RegisteredModel -> Html Msg
-viewRegistered model =
+viewRegistered : Model -> RegisteredModel -> Html Msg
+viewRegistered m model =
     Ui.column
         [ Html.Attributes.style "justify-self" "start"
         , Html.Attributes.style "padding" "1rem"
@@ -620,7 +723,7 @@ viewRegistered model =
             ]
         , model.myContracts
             |> Dict.values
-            |> List.map (Ui.Contract.view model.timeZone model.currentTime)
+            |> List.map (Ui.Contract.view m.timeZone m.currentTime)
             |> (::) (Html.h3 [] [ Html.text "My Contracts" ])
             |> Html.div []
         , model.myShips

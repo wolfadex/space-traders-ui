@@ -33,10 +33,19 @@ row attrs =
 --     }
 
 
-center : { justify : Html.Attribute msg, align : Html.Attribute msg }
-center =
-    { justify = Html.Attributes.style "justify-self" "center"
-    , align = Html.Attributes.style "align-self" "center"
+justify : { center : Html.Attribute msg, start : Html.Attribute msg, end : Html.Attribute msg }
+justify =
+    { center = Html.Attributes.style "justify-self" "center"
+    , start = Html.Attributes.style "justify-self" "start"
+    , end = Html.Attributes.style "justify-self" "end"
+    }
+
+
+align : { center : Html.Attribute msg, start : Html.Attribute msg, end : Html.Attribute msg }
+align =
+    { center = Html.Attributes.style "align-self" "center"
+    , start = Html.Attributes.style "align-self" "start"
+    , end = Html.Attributes.style "align-self" "end"
     }
 
 

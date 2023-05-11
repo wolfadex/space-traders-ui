@@ -67,10 +67,20 @@
     <script src="elm.js"></script>
     <script>
       const TOKEN_KEY = "token";
+      const SETTINGS_KEY = "settings";
 
       const maybeToken = localStorage.getItem(TOKEN_KEY);
+      let maybeSettings = localStorage.getItem(SETTINGS_KEY);
 
-      const app = Elm.Main.init({ flags: { accessToken: maybeToken } });
+      if (maybeSettings) {
+        console.log("settings before", maybeSettings);
+        maybeSettings = JSON.parse(maybeSettings);
+        console.log("settings after", maybeSettings);
+      }
+
+      const app = Elm.Main.init({
+        flags: { accessToken: maybeToken, settings: maybeSettings },
+      });
 
       app.ports.setToken.subscribe(function (token) {
         localStorage.setItem(TOKEN_KEY, token);
@@ -78,6 +88,24 @@
 
       app.ports.clearToken.subscribe(function () {
         localStorage.removeItem(TOKEN_KEY);
+      });
+
+      app.ports.storeSettings.subscribe(function (settings) {
+        console.log("settings saved", settings);
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      });
+
+      app.ports.openModal.subscribe(function (id) {
+        const modalEl = document.getElementById(id);
+        console.log("open", modalEl);
+
+        modalEl?.showModal();
+      });
+
+      app.ports.closeModal.subscribe(function (id) {
+        const modalEl = document.getElementById(id);
+        console.log("close", modalEl);
+        modalEl?.close();
       });
     </script>
   </body>
