@@ -4,7 +4,8 @@ A UI for [SpaceTraders](https://spacetraders.io/), built with [Elm](https://elm-
 
 ## Current Features
 
-- Auth
+- auth
+- ui color themes
 - view your Agent
 - view your Contracts
 - view (parts of) your ships
