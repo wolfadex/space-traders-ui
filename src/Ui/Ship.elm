@@ -23,4 +23,16 @@ view ship =
     -- , cargo : Cargo
     -- , fuel : Fuel
     -- }
-    Html.text ship.id
+    Ui.column
+        [ Html.Attributes.style "border" "0.125rem solid"
+        , Html.Attributes.style "border-radius" "0.25rem"
+        , Html.Attributes.style "padding" "0.5rem"
+        ]
+        [ Html.text ship.id
+        , Html.br [] []
+        , Html.text "Fuel"
+        , Ui.progress []
+            { max = toFloat ship.fuel.capacity
+            , current = toFloat ship.fuel.current
+            }
+        ]

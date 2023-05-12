@@ -21,14 +21,14 @@ view :
     -> Html msg
 view options config =
     Ui.column
-        [ Html.Attributes.style "border" "0.125rem solid black"
+        [ Html.Attributes.style "border" "0.125rem solid "
         , Html.Attributes.style "border-radius" "0.5rem"
         , Html.Attributes.style "max-width" "50rem"
         , Html.Attributes.style "padding" "1rem"
         , Ui.gap 1
         ]
         [ Ui.header.three
-            [ Html.Attributes.style "border-bottom" "0.125rem solid black"
+            [ Html.Attributes.style "border-bottom" "0.125rem solid "
 
             -- , Html.Attributes.style "height" "fit-content"
             ]

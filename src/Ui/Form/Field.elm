@@ -33,7 +33,11 @@ text formState label field =
         [ Html.Attributes.style "grid-column" "1" ]
         [ Html.text label ]
     , Form.FieldView.input
-        [ Html.Attributes.style "grid-column" "2" ]
+        [ Html.Attributes.style "grid-column" "2"
+        , Html.Attributes.style "border-radius" "0.1rem"
+        , Html.Attributes.style "border-style" "solid"
+        , Html.Attributes.style "padding" "0.25rem 1rem"
+        ]
         field
     , errorsView formState field
     ]
@@ -50,7 +54,11 @@ select options formState label field =
         [ Html.Attributes.style "grid-column" "1" ]
         [ Html.text label ]
     , Form.FieldView.select
-        [ Html.Attributes.style "grid-column" "2" ]
+        [ Html.Attributes.style "grid-column" "2"
+        , Html.Attributes.style "border-radius" "0.1rem"
+        , Html.Attributes.style "border-style" "solid"
+        , Html.Attributes.style "padding" "0.25rem 1rem"
+        ]
         (\item -> ( [], options.toString item ))
         field
     , errorsView formState field
@@ -62,6 +70,11 @@ submit { label, disabled } =
     [ Html.button
         [ Html.Attributes.style "grid-column" "2"
         , Html.Attributes.style "cursor" "pointer"
+        , Html.Attributes.style "border-radius" "3rem"
+        , Html.Attributes.style "border-style" "solid"
+        , Html.Attributes.style "padding" "0.5rem 1.5rem"
+        , Html.Attributes.style "background-color" "var(--primary-color)"
+        , Html.Attributes.style "color" "var(--secondary-color)"
         , Html.Attributes.disabled disabled
         ]
         [ Html.text label ]

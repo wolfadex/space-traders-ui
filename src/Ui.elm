@@ -3,6 +3,9 @@ module Ui exposing (..)
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
+import Json.Decode
+import Json.Encode
+import List.NonEmpty
 import Time
 
 
@@ -149,18 +152,19 @@ viewLabeled options =
         [ Html.Attributes.style "grid-column" "1"
         , Html.Attributes.style "font-weight" "bold"
         , Html.Attributes.style "padding" "0.5rem "
-        , Html.Attributes.style "border" "1px solid black"
+        , Html.Attributes.style "border-width" "1px "
         , Html.Attributes.style "margin-bottom" "0.5rem"
         , Html.Attributes.style "border-top-left-radius" "0.25rem"
         , Html.Attributes.style "border-bottom-left-radius" "0.25rem"
-        , Html.Attributes.style "background" "lightgray"
+        , Html.Attributes.style "background" "var(--primary-color)"
+        , Html.Attributes.style "color" "var(--secondary-color)"
         , Html.Attributes.style "border-right" "none"
         ]
         [ Html.text options.label ]
     , Html.span
         [ Html.Attributes.style "grid-column" "2"
         , Html.Attributes.style "padding" "0.5rem"
-        , Html.Attributes.style "border" "1px solid black"
+        , Html.Attributes.style "border" "1px solid"
         , Html.Attributes.style "margin-bottom" "0.5rem"
         , Html.Attributes.style "border-top-right-radius" "0.25rem"
         , Html.Attributes.style "border-bottom-right-radius" "0.25rem"
@@ -180,3 +184,19 @@ header =
     , two = \attr -> Html.h2 (attr ++ [ Html.Attributes.style "margin" "0" ])
     , three = \attr -> Html.h3 (attr ++ [ Html.Attributes.style "margin" "0" ])
     }
+
+
+progress : List (Html.Attribute msg) -> { max : Float, current : Float } -> Html msg
+progress attr opt =
+    Html.div
+        [ Html.Attributes.style "width" "100%"
+        , Html.Attributes.style "height" "1.5rem"
+        , Html.Attributes.style "border" "0.125rem solid"
+        ]
+        [ Html.div
+            [ Html.Attributes.style "width" (String.fromFloat (opt.current / opt.max * 100) ++ "%")
+            , Html.Attributes.style "height" "100%"
+            , Html.Attributes.style "background-color" "var(--primary-color)"
+            ]
+            []
+        ]

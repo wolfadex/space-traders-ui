@@ -13,6 +13,7 @@ import Html.Events
 import Http
 import Json.Decode
 import Json.Encode
+import List.NonEmpty
 import SpaceTrader.Agent
 import SpaceTrader.Api
 import SpaceTrader.Contract
@@ -27,7 +28,9 @@ import Ui.Contract
 import Ui.Form
 import Ui.Form.Field
 import Ui.Modal
+import Ui.Select
 import Ui.Ship
+import Ui.Theme
 
 
 main : Program Json.Encode.Value Model Msg
@@ -43,7 +46,7 @@ main =
 type alias Model =
     { timeZone : Time.Zone
     , currentTime : Time.Posix
-    , theme : String
+    , theme : Ui.Theme.Theme
     , authed : Authed
     }
 
@@ -78,7 +81,7 @@ init flags =
         Err _ ->
             ( { timeZone = Time.utc
               , currentTime = Time.millisToPosix 0
-              , theme = "theme-1"
+              , theme = List.NonEmpty.head Ui.Theme.themes
               , authed =
                     Unregistered
                         { registerFormModel = Form.init
@@ -131,7 +134,7 @@ init flags =
             )
 
 
-decodeFlags : Json.Decode.Decoder { accessToken : Maybe String, settings : { theme : String } }
+decodeFlags : Json.Decode.Decoder { accessToken : Maybe String, settings : { theme : Ui.Theme.Theme } }
 decodeFlags =
     Json.Decode.map2
         (\accessToken settings ->
@@ -143,15 +146,15 @@ decodeFlags =
         (Json.Decode.field "settings" decodeSettings)
 
 
-decodeSettings : Json.Decode.Decoder { theme : String }
+decodeSettings : Json.Decode.Decoder { theme : Ui.Theme.Theme }
 decodeSettings =
     Json.Decode.map
         (\theme ->
             { theme = theme
             }
         )
-        (Json.Decode.maybe (Json.Decode.field "theme" Json.Decode.string)
-            |> Json.Decode.map (Maybe.withDefault "theme-1")
+        (Json.Decode.maybe (Json.Decode.field "theme" Ui.Theme.decode)
+            |> Json.Decode.map (Maybe.withDefault (List.NonEmpty.head Ui.Theme.themes))
         )
 
 
@@ -179,7 +182,7 @@ saveSettings : Model -> Cmd msg
 saveSettings model =
     storeSettings
         (Json.Encode.object
-            [ ( "theme", Json.Encode.string model.theme )
+            [ ( "theme", Ui.Theme.encode model.theme )
             ]
         )
 
@@ -192,7 +195,7 @@ type
       -- settings
     | OpenSettingsClicked
     | CloseSettingsClicked
-    | ThemeSelected String
+    | ThemeSelected Ui.Theme.Theme
       -- auth
     | LogoutClicked
     | RegistrationFormMsg (Form.Msg Msg)
@@ -495,7 +498,7 @@ view model =
     { title = "SpaceTrader"
     , body =
         [ Ui.column
-            [ Html.Attributes.class model.theme
+            [ Html.Attributes.class model.theme.class
             , Html.Attributes.style "height" "100vh"
             ]
             [ Ui.header.one
@@ -509,7 +512,7 @@ view model =
 
                 Registered m ->
                     viewRegistered model m
-            , Ui.Button.view
+            , Ui.Button.default
                 [ Ui.justify.end
                 , Ui.align.end
                 , Html.Attributes.style "padding" "1rem"
@@ -518,26 +521,22 @@ view model =
                 , onClick = Just OpenSettingsClicked
                 }
             , Ui.Modal.view modalIds.settings
-                [ Html.Attributes.class model.theme ]
+                [-- Html.Attributes.class model.theme
+                ]
                 [ Ui.column
                     [ Ui.gap 1 ]
                     [ Html.label
                         []
                         [ Html.text "Theme: "
-                        , Html.select
-                            [ Html.Events.onInput ThemeSelected
-                            , Html.Attributes.value model.theme
-                            ]
-                            (List.range 1 10
-                                |> List.map
-                                    (\i ->
-                                        Html.option
-                                            [ Html.Attributes.value ("theme-" ++ String.fromInt i) ]
-                                            [ Html.text ("theme-" ++ String.fromInt i) ]
-                                    )
-                            )
+                        , Ui.Select.view
+                            []
+                            { options = List.NonEmpty.toList Ui.Theme.themes
+                            , toString = .label
+                            , value = model.theme
+                            , onChange = ThemeSelected
+                            }
                         ]
-                    , Ui.Button.view
+                    , Ui.Button.default
                         [ Ui.justify.end
                         , Ui.align.end
                         ]
@@ -710,7 +709,7 @@ viewRegistered m model =
         [ Ui.viewLabelGroup
             (Html.div []
                 [ Html.text "Agent"
-                , Ui.Button.view
+                , Ui.Button.default
                     [ Html.Attributes.style "float" "right" ]
                     { label = Html.text "Logout"
                     , onClick = Just LogoutClicked

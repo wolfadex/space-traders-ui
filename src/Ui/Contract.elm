@@ -14,7 +14,7 @@ import Ui
 view : Time.Zone -> Time.Posix -> SpaceTrader.Contract.Contract -> Html msg
 view timeZone currentTime contract =
     Html.div
-        [ Html.Attributes.style "border" "0.125rem solid black"
+        [ Html.Attributes.style "border" "0.125rem solid"
         , Html.Attributes.style "border-radius" "0.25rem"
         , Html.Attributes.style "padding" "0.5rem"
         ]
