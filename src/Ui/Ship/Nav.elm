@@ -7,6 +7,7 @@ import SpaceTrader.Ship.Nav
 import SpaceTrader.Ship.Nav.Status
 import Ui
 import Ui.Button
+import Ui.Point
 import Ui.Ship.Nav.Status
 
 
@@ -17,11 +18,11 @@ view opts nav =
         (Html.h3 [] [ Html.text "Nav" ]
             :: Ui.viewLabeled
                 { label = "System"
-                , value = nav.system
+                , value = Ui.Point.view nav.system
                 }
             ++ Ui.viewLabeled
                 { label = "Waypoint"
-                , value = nav.waypoint
+                , value = Ui.Point.view nav.waypoint
                 }
             ++ [ Ui.Ship.Nav.Status.view opts
                     nav.status

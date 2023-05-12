@@ -29,6 +29,7 @@ import Ui.Contract
 import Ui.Form
 import Ui.Form.Field
 import Ui.Modal
+import Ui.Point
 import Ui.Select
 import Ui.Ship
 import Ui.Theme
@@ -796,7 +797,7 @@ viewRegistered m model =
                 ]
             )
             [ { label = "Callsign", value = model.agent.callsign }
-            , { label = "Headquarters", value = model.agent.headquarters }
+            , { label = "Headquarters", value = Ui.Point.view model.agent.headquarters }
             , { label = "Credits", value = String.fromInt model.agent.credits }
             ]
         , model.myContracts
