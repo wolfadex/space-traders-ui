@@ -7,6 +7,7 @@ import SpaceTrader.Agent exposing (Agent)
 import SpaceTrader.Contract exposing (Contract)
 import SpaceTrader.Faction exposing (Faction)
 import SpaceTrader.Ship exposing (Ship)
+import SpaceTrader.Ship.Nav
 import SpaceTrader.Waypoint exposing (Waypoint)
 
 
@@ -97,6 +98,28 @@ myShips toMsg options =
         , url = [ "my", "ships" ]
         , body = Http.emptyBody
         , expect = Http.expectJson toMsg (decodeSuccess (Json.Decode.list SpaceTrader.Ship.decode))
+        }
+
+
+moveToOrbit : (Result Http.Error SpaceTrader.Ship.Nav.Nav -> msg) -> { token : String, shipId : String } -> Cmd msg
+moveToOrbit toMsg options =
+    v2
+        { method = "POST"
+        , token = options.token
+        , url = [ "my", "ships", options.shipId, "orbit" ]
+        , body = Http.emptyBody
+        , expect = Http.expectJson toMsg (decodeSuccess (Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode))
+        }
+
+
+dockShip : (Result Http.Error SpaceTrader.Ship.Nav.Nav -> msg) -> { token : String, shipId : String } -> Cmd msg
+dockShip toMsg options =
+    v2
+        { method = "POST"
+        , token = options.token
+        , url = [ "my", "ships", options.shipId, "dock" ]
+        , body = Http.emptyBody
+        , expect = Http.expectJson toMsg (decodeSuccess (Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode))
         }
 
 

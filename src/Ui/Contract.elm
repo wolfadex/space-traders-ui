@@ -31,7 +31,7 @@ view timeZone currentTime contract =
                         , Html.Attributes.style "margin-top" "-1rem"
                         , Html.Attributes.style "color" <|
                             if isInFuture then
-                                "green"
+                                ""
 
                             else
                                 "red"

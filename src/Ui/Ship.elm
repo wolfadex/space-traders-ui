@@ -4,13 +4,15 @@ import Html exposing (Html)
 import Html.Attributes
 import SpaceTrader.Faction
 import SpaceTrader.Ship
+import SpaceTrader.Ship.Nav.Status
 import Time
 import Time.Distance
 import Ui
+import Ui.Ship.Nav
 
 
-view : SpaceTrader.Ship.Ship -> Html msg
-view ship =
+view : { onDock : String -> msg, onOrbit : String -> msg, onMove : String -> msg } -> SpaceTrader.Ship.Ship -> Html msg
+view opts ship =
     -- { id : String
     -- , registration : Registration
     -- , nav : Nav
@@ -28,11 +30,18 @@ view ship =
         , Html.Attributes.style "border-radius" "0.25rem"
         , Html.Attributes.style "padding" "0.5rem"
         ]
-        [ Html.text ship.id
-        , Html.br [] []
-        , Html.text "Fuel"
+        [ Html.div
+            [ Html.Attributes.style "display" "grid" ]
+            (Ui.viewLabeled { label = "Name", value = ship.id })
+        , Html.h3 [] [ Html.text "Fuel" ]
         , Ui.progress []
             { max = toFloat ship.fuel.capacity
             , current = toFloat ship.fuel.current
             }
+        , Ui.Ship.Nav.view
+            { onDock = opts.onDock ship.id
+            , onOrbit = opts.onOrbit ship.id
+            , onMove = opts.onMove ship.id
+            }
+            ship.nav
         ]

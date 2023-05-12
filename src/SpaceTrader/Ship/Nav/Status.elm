@@ -27,3 +27,16 @@ decode =
                     _ ->
                         Json.Decode.fail "Invalid status"
             )
+
+
+prettyPrint : Status -> String
+prettyPrint status =
+    case status of
+        InTransit ->
+            "In transit"
+
+        InOrbit ->
+            "In orbit"
+
+        Docked ->
+            "Docked"

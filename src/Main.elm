@@ -19,6 +19,7 @@ import SpaceTrader.Api
 import SpaceTrader.Contract
 import SpaceTrader.Faction
 import SpaceTrader.Ship
+import SpaceTrader.Ship.Nav
 import SpaceTrader.Waypoint
 import Task
 import Time
@@ -217,6 +218,11 @@ type
     | WaypointResponded String (Result Http.Error SpaceTrader.Waypoint.Waypoint)
     | MyContractsResponded (Result Http.Error (List SpaceTrader.Contract.Contract))
     | MyShipsResponded (Result Http.Error (List SpaceTrader.Ship.Ship))
+    | ShipDockRequested String
+    | ShipDockResponded String (Result Http.Error SpaceTrader.Ship.Nav.Nav)
+    | ShipOrbitRequested String
+    | ShipOrbitResponded String (Result Http.Error SpaceTrader.Ship.Nav.Nav)
+    | ShipMoveRequested String
 
 
 updateWithUnregistered : (UnregisteredModel -> ( UnregisteredModel, Cmd Msg )) -> Model -> ( Model, Cmd Msg )
@@ -467,6 +473,79 @@ update msg model =
                     )
                 )
                 model
+
+        ShipDockRequested id ->
+            updateWithRegistered
+                (\registeredModel ->
+                    ( registeredModel
+                    , SpaceTrader.Api.dockShip (ShipDockResponded id)
+                        { token = registeredModel.accessToken
+                        , shipId = id
+                        }
+                    )
+                )
+                model
+
+        ShipDockResponded _ (Err err) ->
+            Debug.todo (Debug.toString err)
+
+        ShipDockResponded id (Ok nav) ->
+            updateWithRegistered
+                (\registeredModel ->
+                    ( { registeredModel
+                        | myShips =
+                            Dict.update id
+                                (Maybe.map
+                                    (\ship ->
+                                        { ship
+                                            | nav = nav
+                                        }
+                                    )
+                                )
+                                registeredModel.myShips
+                      }
+                    , Cmd.none
+                    )
+                )
+                model
+
+        ShipOrbitRequested id ->
+            updateWithRegistered
+                (\registeredModel ->
+                    ( registeredModel
+                    , SpaceTrader.Api.moveToOrbit (ShipOrbitResponded id)
+                        { token = registeredModel.accessToken
+                        , shipId = id
+                        }
+                    )
+                )
+                model
+
+        ShipOrbitResponded _ (Err err) ->
+            Debug.todo (Debug.toString err)
+
+        ShipOrbitResponded id (Ok nav) ->
+            updateWithRegistered
+                (\registeredModel ->
+                    ( { registeredModel
+                        | myShips =
+                            Dict.update id
+                                (Maybe.map
+                                    (\ship ->
+                                        { ship
+                                            | nav = nav
+                                        }
+                                    )
+                                )
+                                registeredModel.myShips
+                      }
+                    , Cmd.none
+                    )
+                )
+                model
+
+        ShipMoveRequested id ->
+            Debug.todo ""
 
 
 initRegistered :
@@ -727,7 +806,13 @@ viewRegistered m model =
             |> Html.div []
         , model.myShips
             |> Dict.values
-            |> List.map Ui.Ship.view
+            |> List.map
+                (Ui.Ship.view
+                    { onDock = ShipDockRequested
+                    , onOrbit = ShipOrbitRequested
+                    , onMove = ShipMoveRequested
+                    }
+                )
             |> (::) (Ui.header.three [] [ Html.text "My Ships" ])
             |> Html.div []
         ]
