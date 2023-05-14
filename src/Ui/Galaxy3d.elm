@@ -103,10 +103,11 @@ viewSystems :
     , onZoomPress : Float -> msg
     , onRotationPress : Float -> msg
     , headquarters : String
+    , selected : Maybe String
     }
     -> MinRenderableWorld r
     -> Html msg
-viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, headquarters } world =
+viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, headquarters, selected } world =
     let
         solarSystemPoints : List ( String, Point3d Meters LightYear )
         solarSystemPoints =
@@ -184,49 +185,46 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, headquarters 
             List.map
                 (\( systemId, vertex ) ->
                     let
-                        highlightSystem : Bool
-                        highlightSystem =
-                            -- List.any
-                            --     (\civId ->
-                            --         world.civilizationPopulations
-                            --             |> Logic.Component.get civId
-                            --             |> Maybe.map
-                            --                 (\dictPlanetPopulatiopns ->
-                            --                     let
-                            --                         solarSystemsCivIsIn : List String
-                            --                         solarSystemsCivIsIn =
-                            --                             List.filterMap
-                            --                                 (\planetId ->
-                            --                                     Logic.Component.get planetId world.parents
-                            --                                 )
-                            --                                 (Dict.keys dictPlanetPopulatiopns)
-                            --                     in
-                            --                     List.any ((==) systemId) solarSystemsCivIsIn && Just civId == focusedCivilization
-                            --                 )
-                            --             |> Maybe.withDefault False
-                            --     )
-                            --     (Set.toList world.civilizations)
+                        isHeadquarters : Bool
+                        isHeadquarters =
                             headquarters
                                 |> String.split "-"
                                 |> List.take 2
                                 |> String.join "-"
                                 |> (==) systemId
 
+                        isSelected : Bool
+                        isSelected =
+                            case selected of
+                                Nothing ->
+                                    False
+
+                                Just selectedSystemId ->
+                                    selectedSystemId == systemId
+
                         -- TODO: This could allow for highlighting of factions
                         -- False
                     in
                     Svg.g
-                        [ Svg.Attributes.class
-                            (if highlightSystem then
+                        [ Svg.Attributes.class <|
+                            if isHeadquarters || isSelected then
                                 "galactic-label-focus-civ"
 
-                             else
+                            else
                                 "galactic-label"
-                            )
+                        , Svg.Attributes.style <|
+                            if isHeadquarters then
+                                "opacity: 1;"
+
+                            else
+                                ""
                         ]
                         [ Geometry.Svg.circle2d
                             [ Svg.Attributes.stroke
-                                (if highlightSystem then
+                                (if isSelected then
+                                    "rgb(255, 255, 0)"
+
+                                 else if isHeadquarters then
                                     "var(--primary-color)"
 
                                  else
@@ -830,7 +828,7 @@ viewSpace options labels scene =
                         Html.text ""
 
                     Just onZoomPress ->
-                        Ui.Button.default []
+                        Ui.Button.default [ Html.Attributes.style "pointer-events" "all" ]
                             { onClick = Just (onZoomPress -10.0)
                             , label = Html.text "+"
                             }
@@ -839,7 +837,7 @@ viewSpace options labels scene =
                         Html.text ""
 
                     Just onZoomPress ->
-                        Ui.Button.default []
+                        Ui.Button.default [ Html.Attributes.style "pointer-events" "all" ]
                             { onClick = Just (onZoomPress 10.0)
                             , label = Html.text "-"
                             }
@@ -854,7 +852,7 @@ viewSpace options labels scene =
                         Html.text ""
 
                     Just onRotationPress ->
-                        Ui.Button.default []
+                        Ui.Button.default [ Html.Attributes.style "pointer-events" "all" ]
                             { onClick = Just (onRotationPress -5)
                             , label = Html.text "<-"
                             }
@@ -863,7 +861,7 @@ viewSpace options labels scene =
                         Html.text ""
 
                     Just onRotationPress ->
-                        Ui.Button.default []
+                        Ui.Button.default [ Html.Attributes.style "pointer-events" "all" ]
                             { onClick = Just (onRotationPress 5)
                             , label = Html.text "->"
                             }

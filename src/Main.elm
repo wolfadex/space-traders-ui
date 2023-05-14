@@ -1078,6 +1078,13 @@ viewRegistered m model =
                 , onZoomPress = ZoomPressed
                 , onRotationPress = RotationPressed
                 , headquarters = model.agent.headquarters
+                , selected =
+                    case model.selectedSystem of
+                        Just (Loaded system) ->
+                            Just system.id
+
+                        _ ->
+                            Nothing
                 }
                 { galaxyViewSize = { width = 750, height = 500 }
                 , zoom = m.zoom
