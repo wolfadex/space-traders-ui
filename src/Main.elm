@@ -75,6 +75,11 @@ type alias Model =
 
     -- cached data
     , systems : Cacheable SpaceTrader.System.System
+
+    -- game stuffs
+    , spaceFocus : SpaceFocus
+    , zoom : Float
+    , viewRotation : Float
     }
 
 
@@ -119,6 +124,11 @@ init flags =
                         , loginServerError = Nothing
                         }
               , systems = Uncached
+              , spaceFocus = FGalaxy
+              , viewRotation = 0
+
+              -- a nice default
+              , zoom = 6621539845261203 * 10000
               }
             , Task.map2 CurrentTimeAndZoneReceived
                 Time.now
@@ -146,6 +156,27 @@ init flags =
                         , loginServerError = Nothing
                         }
               , systems = Cached cached.systems
+              , spaceFocus = FGalaxy
+              , zoom =
+                    cached.systems
+                        |> Dict.values
+                        |> List.map
+                            (\system ->
+                                Length.inMeters
+                                    (Point3d.distanceFrom Point3d.origin
+                                        (Point3d.xyz
+                                            (system.x |> toFloat |> Length.lightYears)
+                                            (system.y |> toFloat |> Length.lightYears)
+                                            (Length.lightYears 0)
+                                        )
+                                    )
+                            )
+                        |> List.sort
+                        |> List.reverse
+                        |> List.head
+                        |> Maybe.map (\a -> a / 2)
+                        |> Maybe.withDefault (25000 + (100 * 9460730000000000))
+              , viewRotation = 0
               }
             , Cmd.batch
                 [ case accessToken of
@@ -677,13 +708,50 @@ update msg model =
             Debug.todo ""
 
         Zoomed value ->
-            Debug.todo ""
+            case Json.Decode.decodeValue decodeZoomEvent value of
+                Ok delta ->
+                    setZoom model (delta * zoomMultiplier model.spaceFocus)
 
-        ZoomPressed amt ->
-            Debug.todo ""
+                Err _ ->
+                    ( model, Cmd.none )
 
-        RotationPressed amt ->
-            Debug.todo ""
+        ZoomPressed change ->
+            setZoom model (change * zoomMultiplier model.spaceFocus)
+
+        RotationPressed change ->
+            ( { model | viewRotation = toFloat (remainderBy 360 (floor (model.viewRotation + change))) }
+            , Cmd.none
+            )
+
+
+setZoom : Model -> Float -> ( Model, Cmd Msg )
+setZoom model delta =
+    ( { model | zoom = max 5000000 (model.zoom + delta) }, Cmd.none )
+
+
+decodeZoomEvent : Json.Decode.Decoder Float
+decodeZoomEvent =
+    Json.Decode.field "deltaY" Json.Decode.float
+
+
+zoomMultiplier : SpaceFocus -> Float
+zoomMultiplier focus =
+    case focus of
+        FGalaxy ->
+            -- One light year is 9460730000000000, this is about 10 light years
+            94607300000000000
+
+        FSystem _ ->
+            10000000000
+
+        FWaypoint _ ->
+            1
+
+
+type SpaceFocus
+    = FGalaxy
+    | FSystem String
+    | FWaypoint String
 
 
 initRegistered :
@@ -963,28 +1031,8 @@ viewRegistered m model =
                 , onRotationPress = RotationPressed
                 }
                 { galaxyViewSize = { width = 750, height = 500 }
-                , zoom =
-                    m.systems
-                        |> cachedData
-                        |> Dict.values
-                        |> List.map
-                            (\system ->
-                                Length.inMeters
-                                    (Point3d.distanceFrom Point3d.origin
-                                        (Point3d.xyz
-                                            (system.x |> toFloat |> Length.lightYears)
-                                            (system.y |> toFloat |> Length.lightYears)
-                                            (Length.lightYears 0)
-                                        )
-                                    )
-                            )
-                        |> List.sort
-                        |> List.reverse
-                        |> List.head
-                        |> Maybe.map (\a -> a / 2)
-                        |> Maybe.withDefault (25000 + (100 * 9460730000000000))
-                        |> Debug.log "zoom"
-                , viewRotation = 0
+                , zoom = m.zoom
+                , viewRotation = m.viewRotation
                 , systems =
                     m.systems
                         |> cachedData

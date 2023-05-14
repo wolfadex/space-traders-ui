@@ -58,7 +58,7 @@ import Scene3d.Mesh
 import Set exposing (Set)
 import SpaceTrader.System
 import Sphere3d
-import Svg
+import Svg exposing (Svg)
 import Svg.Attributes
 import Svg.Events
 import Task
@@ -121,7 +121,6 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress } world =
                             (Length.lightYears 0)
                         )
                     )
-                |> Debug.log "solarSystemPoints"
 
         solarSystems : List (Scene3d.Entity ScaledViewPoint)
         solarSystems =
@@ -271,13 +270,9 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress } world =
 
         -- Create an SVG element with the projected points, lines and
         -- associated labels
-        galaxyLabels : Html msg
+        galaxyLabels : List (Svg msg)
         galaxyLabels =
-            Svg.svg
-                [ Html.Attributes.width (floor world.galaxyViewSize.width)
-                , Html.Attributes.height (floor world.galaxyViewSize.height)
-                ]
-                [ Geometry.Svg.relativeTo topLeftFrame (Svg.g [] svgLabels) ]
+            [ Geometry.Svg.relativeTo topLeftFrame (Svg.g [] svgLabels) ]
 
         galaxyScene : Html msg
         galaxyScene =
@@ -308,6 +303,7 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress } world =
         { onZoom = Just onZoom
         , onZoomPress = Just onZoomPress
         , onRotationPress = Just onRotationPress
+        , galaxyViewSize = world.galaxyViewSize
         }
         galaxyLabels
         galaxyScene
@@ -732,28 +728,23 @@ viewSpace :
         | onZoom : Maybe (Value -> msg)
         , onZoomPress : Maybe (Float -> msg)
         , onRotationPress : Maybe (Float -> msg)
+        , galaxyViewSize : { width : Float, height : Float }
     }
-    -> Html msg
+    -> List (Svg msg)
     -> Html msg
     -> Html msg
 viewSpace options labels scene =
     Html.div
-        [ -- TODO
-          -- , inFront (html labels)
-          Html.Attributes.style "width" "100%"
-        , Html.Attributes.style "height" "100%"
-        , Html.Attributes.id "galaxy-view"
-        , case options.onZoom of
-            Nothing ->
-                Html.Attributes.style "" ""
+        [ Html.Attributes.id "galaxy-view"
 
-            Just onZoom ->
-                Html.Events.preventDefaultOn "wheel"
-                    (Json.Decode.map (\v -> ( onZoom v, True ))
-                        Json.Decode.value
-                    )
-
-        -- TODO: manual controls
+        -- , case options.onZoom of
+        --     Nothing ->
+        --         Html.Attributes.style "" ""
+        --     Just onZoom ->
+        --         Html.Events.preventDefaultOn "wheel"
+        --             (Json.Decode.map (\v -> ( onZoom v, True ))
+        --                 Json.Decode.value
+        --             )
         -- , inFront
         --     (row
         --         [ alignRight, alignBottom, padding 16, spacing 8 ]
@@ -797,7 +788,83 @@ viewSpace options labels scene =
         --         ]
         --     )
         ]
-        [ spaceCss, scene ]
+        [ spaceCss
+        , scene
+        , Svg.svg
+            [ Html.Attributes.width (floor options.galaxyViewSize.width)
+            , Html.Attributes.height (floor options.galaxyViewSize.height)
+            , Html.Attributes.style "position" "absolute"
+            , Html.Attributes.style "transform" "translateY(-100%)"
+            , Html.Attributes.style "background" "rgba(0, 0, 0, 0)"
+
+            -- DEBUG
+            -- , Html.Attributes.style "border" "1px solid red"
+            ]
+            labels
+        , Html.div
+            [ Html.Attributes.style "position" "absolute"
+            , Html.Attributes.style "transform" "translateY(-100%)"
+            , Html.Attributes.style "background" "rgba(0, 0, 0, 0)"
+            , Html.Attributes.style "width" (String.fromInt (floor options.galaxyViewSize.width) ++ "px")
+            , Html.Attributes.style "display" "flex"
+            , Html.Attributes.style "flex-direction" "column"
+            , Html.Attributes.style "align-items" "end"
+            , Html.Attributes.style "gap" "1rem"
+
+            -- DEBUG
+            -- , Html.Attributes.style "border" "1px solid red"
+            ]
+            [ Html.div
+                [ Html.Attributes.style "background" "rgba(0, 0, 0, 0)"
+                , Html.Attributes.style "display" "flex"
+                , Html.Attributes.style "flex-direction" "column"
+                , Html.Attributes.style "gap" "1rem"
+                ]
+                [ case options.onZoomPress of
+                    Nothing ->
+                        Html.text ""
+
+                    Just onZoomPress ->
+                        Ui.Button.default []
+                            { onClick = Just (onZoomPress -10.0)
+                            , label = Html.text "+"
+                            }
+                , case options.onZoomPress of
+                    Nothing ->
+                        Html.text ""
+
+                    Just onZoomPress ->
+                        Ui.Button.default []
+                            { onClick = Just (onZoomPress 10.0)
+                            , label = Html.text "-"
+                            }
+                ]
+            , Html.div
+                [ Html.Attributes.style "background" "rgba(0, 0, 0, 0)"
+                , Html.Attributes.style "display" "flex"
+                , Html.Attributes.style "gap" "1rem"
+                ]
+                [ case options.onRotationPress of
+                    Nothing ->
+                        Html.text ""
+
+                    Just onRotationPress ->
+                        Ui.Button.default []
+                            { onClick = Just (onRotationPress -5)
+                            , label = Html.text "<-"
+                            }
+                , case options.onRotationPress of
+                    Nothing ->
+                        Html.text ""
+
+                    Just onRotationPress ->
+                        Ui.Button.default []
+                            { onClick = Just (onRotationPress 5)
+                            , label = Html.text "->"
+                            }
+                ]
+            ]
+        ]
 
 
 spaceCss : Html msg
