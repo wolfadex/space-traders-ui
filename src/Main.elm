@@ -13,7 +13,9 @@ import Html.Events
 import Http
 import Json.Decode
 import Json.Encode
+import Length
 import List.NonEmpty
+import Point3d
 import SpaceTrader.Agent
 import SpaceTrader.Api
 import SpaceTrader.Contract
@@ -48,7 +50,7 @@ main =
 
 type Cacheable a
     = Uncached
-    | Loading  { data : Dict String a , current : Int , max : Int }
+    | Loading { data : Dict String a, current : Int, max : Int }
     | Cached (Dict String a)
 
 
@@ -70,6 +72,7 @@ type alias Model =
     , currentTime : Time.Posix
     , theme : Ui.Theme.Theme
     , authed : Authed
+
     -- cached data
     , systems : Cacheable SpaceTrader.System.System
     }
@@ -474,9 +477,11 @@ update msg model =
                 , SpaceTrader.Api.myShips MyShipsResponded
                     { token = accessToken }
                 , case model.systems of
-                    Uncached -> SpaceTrader.Api.getAllSystemsInit SystemsLongRequestMsg { token = accessToken }
+                    Uncached ->
+                        SpaceTrader.Api.getAllSystemsInit SystemsLongRequestMsg { token = accessToken }
 
-                    _ -> Cmd.none
+                    _ ->
+                        Cmd.none
                 , setToken accessToken
                 ]
             )
@@ -625,10 +630,8 @@ update msg model =
                             }
                 }
 
-
         SystemsLongRequestMsg (Err err) ->
             Debug.todo (Debug.toString err)
-        
 
         SystemsLongRequestMsg (Ok msg_) ->
             case msg_ of
@@ -959,8 +962,28 @@ viewRegistered m model =
                 , onZoomPress = ZoomPressed
                 , onRotationPress = RotationPressed
                 }
-                { galaxyViewSize = { width = 800, height = 600 }
-                , zoom = 1
+                { galaxyViewSize = { width = 750, height = 500 }
+                , zoom =
+                    m.systems
+                        |> cachedData
+                        |> Dict.values
+                        |> List.map
+                            (\system ->
+                                Length.inMeters
+                                    (Point3d.distanceFrom Point3d.origin
+                                        (Point3d.xyz
+                                            (system.x |> toFloat |> Length.lightYears)
+                                            (system.y |> toFloat |> Length.lightYears)
+                                            (Length.lightYears 0)
+                                        )
+                                    )
+                            )
+                        |> List.sort
+                        |> List.reverse
+                        |> List.head
+                        |> Maybe.map (\a -> a / 2)
+                        |> Maybe.withDefault (25000 + (100 * 9460730000000000))
+                        |> Debug.log "zoom"
                 , viewRotation = 0
                 , systems =
                     m.systems

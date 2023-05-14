@@ -115,12 +115,13 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress } world =
                 |> List.map
                     (\system ->
                         ( system.id
-                        , Point3d.meters
-                            (toFloat system.x)
-                            (toFloat system.y)
-                            0
+                        , Point3d.xyz
+                            (system.x |> toFloat |> Length.lightYears)
+                            (system.y |> toFloat |> Length.lightYears)
+                            (Length.lightYears 0)
                         )
                     )
+                |> Debug.log "solarSystemPoints"
 
         solarSystems : List (Scene3d.Entity ScaledViewPoint)
         solarSystems =
@@ -282,16 +283,18 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress } world =
         galaxyScene =
             Scene3d.unlit
                 { entities =
-                    Scene3d.cylinder (Material.color (Color.rgb 0 0.1 0.3))
-                        (Cylinder3d.centeredOn Point3d.origin
-                            Direction3d.positiveZ
-                            { radius =
-                                -- The radius of the Milky Way plus a little
-                                Length.lightYears 52000
-                            , length = Length.meters 0.01
-                            }
-                        )
-                        :: solarSystems
+                    -- Scene3d.cylinder (Material.color (Color.rgb 0 0.1 0.3))
+                    --     (Cylinder3d.centeredOn Point3d.origin
+                    --         Direction3d.positiveZ
+                    --         { radius =
+                    --             -- The radius of the Milky Way plus a little
+                    --             -- Length.lightYears 52000
+                    --             Length.lightYears 15000
+                    --         , length = Length.meters 0.01
+                    --         }
+                    --     )
+                    --     ::
+                    solarSystems
                 , camera = camera
                 , clipDepth = Length.nanometer
                 , background = Scene3d.backgroundColor Color.black
@@ -301,7 +304,13 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress } world =
                     )
                 }
     in
-    viewSpace { onZoom = Just onZoom, onZoomPress = Just onZoomPress, onRotationPress = Just onRotationPress } galaxyLabels galaxyScene
+    viewSpace
+        { onZoom = Just onZoom
+        , onZoomPress = Just onZoomPress
+        , onRotationPress = Just onRotationPress
+        }
+        galaxyLabels
+        galaxyScene
 
 
 
@@ -846,7 +855,7 @@ renderSystem : Point3d Meters LightYear -> Scene3d.Entity ScaledViewPoint
 renderSystem position =
     Scene3d.sphere
         (Material.color Color.gray)
-        (Sphere3d.atPoint (scalePointInLightYearsToOne position) (Length.lightYears 300))
+        (Sphere3d.atPoint (scalePointInLightYearsToOne position) (Length.lightYears 60))
 
 
 type ScaledViewPoint
