@@ -102,12 +102,11 @@ viewSystems :
     , onZoom : Value -> msg
     , onZoomPress : Float -> msg
     , onRotationPress : Float -> msg
-
-    -- , focusedCivilization : List String
+    , headquarters : String
     }
     -> MinRenderableWorld r
     -> Html msg
-viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress } world =
+viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, headquarters } world =
     let
         solarSystemPoints : List ( String, Point3d Meters LightYear )
         solarSystemPoints =
@@ -207,8 +206,14 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress } world =
                             --             |> Maybe.withDefault False
                             --     )
                             --     (Set.toList world.civilizations)
-                            -- TODO: This could allow for highlighting of factions
-                            False
+                            headquarters
+                                |> String.split "-"
+                                |> List.take 2
+                                |> String.join "-"
+                                |> (==) systemId
+
+                        -- TODO: This could allow for highlighting of factions
+                        -- False
                     in
                     Svg.g
                         [ Svg.Attributes.class
@@ -222,7 +227,7 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress } world =
                         [ Geometry.Svg.circle2d
                             [ Svg.Attributes.stroke
                                 (if highlightSystem then
-                                    "rgb(200, 255, 200)"
+                                    "var(--primary-color)"
 
                                  else
                                     "rgb(255, 255, 0)"

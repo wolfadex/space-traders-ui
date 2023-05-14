@@ -12,8 +12,6 @@ import SpaceTrader.Ship.Nav
 import SpaceTrader.System
 import SpaceTrader.Waypoint exposing (Waypoint)
 import Task exposing (Task)
-import Process
-
 
 
 
@@ -148,7 +146,7 @@ listSystems toMsg options =
         }
 
 
-getAllSystemsInit : (Result Http.Error (Msg (SpaceTrader.System.System)) -> msg) -> { token : String } -> Cmd msg
+getAllSystemsInit : (Result Http.Error (Msg SpaceTrader.System.System) -> msg) -> { token : String } -> Cmd msg
 getAllSystemsInit toMsg options =
     getAllInit toMsg
         { token = options.token
@@ -158,7 +156,7 @@ getAllSystemsInit toMsg options =
 
 
 getAllSystemsUpdate :
-    (Result Http.Error (Msg (SpaceTrader.System.System)) -> msg)
+    (Result Http.Error (Msg SpaceTrader.System.System) -> msg)
     ->
         { token : String
         , url : List String
@@ -171,6 +169,17 @@ getAllSystemsUpdate :
     -> Cmd msg
 getAllSystemsUpdate =
     getAllUpdate
+
+
+getSystem : (Result Http.Error SpaceTrader.System.System -> msg) -> { token : String, systemId : String } -> Cmd msg
+getSystem toMsg options =
+    v2
+        { method = "GET"
+        , token = options.token
+        , url = [ "systems", options.systemId ]
+        , body = Http.emptyBody
+        , expect = Http.expectJson toMsg (decodeSuccess SpaceTrader.System.decode)
+        }
 
 
 getWaypoint : (Result Http.Error SpaceTrader.Waypoint.Waypoint -> msg) -> { token : String, systemId : String, waypointId : String } -> Cmd msg
@@ -215,15 +224,16 @@ getAllInit toMsg opts =
         , headers = [ Http.header "Authorization" ("Bearer " ++ opts.token) ]
         , url = toUrl (baseUri :: opts.url) ++ "?limit=20&page=1"
         , body = Http.emptyBody
-        , resolver = Http.stringResolver <|
-            jsonResolver <|
-                Json.Decode.map2 Tuple.pair
-                    (decodeSuccess (Json.Decode.list opts.decoder))
-                    decodePagedMeta
+        , resolver =
+            Http.stringResolver <|
+                jsonResolver <|
+                    Json.Decode.map2 Tuple.pair
+                        (decodeSuccess (Json.Decode.list opts.decoder))
+                        decodePagedMeta
         , timeout = Nothing
         }
         |> Task.map
-            ((\( list, meta ) ->
+            (\( list, meta ) ->
                 if meta.page * meta.limit < meta.total then
                     NeedsMore
                         { token = opts.token
@@ -234,9 +244,10 @@ getAllInit toMsg opts =
                         , current = List.length list
                         , max = meta.total
                         }
+
                 else
                     Complete list
-            ))
+            )
         |> Task.attempt toMsg
 
 
@@ -261,15 +272,16 @@ getAllUpdate toMsg opts =
                     , headers = [ Http.header "Authorization" ("Bearer " ++ opts.token) ]
                     , url = toUrl (baseUri :: opts.url) ++ "?limit=20&page=" ++ String.fromInt opts.page
                     , body = Http.emptyBody
-                    , resolver = Http.stringResolver <|
-                        jsonResolver <|
-                            Json.Decode.map2 Tuple.pair
-                                (decodeSuccess (Json.Decode.list opts.decoder))
-                                decodePagedMeta
+                    , resolver =
+                        Http.stringResolver <|
+                            jsonResolver <|
+                                Json.Decode.map2 Tuple.pair
+                                    (decodeSuccess (Json.Decode.list opts.decoder))
+                                    decodePagedMeta
                     , timeout = Nothing
                     }
                     |> Task.map
-                        ((\( list, meta ) ->
+                        (\( list, meta ) ->
                             if meta.page * meta.limit < meta.total then
                                 NeedsMore
                                     { token = opts.token
@@ -280,12 +292,12 @@ getAllUpdate toMsg opts =
                                     , current = List.length list + opts.current
                                     , max = meta.total
                                     }
+
                             else
                                 Complete list
-                        ))
+                        )
             )
-            |> Task.attempt toMsg
-
+        |> Task.attempt toMsg
 
 
 jsonResolver : Json.Decode.Decoder a -> Http.Response String -> Result Http.Error a
@@ -310,6 +322,7 @@ jsonResolver decode response =
 
                 Err err ->
                     Err (Http.BadBody (Json.Decode.errorToString err))
+
 
 type alias PagedMeta =
     { total : Int

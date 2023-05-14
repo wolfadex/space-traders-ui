@@ -35,6 +35,7 @@ import Ui.Galaxy3d
 import Ui.Modal
 import Ui.Select
 import Ui.Ship
+import Ui.System
 import Ui.Theme
 
 
@@ -50,8 +51,14 @@ main =
 
 type Cacheable a
     = Uncached
-    | Loading { data : Dict String a, current : Int, max : Int }
+    | Caching { data : Dict String a, current : Int, max : Int }
     | Cached (Dict String a)
+
+
+type Remote a
+    = Loading
+    | Failure String
+    | Loaded a
 
 
 cachedData : Cacheable a -> Dict String a
@@ -60,7 +67,7 @@ cachedData cacheable =
         Uncached ->
             Dict.empty
 
-        Loading { data } ->
+        Caching { data } ->
             data
 
         Cached data ->
@@ -104,6 +111,7 @@ type alias RegisteredModel =
     , waypoints : Dict String SpaceTrader.Waypoint.Waypoint
     , myContracts : Dict String SpaceTrader.Contract.Contract
     , myShips : Dict String SpaceTrader.Ship.Ship
+    , selectedSystem : Maybe (Remote SpaceTrader.System.System)
     }
 
 
@@ -309,6 +317,7 @@ type
     | ShipMoveRequested String
     | SystemsLoadRequested
     | SystemsLongRequestMsg (Result Http.Error (SpaceTrader.Api.Msg SpaceTrader.System.System))
+    | SystemResponded (Result Http.Error SpaceTrader.System.System)
       -- 3d view
     | SystemClicked String
     | Zoomed Json.Encode.Value
@@ -654,7 +663,7 @@ update msg model =
                 )
                 { model
                     | systems =
-                        Loading
+                        Caching
                             { data = cachedData model.systems
                             , current = 0
                             , max = 1
@@ -693,7 +702,7 @@ update msg model =
                                 (cachedData model.systems)
                                 data.data
                     in
-                    ( { model | systems = Loading { data = updatedSystems, current = data.current, max = data.max } }
+                    ( { model | systems = Caching { data = updatedSystems, current = data.current, max = data.max } }
                     , Cmd.batch
                         [ SpaceTrader.Api.getAllSystemsUpdate SystemsLongRequestMsg data
                         , updatedSystems
@@ -705,7 +714,45 @@ update msg model =
 
         -- 3d view
         SystemClicked systemId ->
-            Debug.todo ""
+            updateWithRegistered
+                (\registeredModel ->
+                    let
+                        systemFound : Maybe SpaceTrader.System.System
+                        systemFound =
+                            model.systems
+                                |> cachedData
+                                |> Dict.get systemId
+                    in
+                    ( { registeredModel
+                        | selectedSystem =
+                            Just <|
+                                case systemFound of
+                                    Just system ->
+                                        Loaded system
+
+                                    Nothing ->
+                                        Loading
+                      }
+                    , case systemFound of
+                        Just _ ->
+                            Cmd.none
+
+                        Nothing ->
+                            SpaceTrader.Api.getSystem SystemResponded
+                                { token = registeredModel.accessToken
+                                , systemId = systemId
+                                }
+                    )
+                )
+                model
+
+        SystemResponded (Err err) ->
+            Debug.todo (Debug.toString err)
+
+        SystemResponded (Ok system) ->
+            ( { model | systems = Cached (Dict.insert system.id system (cachedData model.systems)) }
+            , Cmd.none
+            )
 
         Zoomed value ->
             case Json.Decode.decodeValue decodeZoomEvent value of
@@ -769,6 +816,7 @@ initRegistered opt model =
                 , waypoints = Dict.empty
                 , myContracts = Dict.empty
                 , myShips = Dict.empty
+                , selectedSystem = Nothing
                 }
     }
 
@@ -1029,6 +1077,7 @@ viewRegistered m model =
                 , onZoom = Zoomed
                 , onZoomPress = ZoomPressed
                 , onRotationPress = RotationPressed
+                , headquarters = model.agent.headquarters
                 }
                 { galaxyViewSize = { width = 750, height = 500 }
                 , zoom = m.zoom
@@ -1046,7 +1095,7 @@ viewRegistered m model =
                         , onClick = Just SystemsLoadRequested
                         }
 
-                Loading { current, max } ->
+                Caching { current, max } ->
                     Ui.row []
                         [ Html.text "Loading Systems..."
                         , Ui.progress []
@@ -1064,5 +1113,17 @@ viewRegistered m model =
                             , onClick = Just SystemsLoadRequested
                             }
                         ]
+            , case model.selectedSystem of
+                Nothing ->
+                    Html.text ""
+
+                Just Loading ->
+                    Html.text "Loading System..."
+
+                Just (Failure error) ->
+                    Html.text ("Failed to load system: " ++ error)
+
+                Just (Loaded system) ->
+                    Ui.System.view system
             ]
         ]

@@ -178,11 +178,13 @@ header :
     { one : List (Html.Attribute msg) -> List (Html msg) -> Html msg
     , two : List (Html.Attribute msg) -> List (Html msg) -> Html msg
     , three : List (Html.Attribute msg) -> List (Html msg) -> Html msg
+    , four : List (Html.Attribute msg) -> List (Html msg) -> Html msg
     }
 header =
     { one = \attr -> Html.h1 (attr ++ [ Html.Attributes.style "margin" "0" ])
     , two = \attr -> Html.h2 (attr ++ [ Html.Attributes.style "margin" "0" ])
     , three = \attr -> Html.h3 (attr ++ [ Html.Attributes.style "margin" "0" ])
+    , four = \attr -> Html.h4 (attr ++ [ Html.Attributes.style "margin" "0" ])
     }
 
 
