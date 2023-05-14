@@ -1,13 +1,13 @@
-module SpaceTrader.Ship.Nav.Route.Waypoint exposing (..)
+module SpaceTrader.System.Waypoint exposing (..)
 
 import Json.Decode
+import Json.Encode
 import SpaceTrader.Waypoint.Type
 
 
 type alias Waypoint =
     { symbol : String
     , type_ : SpaceTrader.Waypoint.Type.Type
-    , system : String
     , x : Int
     , y : Int
     }
@@ -15,9 +15,18 @@ type alias Waypoint =
 
 decode : Json.Decode.Decoder Waypoint
 decode =
-    Json.Decode.map5 Waypoint
+    Json.Decode.map4 Waypoint
         (Json.Decode.field "symbol" Json.Decode.string)
         (Json.Decode.field "type" SpaceTrader.Waypoint.Type.decode)
-        (Json.Decode.field "systemSymbol" Json.Decode.string)
         (Json.Decode.field "x" Json.Decode.int)
         (Json.Decode.field "y" Json.Decode.int)
+
+
+encode : Waypoint -> Json.Encode.Value
+encode waypoint =
+    Json.Encode.object
+        [ ( "symbol", Json.Encode.string waypoint.symbol )
+        , ( "type", SpaceTrader.Waypoint.Type.encode waypoint.type_ )
+        , ( "x", Json.Encode.int waypoint.x )
+        , ( "y", Json.Encode.int waypoint.y )
+        ]

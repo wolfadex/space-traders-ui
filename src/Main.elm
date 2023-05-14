@@ -20,6 +20,7 @@ import SpaceTrader.Contract
 import SpaceTrader.Faction
 import SpaceTrader.Ship
 import SpaceTrader.Ship.Nav
+import SpaceTrader.System
 import SpaceTrader.Waypoint
 import Task
 import Time
@@ -28,8 +29,8 @@ import Ui.Button
 import Ui.Contract
 import Ui.Form
 import Ui.Form.Field
+import Ui.Galaxy3d
 import Ui.Modal
-import Ui.Point
 import Ui.Select
 import Ui.Ship
 import Ui.Theme
@@ -45,11 +46,32 @@ main =
         }
 
 
+type Cacheable a
+    = Uncached
+    | Loading  { data : Dict String a , current : Int , max : Int }
+    | Cached (Dict String a)
+
+
+cachedData : Cacheable a -> Dict String a
+cachedData cacheable =
+    case cacheable of
+        Uncached ->
+            Dict.empty
+
+        Loading { data } ->
+            data
+
+        Cached data ->
+            data
+
+
 type alias Model =
     { timeZone : Time.Zone
     , currentTime : Time.Posix
     , theme : Ui.Theme.Theme
     , authed : Authed
+    -- cached data
+    , systems : Cacheable SpaceTrader.System.System
     }
 
 
@@ -93,6 +115,7 @@ init flags =
                         , submittingLogin = False
                         , loginServerError = Nothing
                         }
+              , systems = Uncached
               }
             , Task.map2 CurrentTimeAndZoneReceived
                 Time.now
@@ -100,7 +123,7 @@ init flags =
                 |> Task.perform identity
             )
 
-        Ok { accessToken, settings } ->
+        Ok { accessToken, settings, cached } ->
             ( { timeZone = Time.utc
               , currentTime = Time.millisToPosix 0
               , theme = settings.theme
@@ -119,6 +142,7 @@ init flags =
                                     True
                         , loginServerError = Nothing
                         }
+              , systems = Cached cached.systems
               }
             , Cmd.batch
                 [ case accessToken of
@@ -136,16 +160,23 @@ init flags =
             )
 
 
-decodeFlags : Json.Decode.Decoder { accessToken : Maybe String, settings : { theme : Ui.Theme.Theme } }
+decodeFlags :
+    Json.Decode.Decoder
+        { accessToken : Maybe String
+        , settings : { theme : Ui.Theme.Theme }
+        , cached : { systems : Dict String SpaceTrader.System.System }
+        }
 decodeFlags =
-    Json.Decode.map2
-        (\accessToken settings ->
+    Json.Decode.map3
+        (\accessToken settings cached ->
             { accessToken = accessToken
             , settings = settings
+            , cached = cached
             }
         )
         (Json.Decode.maybe (Json.Decode.field "accessToken" Json.Decode.string))
         (Json.Decode.field "settings" decodeSettings)
+        (Json.Decode.field "cached" decodeCached)
 
 
 decodeSettings : Json.Decode.Decoder { theme : Ui.Theme.Theme }
@@ -157,6 +188,21 @@ decodeSettings =
         )
         (Json.Decode.maybe (Json.Decode.field "theme" Ui.Theme.decode)
             |> Json.Decode.map (Maybe.withDefault (List.NonEmpty.head Ui.Theme.themes))
+        )
+
+
+decodeCached : Json.Decode.Decoder { systems : Dict String SpaceTrader.System.System }
+decodeCached =
+    Json.Decode.map
+        (\systems ->
+            { systems = systems
+            }
+        )
+        (Json.Decode.maybe (Json.Decode.field "systems" (Json.Decode.list SpaceTrader.System.decode))
+            |> Json.Decode.map
+                (Maybe.map (List.foldl (\system systems -> Dict.insert system.id system systems) Dict.empty)
+                    >> Maybe.withDefault Dict.empty
+                )
         )
 
 
@@ -178,6 +224,9 @@ port closeModal : String -> Cmd msg
 
 
 port storeSettings : Json.Encode.Value -> Cmd msg
+
+
+port cacheSystems : Json.Encode.Value -> Cmd msg
 
 
 saveSettings : Model -> Cmd msg
@@ -224,6 +273,13 @@ type
     | ShipOrbitRequested String
     | ShipOrbitResponded String (Result Http.Error SpaceTrader.Ship.Nav.Nav)
     | ShipMoveRequested String
+    | SystemsLoadRequested
+    | SystemsLongRequestMsg (Result Http.Error (SpaceTrader.Api.Msg SpaceTrader.System.System))
+      -- 3d view
+    | SystemClicked String
+    | Zoomed Json.Encode.Value
+    | ZoomPressed Float
+    | RotationPressed Float
 
 
 updateWithUnregistered : (UnregisteredModel -> ( UnregisteredModel, Cmd Msg )) -> Model -> ( Model, Cmd Msg )
@@ -417,6 +473,10 @@ update msg model =
                     { token = accessToken }
                 , SpaceTrader.Api.myShips MyShipsResponded
                     { token = accessToken }
+                , case model.systems of
+                    Uncached -> SpaceTrader.Api.getAllSystemsInit SystemsLongRequestMsg { token = accessToken }
+
+                    _ -> Cmd.none
                 , setToken accessToken
                 ]
             )
@@ -546,6 +606,80 @@ update msg model =
                 model
 
         ShipMoveRequested id ->
+            Debug.todo ""
+
+        SystemsLoadRequested ->
+            updateWithRegistered
+                (\registeredModel ->
+                    ( registeredModel
+                    , SpaceTrader.Api.getAllSystemsInit SystemsLongRequestMsg
+                        { token = registeredModel.accessToken }
+                    )
+                )
+                { model
+                    | systems =
+                        Loading
+                            { data = cachedData model.systems
+                            , current = 0
+                            , max = 1
+                            }
+                }
+
+
+        SystemsLongRequestMsg (Err err) ->
+            Debug.todo (Debug.toString err)
+        
+
+        SystemsLongRequestMsg (Ok msg_) ->
+            case msg_ of
+                SpaceTrader.Api.Complete systems ->
+                    let
+                        updatedSystems =
+                            List.foldl
+                                (\system dict ->
+                                    Dict.insert system.id system dict
+                                )
+                                (cachedData model.systems)
+                                systems
+                    in
+                    ( { model | systems = Cached updatedSystems }
+                    , updatedSystems
+                        |> Dict.values
+                        |> Json.Encode.list SpaceTrader.System.encode
+                        |> cacheSystems
+                    )
+
+                SpaceTrader.Api.NeedsMore data ->
+                    let
+                        updatedSystems =
+                            List.foldl
+                                (\system dict ->
+                                    Dict.insert system.id system dict
+                                )
+                                (cachedData model.systems)
+                                data.data
+                    in
+                    ( { model | systems = Loading { data = updatedSystems, current = data.current, max = data.max } }
+                    , Cmd.batch
+                        [ SpaceTrader.Api.getAllSystemsUpdate SystemsLongRequestMsg data
+                        , updatedSystems
+                            |> Dict.values
+                            |> Json.Encode.list SpaceTrader.System.encode
+                            |> cacheSystems
+                        ]
+                    )
+
+        -- 3d view
+        SystemClicked systemId ->
+            Debug.todo ""
+
+        Zoomed value ->
+            Debug.todo ""
+
+        ZoomPressed amt ->
+            Debug.todo ""
+
+        RotationPressed amt ->
             Debug.todo ""
 
 
@@ -782,38 +916,82 @@ viewField formState label field =
 
 viewRegistered : Model -> RegisteredModel -> Html Msg
 viewRegistered m model =
-    Ui.column
-        [ Html.Attributes.style "justify-self" "start"
-        , Html.Attributes.style "padding" "1rem"
-        ]
-        [ Ui.viewLabelGroup
-            (Html.div []
-                [ Html.text "Agent"
-                , Ui.Button.default
-                    [ Html.Attributes.style "float" "right" ]
-                    { label = Html.text "Logout"
-                    , onClick = Just LogoutClicked
-                    }
-                ]
-            )
-            [ { label = "Callsign", value = model.agent.callsign }
-            , { label = "Headquarters", value = Ui.Point.view model.agent.headquarters }
-            , { label = "Credits", value = String.fromInt model.agent.credits }
+    Ui.row []
+        [ Ui.column
+            [ Html.Attributes.style "justify-self" "start"
+            , Html.Attributes.style "padding" "1rem"
             ]
-        , model.myContracts
-            |> Dict.values
-            |> List.map (Ui.Contract.view m.timeZone m.currentTime)
-            |> (::) (Html.h3 [] [ Html.text "My Contracts" ])
-            |> Html.div []
-        , model.myShips
-            |> Dict.values
-            |> List.map
-                (Ui.Ship.view
-                    { onDock = ShipDockRequested
-                    , onOrbit = ShipOrbitRequested
-                    , onMove = ShipMoveRequested
-                    }
+            [ Ui.viewLabelGroup
+                (Html.div []
+                    [ Html.text "Agent"
+                    , Ui.Button.default
+                        [ Html.Attributes.style "float" "right" ]
+                        { label = Html.text "Logout"
+                        , onClick = Just LogoutClicked
+                        }
+                    ]
                 )
-            |> (::) (Ui.header.three [] [ Html.text "My Ships" ])
-            |> Html.div []
+                [ { label = "Callsign", value = model.agent.callsign }
+                , { label = "Headquarters", value = model.agent.headquarters }
+                , { label = "Credits", value = String.fromInt model.agent.credits }
+                ]
+            , model.myContracts
+                |> Dict.values
+                |> List.map (Ui.Contract.view m.timeZone m.currentTime)
+                |> (::) (Html.h3 [] [ Html.text "My Contracts" ])
+                |> Html.div []
+            , model.myShips
+                |> Dict.values
+                |> List.map
+                    (Ui.Ship.view
+                        { onDock = ShipDockRequested
+                        , onOrbit = ShipOrbitRequested
+                        , onMove = ShipMoveRequested
+                        }
+                    )
+                |> (::) (Ui.header.three [] [ Html.text "My Ships" ])
+                |> Html.div []
+            ]
+        , Ui.column []
+            [ Ui.Galaxy3d.viewSystems
+                { onSystemClick = SystemClicked
+                , onZoom = Zoomed
+                , onZoomPress = ZoomPressed
+                , onRotationPress = RotationPressed
+                }
+                { galaxyViewSize = { width = 800, height = 600 }
+                , zoom = 1
+                , viewRotation = 0
+                , systems =
+                    m.systems
+                        |> cachedData
+                        |> Dict.values
+                }
+            , case m.systems of
+                Uncached ->
+                    Ui.Button.default
+                        []
+                        { label = Html.text "Load Systems"
+                        , onClick = Just SystemsLoadRequested
+                        }
+
+                Loading { current, max } ->
+                    Ui.row []
+                        [ Html.text "Loading Systems..."
+                        , Ui.progress []
+                            { max = toFloat max
+                            , current = toFloat current
+                            }
+                        ]
+
+                Cached _ ->
+                    Ui.row []
+                        [ Html.text "Systems Loaded & Cached"
+                        , Ui.Button.default
+                            []
+                            { label = Html.text "Reload Systems"
+                            , onClick = Just SystemsLoadRequested
+                            }
+                        ]
+            ]
         ]

@@ -76,16 +76,28 @@
     <script>
       const TOKEN_KEY = "token";
       const SETTINGS_KEY = "settings";
+      const SYSTEMS_CACHE_KEY = "systems-cache";
 
       const maybeToken = localStorage.getItem(TOKEN_KEY);
       let maybeSettings = localStorage.getItem(SETTINGS_KEY);
+      let maybeCachedSystems = localStorage.getItem(SYSTEMS_CACHE_KEY);
 
       if (maybeSettings) {
         maybeSettings = JSON.parse(maybeSettings);
       }
 
+      if (maybeCachedSystems) {
+        maybeCachedSystems = JSON.parse(maybeCachedSystems);
+      }
+
       const app = Elm.Main.init({
-        flags: { accessToken: maybeToken, settings: maybeSettings },
+        flags: {
+          accessToken: maybeToken,
+          settings: maybeSettings,
+          cached: {
+            systems: maybeCachedSystems,
+          },
+        },
       });
 
       app.ports.setToken.subscribe(function (token) {
@@ -110,6 +122,10 @@
         const modalEl = document.getElementById(id);
 
         modalEl?.close();
+      });
+
+      app.ports.cacheSystems.subscribe(function (systems) {
+        localStorage.setItem(SYSTEMS_CACHE_KEY, JSON.stringify(systems));
       });
     </script>
   </body>

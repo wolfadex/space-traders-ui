@@ -4,11 +4,12 @@ import Json.Decode
 import Json.Decode.Extra
 import SpaceTrader.Chart exposing (Chart)
 import SpaceTrader.Waypoint.Trait exposing (Trait)
+import SpaceTrader.Waypoint.Type
 
 
 type alias Waypoint =
     { symbol : String
-    , type_ : Type
+    , type_ : SpaceTrader.Waypoint.Type.Type
     , system : String
     , x : Int
     , y : Int
@@ -25,7 +26,7 @@ decode =
         |> Json.Decode.Extra.andMap
             (Json.Decode.field "symbol" Json.Decode.string)
         |> Json.Decode.Extra.andMap
-            (Json.Decode.field "type" deoceType)
+            (Json.Decode.field "type" SpaceTrader.Waypoint.Type.decode)
         |> Json.Decode.Extra.andMap
             (Json.Decode.field "systemSymbol" Json.Decode.string)
         |> Json.Decode.Extra.andMap
@@ -49,54 +50,4 @@ decode =
         |> Json.Decode.Extra.andMap
             (Json.Decode.maybe
                 (Json.Decode.field "chart" SpaceTrader.Chart.decode)
-            )
-
-
-type Type
-    = Planet
-    | GasGiant
-    | Moon
-    | OrbitalStation
-    | JumpGate
-    | AsteroidField
-    | Nebula
-    | DebrisField
-    | GravityWell
-
-
-deoceType : Json.Decode.Decoder Type
-deoceType =
-    Json.Decode.string
-        |> Json.Decode.andThen
-            (\str ->
-                case str of
-                    "PLANET" ->
-                        Json.Decode.succeed Planet
-
-                    "GAS_GIANT" ->
-                        Json.Decode.succeed GasGiant
-
-                    "MOON" ->
-                        Json.Decode.succeed Moon
-
-                    "ORBITAL_STATION" ->
-                        Json.Decode.succeed OrbitalStation
-
-                    "JUMP_GATE" ->
-                        Json.Decode.succeed JumpGate
-
-                    "ASTEROID_FIELD" ->
-                        Json.Decode.succeed AsteroidField
-
-                    "NEBULA" ->
-                        Json.Decode.succeed Nebula
-
-                    "DEBRIS_FIELD" ->
-                        Json.Decode.succeed DebrisField
-
-                    "GRAVITY_WELL" ->
-                        Json.Decode.succeed GravityWell
-
-                    _ ->
-                        Json.Decode.fail ("Unknown waypoint type: " ++ str)
             )
