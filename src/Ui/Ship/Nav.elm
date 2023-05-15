@@ -10,18 +10,29 @@ import Ui.Button
 import Ui.Ship.Nav.Status
 
 
-view : { onDock : msg, onOrbit : msg, onMove : msg } -> SpaceTrader.Ship.Nav.Nav -> Html msg
+view :
+    { onDock : msg
+    , onOrbit : msg
+    , onMove : msg
+    , onSystemClicked : String -> msg
+    }
+    -> SpaceTrader.Ship.Nav.Nav
+    -> Html msg
 view opts nav =
     Ui.column
         []
         (Html.h3 [] [ Html.text "Nav" ]
             :: Ui.viewLabeled
                 { label = "System"
-                , value = nav.system
+                , value =
+                    Ui.Button.link [ Html.Attributes.style "font-weight" "bold" ]
+                        { label = Html.text nav.system
+                        , onClick = opts.onSystemClicked nav.system
+                        }
                 }
             ++ Ui.viewLabeled
                 { label = "Waypoint"
-                , value = nav.waypoint
+                , value = Html.text <| nav.waypoint
                 }
             ++ [ Ui.Ship.Nav.Status.view opts
                     nav.status

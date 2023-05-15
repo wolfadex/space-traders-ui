@@ -11,7 +11,14 @@ import Ui
 import Ui.Ship.Nav
 
 
-view : { onDock : String -> msg, onOrbit : String -> msg, onMove : String -> msg } -> SpaceTrader.Ship.Ship -> Html msg
+view :
+    { onDock : String -> msg
+    , onOrbit : String -> msg
+    , onMove : String -> msg
+    , onSystemClicked : String -> msg
+    }
+    -> SpaceTrader.Ship.Ship
+    -> Html msg
 view opts ship =
     -- { id : String
     -- , registration : Registration
@@ -32,7 +39,7 @@ view opts ship =
         ]
         [ Html.div
             [ Html.Attributes.style "display" "grid" ]
-            (Ui.viewLabeled { label = "Name", value = ship.id })
+            (Ui.viewLabeled { label = "Name", value = Html.text <| ship.id })
         , Html.h3 [] [ Html.text "Fuel" ]
         , Ui.progress []
             { max = toFloat ship.fuel.capacity
@@ -42,6 +49,7 @@ view opts ship =
             { onDock = opts.onDock ship.id
             , onOrbit = opts.onOrbit ship.id
             , onMove = opts.onMove ship.id
+            , onSystemClicked = opts.onSystemClicked
             }
             ship.nav
         ]

@@ -1130,13 +1130,30 @@ viewRegistered m model =
                         }
                     ]
                 )
-                [ { label = "Callsign", value = model.agent.callsign }
-                , { label = "Headquarters", value = model.agent.headquarters }
-                , { label = "Credits", value = String.fromInt model.agent.credits }
+                [ { label = "Callsign", value = Html.text <| model.agent.callsign }
+                , { label = "Headquarters"
+                  , value =
+                        Ui.Button.link []
+                            { label = Html.text model.agent.headquarters
+                            , onClick =
+                                model.agent.headquarters
+                                    |> String.split "-"
+                                    |> List.take 2
+                                    |> String.join "-"
+                                    |> SystemClicked
+                            }
+                  }
+                , { label = "Credits", value = Html.text <| String.fromInt model.agent.credits }
                 ]
             , model.myContracts
                 |> Dict.values
-                |> List.map (Ui.Contract.view m.timeZone m.currentTime)
+                |> List.map
+                    (Ui.Contract.view
+                        { timeZone = m.timeZone
+                        , currentTime = m.currentTime
+                        , onDestinationClicked = SystemClicked
+                        }
+                    )
                 |> (::) (Html.h3 [] [ Html.text "My Contracts" ])
                 |> Html.div []
             , model.myShips
@@ -1146,6 +1163,7 @@ viewRegistered m model =
                         { onDock = ShipDockRequested
                         , onOrbit = ShipOrbitRequested
                         , onMove = ShipMoveRequested
+                        , onSystemClicked = SystemClicked
                         }
                     )
                 |> (::) (Ui.header.three [] [ Html.text "My Ships" ])
@@ -1157,7 +1175,6 @@ viewRegistered m model =
                 , onZoom = Zoomed
                 , onZoomPress = ZoomPressed
                 , onRotationPress = RotationPressed
-                , headquarters = model.agent.headquarters
                 , selected =
                     case model.selectedSystem of
                         Just (Loaded system) ->
@@ -1169,12 +1186,7 @@ viewRegistered m model =
                 { galaxyViewSize = { width = 750, height = 500 }
                 , zoom = m.zoom
                 , viewRotation = m.viewRotation
-                , systems =
-                    -- m.systems
-                    --     |> cachedData
-                    --     |> Dict.values
-                    m.systems3d
-                        |> Dict.toList
+                , systems = Dict.toList m.systems3d
                 }
             , case m.systems of
                 Uncached ->

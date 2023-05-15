@@ -7,7 +7,7 @@ import Ui
 import Ui.Button
 
 
-view : { onDock : msg, onOrbit : msg, onMove : msg } -> SpaceTrader.Ship.Nav.Status.Status -> Html msg
+view : { a | onDock : msg, onOrbit : msg, onMove : msg } -> SpaceTrader.Ship.Nav.Status.Status -> Html msg
 view otps status =
     Ui.Button.multi [] <|
         case status of

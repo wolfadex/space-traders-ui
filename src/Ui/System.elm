@@ -29,7 +29,7 @@ view system =
         , Html.div [] <|
             Ui.viewLabeled
                 { label = "Type"
-                , value = Ui.System.Type.view system.type_
+                , value = Html.text <| Ui.System.Type.view system.type_
                 }
         , Ui.header.four [] [ Html.text "Waypoints:" ]
         , Ui.column [] (List.map Ui.System.Waypoint.view system.waypoints)

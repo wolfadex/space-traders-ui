@@ -105,12 +105,11 @@ viewSystems :
     , onZoom : Value -> msg
     , onZoomPress : Float -> msg
     , onRotationPress : Float -> msg
-    , headquarters : String
     , selected : Maybe String
     }
     -> MinRenderableWorld r
     -> Html msg
-viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, headquarters, selected } world =
+viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, selected } world =
     let
         eyePoint : Point3d Meters coordinates
         eyePoint =
@@ -169,14 +168,6 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, headquarters,
                                 screenRectangle
                                 (Point3d.rotateAround Axis3d.z angle (scalePointInLightYearsToOne point))
 
-                        isHeadquarters : Bool
-                        isHeadquarters =
-                            headquarters
-                                |> String.split "-"
-                                |> List.take 2
-                                |> String.join "-"
-                                |> (==) systemId
-
                         isSelected : Bool
                         isSelected =
                             case selected of
@@ -191,13 +182,13 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, headquarters,
                     in
                     Svg.g
                         [ Svg.Attributes.class <|
-                            if isHeadquarters || isSelected then
+                            if isSelected then
                                 "galactic-label-focus-civ"
 
                             else
                                 "galactic-label"
                         , Svg.Attributes.style <|
-                            if isHeadquarters then
+                            if isSelected then
                                 "opacity: 1;"
 
                             else
@@ -206,9 +197,6 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, headquarters,
                         [ Geometry.Svg.circle2d
                             [ Svg.Attributes.stroke
                                 (if isSelected then
-                                    "rgb(255, 255, 0)"
-
-                                 else if isHeadquarters then
                                     "var(--primary-color)"
 
                                  else

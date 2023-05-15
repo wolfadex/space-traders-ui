@@ -25,6 +25,19 @@ default attr { label, onClick } =
         [ label ]
 
 
+link : List (Html.Attribute msg) -> { label : Html msg, onClick : msg } -> Html msg
+link attr { label, onClick } =
+    Html.button
+        (attr
+            ++ [ Html.Attributes.style "cursor" "pointer"
+               , Html.Attributes.style "border" "none"
+               , Html.Attributes.style "text-decoration" "underline"
+               , Html.Events.onClick onClick
+               ]
+        )
+        [ label ]
+
+
 multi : List (Html.Attribute msg) -> List { label : Html msg, onClick : msg, selected : Bool } -> Html msg
 multi attr btns =
     let

@@ -9,10 +9,11 @@ import SpaceTrader.Faction
 import Time
 import Time.Distance
 import Ui
+import Ui.Button
 
 
-view : Time.Zone -> Time.Posix -> SpaceTrader.Contract.Contract -> Html msg
-view timeZone currentTime contract =
+view : { timeZone : Time.Zone, currentTime : Time.Posix, onDestinationClicked : String -> msg } -> SpaceTrader.Contract.Contract -> Html msg
+view { timeZone, currentTime, onDestinationClicked } contract =
     Html.div
         [ Html.Attributes.style "border" "0.125rem solid"
         , Html.Attributes.style "border-radius" "0.25rem"
@@ -63,7 +64,15 @@ view timeZone currentTime contract =
                                     , important good.tradeSymbol
                                     , Html.br [] []
                                     , Html.text "and deliver them to "
-                                    , important good.destinationSymbol
+                                    , Ui.Button.link [ Html.Attributes.style "font-weight" "bold" ]
+                                        { label = Html.text good.destinationSymbol
+                                        , onClick =
+                                            good.destinationSymbol
+                                                |> String.split "-"
+                                                |> List.take 2
+                                                |> String.join "-"
+                                                |> onDestinationClicked
+                                        }
                                     ]
                             )
                             contract.terms.deliver

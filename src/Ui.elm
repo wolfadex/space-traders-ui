@@ -135,7 +135,7 @@ monthToString month =
             "December"
 
 
-viewLabelGroup : Html msg -> List { label : String, value : String } -> Html msg
+viewLabelGroup : Html msg -> List { label : String, value : Html msg } -> Html msg
 viewLabelGroup title children =
     Html.div
         [ Html.Attributes.style "display" "grid"
@@ -146,7 +146,7 @@ viewLabelGroup title children =
         )
 
 
-viewLabeled : { label : String, value : String } -> List (Html msg)
+viewLabeled : { label : String, value : Html msg } -> List (Html msg)
 viewLabeled options =
     [ Html.span
         [ Html.Attributes.style "grid-column" "1"
@@ -170,7 +170,7 @@ viewLabeled options =
         , Html.Attributes.style "border-bottom-right-radius" "0.25rem"
         , Html.Attributes.style "border-left" "none"
         ]
-        [ Html.text options.value ]
+        [ options.value ]
     ]
 
 
