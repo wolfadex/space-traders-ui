@@ -1,7 +1,10 @@
 module Ui.Galaxy3d exposing
-    ( MinRenderableWorld
-    , getGalaxyViewport
+    ( LightYear
       -- , viewSolarSystem
+    , MinRenderableWorld
+    , ScaledViewPoint
+    , getGalaxyViewport
+    , renderSystem
     , viewSystems
     )
 
@@ -72,7 +75,7 @@ type alias MinRenderableWorld r =
         | galaxyViewSize : { width : Float, height : Float }
         , zoom : Float
         , viewRotation : Float
-        , systems : List SpaceTrader.System.System
+        , systems : List ( String, ( Point3d Meters LightYear, Scene3d.Entity ScaledViewPoint ) )
 
         -- , civilizationPopulations : Logic.Component.Set (Dict EntityID Population)
         -- , planetTypes : Logic.Component.Set CelestialBodyForm
@@ -109,23 +112,6 @@ viewSystems :
     -> Html msg
 viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, headquarters, selected } world =
     let
-        solarSystemPoints : List ( String, Point3d Meters LightYear )
-        solarSystemPoints =
-            world.systems
-                |> List.map
-                    (\system ->
-                        ( system.id
-                        , Point3d.xyz
-                            (system.x |> toFloat |> Length.lightYears)
-                            (system.y |> toFloat |> Length.lightYears)
-                            (Length.lightYears 0)
-                        )
-                    )
-
-        solarSystems : List (Scene3d.Entity ScaledViewPoint)
-        solarSystems =
-            List.map (\( _, point ) -> renderSystem point) solarSystemPoints
-
         eyePoint : Point3d Meters coordinates
         eyePoint =
             Point3d.rotateAround Axis3d.z
@@ -166,25 +152,23 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, headquarters,
         angle =
             Angle.degrees 0.0
 
-        -- Take all vertices of the logo shape, rotate them the same amount as
-        -- the logo itself and then project them into 2D screen space
-        vertices2d : List ( String, Point2d.Point2d Pixels.Pixels ScaledViewPoint )
-        vertices2d =
-            List.map
-                (Tuple.mapSecond
-                    (\point ->
-                        Point3d.Projection.toScreenSpace camera
-                            screenRectangle
-                            (Point3d.rotateAround Axis3d.z angle (scalePointInLightYearsToOne point))
-                    )
-                )
-                solarSystemPoints
+        solarSystems : List (Scene3d.Entity ScaledViewPoint)
+        solarSystems =
+            List.map (\( _, ( _, sys ) ) -> sys) world.systems
 
         svgLabels : List (Svg.Svg msg)
         svgLabels =
             List.map
-                (\( systemId, vertex ) ->
+                (\( systemId, ( point, _ ) ) ->
                     let
+                        -- Take all vertices of the logo shape, rotate them the same amount as
+                        -- the logo itself and then project them into 2D screen space
+                        vertex : Point2d.Point2d Pixels.Pixels ScaledViewPoint
+                        vertex =
+                            Point3d.Projection.toScreenSpace camera
+                                screenRectangle
+                                (Point3d.rotateAround Axis3d.z angle (scalePointInLightYearsToOne point))
+
                         isHeadquarters : Bool
                         isHeadquarters =
                             headquarters
@@ -262,7 +246,7 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, headquarters,
                             )
                         ]
                 )
-                vertices2d
+                world.systems
 
         -- Used for converting from coordinates relative to the bottom-left
         -- corner of the 2D drawing into coordinates relative to the top-left

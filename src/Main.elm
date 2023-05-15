@@ -13,9 +13,10 @@ import Html.Events
 import Http
 import Json.Decode
 import Json.Encode
-import Length
+import Length exposing (Meters)
 import List.NonEmpty
-import Point3d
+import Point3d exposing (Point3d)
+import Scene3d
 import SpaceTrader.Agent
 import SpaceTrader.Api
 import SpaceTrader.Contract
@@ -31,7 +32,7 @@ import Ui.Button
 import Ui.Contract
 import Ui.Form
 import Ui.Form.Field
-import Ui.Galaxy3d
+import Ui.Galaxy3d exposing (LightYear, ScaledViewPoint)
 import Ui.Modal
 import Ui.Select
 import Ui.Ship
@@ -87,6 +88,7 @@ type alias Model =
     , spaceFocus : SpaceFocus
     , zoom : Float
     , viewRotation : Float
+    , systems3d : Dict String ( Point3d Meters LightYear, Scene3d.Entity ScaledViewPoint )
     }
 
 
@@ -132,11 +134,14 @@ init flags =
                         , loginServerError = Nothing
                         }
               , systems = Uncached
+
+              -- game stuffs
               , spaceFocus = FGalaxy
               , viewRotation = 0
 
               -- a nice default
               , zoom = 6621539845261203 * 10000
+              , systems3d = Dict.empty
               }
             , Task.map2 CurrentTimeAndZoneReceived
                 Time.now
@@ -164,6 +169,8 @@ init flags =
                         , loginServerError = Nothing
                         }
               , systems = Cached cached.systems
+
+              -- game stuffs
               , spaceFocus = FGalaxy
               , zoom =
                     cached.systems
@@ -185,6 +192,21 @@ init flags =
                         |> Maybe.map (\a -> a / 2)
                         |> Maybe.withDefault (25000 + (100 * 9460730000000000))
               , viewRotation = 0
+              , systems3d =
+                    cached.systems
+                        |> Dict.map
+                            (\_ system ->
+                                let
+                                    point =
+                                        Point3d.xyz
+                                            (system.x |> toFloat |> Length.lightYears)
+                                            (system.y |> toFloat |> Length.lightYears)
+                                            (Length.lightYears 0)
+                                in
+                                ( point
+                                , Ui.Galaxy3d.renderSystem point
+                                )
+                            )
               }
             , Cmd.batch
                 [ case accessToken of
@@ -685,7 +707,28 @@ update msg model =
                                 (cachedData model.systems)
                                 systems
                     in
-                    ( { model | systems = Cached updatedSystems }
+                    ( { model
+                        | systems = Cached updatedSystems
+                        , systems3d =
+                            List.foldl
+                                (\system dict ->
+                                    Dict.insert system.id
+                                        (let
+                                            point =
+                                                Point3d.xyz
+                                                    (system.x |> toFloat |> Length.lightYears)
+                                                    (system.y |> toFloat |> Length.lightYears)
+                                                    (Length.lightYears 0)
+                                         in
+                                         ( point
+                                         , Ui.Galaxy3d.renderSystem point
+                                         )
+                                        )
+                                        dict
+                                )
+                                model.systems3d
+                                systems
+                      }
                     , updatedSystems
                         |> Dict.values
                         |> Json.Encode.list SpaceTrader.System.encode
@@ -702,7 +745,28 @@ update msg model =
                                 (cachedData model.systems)
                                 data.data
                     in
-                    ( { model | systems = Caching { data = updatedSystems, current = data.current, max = data.max } }
+                    ( { model
+                        | systems = Caching { data = updatedSystems, current = data.current, max = data.max }
+                        , systems3d =
+                            List.foldl
+                                (\system dict ->
+                                    Dict.insert system.id
+                                        (let
+                                            point =
+                                                Point3d.xyz
+                                                    (system.x |> toFloat |> Length.lightYears)
+                                                    (system.y |> toFloat |> Length.lightYears)
+                                                    (Length.lightYears 0)
+                                         in
+                                         ( point
+                                         , Ui.Galaxy3d.renderSystem point
+                                         )
+                                        )
+                                        dict
+                                )
+                                model.systems3d
+                                data.data
+                      }
                     , Cmd.batch
                         [ SpaceTrader.Api.getAllSystemsUpdate SystemsLongRequestMsg data
                         , updatedSystems
@@ -750,7 +814,23 @@ update msg model =
             Debug.todo (Debug.toString err)
 
         SystemResponded (Ok system) ->
-            ( { model | systems = Cached (Dict.insert system.id system (cachedData model.systems)) }
+            ( { model
+                | systems = Cached (Dict.insert system.id system (cachedData model.systems))
+                , systems3d =
+                    Dict.insert system.id
+                        (let
+                            point =
+                                Point3d.xyz
+                                    (system.x |> toFloat |> Length.lightYears)
+                                    (system.y |> toFloat |> Length.lightYears)
+                                    (Length.lightYears 0)
+                         in
+                         ( point
+                         , Ui.Galaxy3d.renderSystem point
+                         )
+                        )
+                        model.systems3d
+              }
             , Cmd.none
             )
 
@@ -1090,9 +1170,11 @@ viewRegistered m model =
                 , zoom = m.zoom
                 , viewRotation = m.viewRotation
                 , systems =
-                    m.systems
-                        |> cachedData
-                        |> Dict.values
+                    -- m.systems
+                    --     |> cachedData
+                    --     |> Dict.values
+                    m.systems3d
+                        |> Dict.toList
                 }
             , case m.systems of
                 Uncached ->
