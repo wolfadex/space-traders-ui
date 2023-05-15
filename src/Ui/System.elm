@@ -3,14 +3,15 @@ module Ui.System exposing (..)
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
+import SpaceTrader.Ship
 import SpaceTrader.System
 import Ui
 import Ui.System.Type
 import Ui.System.Waypoint
 
 
-view : SpaceTrader.System.System -> Html msg
-view system =
+view : { myShips : List SpaceTrader.Ship.Ship } -> SpaceTrader.System.System -> Html msg
+view opts system =
     -- { id : String
     -- , sector : String
     -- , type_ : SpaceTrader.System.Type.Type
@@ -32,5 +33,9 @@ view system =
                 , value = Html.text <| Ui.System.Type.view system.type_
                 }
         , Ui.header.four [] [ Html.text "Waypoints:" ]
-        , Ui.column [] (List.map Ui.System.Waypoint.view system.waypoints)
+        , Ui.column [ Ui.gap 0.5 ]
+            (List.map
+                (Ui.System.Waypoint.view opts)
+                system.waypoints
+            )
         ]

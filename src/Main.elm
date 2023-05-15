@@ -913,6 +913,9 @@ view model =
         [ Ui.column
             [ Html.Attributes.class model.theme.class
             , Html.Attributes.style "height" "100vh"
+            , Html.Attributes.style "overflow-y" "auto"
+            , Html.Attributes.style "padding-right" "1rem"
+            , Html.Attributes.style "padding-bottom" "1rem"
             ]
             [ Ui.header.one
                 [ Ui.justify.center
@@ -1225,6 +1228,8 @@ viewRegistered m model =
                     Html.text ("Failed to load system: " ++ error)
 
                 Just (Loaded system) ->
-                    Ui.System.view system
+                    Ui.System.view
+                        { myShips = Dict.values model.myShips }
+                        system
             ]
         ]
