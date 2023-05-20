@@ -553,7 +553,7 @@ view shared model =
                     , Ui.Button.default
                         [ Html.Attributes.style "float" "right" ]
                         { label = Html.text "Logout"
-                        , onClick = Nothing -- Just LogoutClicked
+                        , onClick = Just LogoutClicked
                         }
                     ]
                 )
