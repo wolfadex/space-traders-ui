@@ -592,23 +592,22 @@ navLink opts focused =
 
 view : Shared.Model -> Model -> Html Msg
 view shared model =
-    Html.a
+    Html.div
         [ Html.Attributes.class shared.theme.class
         , Html.Attributes.style "display" "grid"
         , Html.Attributes.style "height" "100vh"
         , Html.Attributes.style "width" "100vw"
         , Html.Attributes.style "grid-template-columns" "15rem 1fr"
-
-        -- , Html.Attributes.style "grid-template-rows" "10rem 1fr"
         , Html.Attributes.style "grid-template-areas" """
             "sidebar content"
         """
         ]
         [ Html.div
             [ Html.Attributes.class "sidebar"
+            , Html.Attributes.style "display" "flex"
+            , Html.Attributes.style "flex-direction" "column"
+            , Html.Attributes.style "align-content" "start"
             , Html.Attributes.style "background-color" "var(--blue-dark)"
-
-            -- Html.Attributes.style "align-contents" "start"
             ]
             [ Ui.header.one
                 [ Ui.justify.center
@@ -632,25 +631,27 @@ view shared model =
                 , route = Route.Game (Just Route.Waypoints)
                 }
                 (model.tab == Route.Waypoints)
-            , Ui.Button.default []
-                { label = Html.text "⚙️"
-                , onClick = Nothing -- Just OpenSettingsClicked
+
+            -- , Ui.Button.default []
+            --     { label = Html.text "⚙️"
+            --     , onClick = Nothing -- Just OpenSettingsClicked
+            --     }
+            , Html.div [ Html.Attributes.style "height" "100%" ] []
+            , Ui.Button.default
+                [ Html.Attributes.style "float" "right"
+                , Html.Attributes.style "color" "var(--blue-light)"
+                , Html.Attributes.style "margin" "0 1rem 1rem 1rem"
+                ]
+                { label = Html.text "Logout"
+                , onClick = Just LogoutClicked
                 }
             ]
         , Html.div
-            [ Html.Attributes.class "sidebar"
-
-            -- Html.Attributes.style "justify-self" "start"
-            -- , Html.Attributes.style "padding" "1rem"
+            [ Html.Attributes.class "content"
             ]
             [ Ui.viewLabelGroup
                 (Html.div []
                     [ Html.text "Agent"
-                    , Ui.Button.default
-                        [ Html.Attributes.style "float" "right" ]
-                        { label = Html.text "Logout"
-                        , onClick = Just LogoutClicked
-                        }
                     ]
                 )
                 [ { label = "Callsign"
