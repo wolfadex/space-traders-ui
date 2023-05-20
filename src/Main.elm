@@ -117,7 +117,7 @@ init flags url navKey =
                     , Cmd.none
                     )
 
-                Route.Game ->
+                Route.Game tab ->
                     case initialState.accessToken of
                         Nothing ->
                             ( Login <| Page.Login.init { systems = initialState.cachedSystemd }
@@ -129,6 +129,7 @@ init flags url navKey =
                                 { accessToken = accessToken
                                 , agent = Nothing
                                 , systems = initialState.cachedSystemd
+                                , tab = tab
                                 }
                                 |> Tuple.mapBoth Game (Cmd.map GameMsg)
 
@@ -196,7 +197,15 @@ decodeCached =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Sub.map SharedMsg (Shared.subscriptions model.shared)
+    Sub.batch
+        [ Sub.map SharedMsg (Shared.subscriptions model.shared)
+        , case model.page of
+            Login pageModel ->
+                Sub.map LoginMsg (Page.Login.subscriptions pageModel)
+
+            Game pageModel ->
+                Sub.none
+        ]
 
 
 type Msg
@@ -253,7 +262,7 @@ update msg model =
                     -- TODO: Should we redirect here?
                     ( model, Cmd.none )
 
-                Route.Game ->
+                Route.Game tab ->
                     case model.page of
                         Game _ ->
                             ( model, Cmd.none )
@@ -265,13 +274,13 @@ update msg model =
                                         { accessToken = accessToken
                                         , agent = Nothing
                                         , systems = loginModel.systems
+                                        , tab = tab
                                         }
                                         |> Tuple.mapBoth
                                             (\gameModel -> { model | page = Game gameModel })
                                             (\cmd ->
                                                 Cmd.batch
                                                     [ Cmd.map GameMsg cmd
-                                                    , Browser.Navigation.replaceUrl model.navKey (Route.toUrlString Route.Game)
                                                     , Port.setToken accessToken
                                                     ]
                                             )
@@ -291,15 +300,11 @@ update msg model =
                         { accessToken = accessToken
                         , agent = agent
                         , systems = systems
+                        , tab = Nothing
                         }
                         |> Tuple.mapBoth
                             (\gameModel -> { model | page = Game gameModel })
-                            (\cmd ->
-                                Cmd.batch
-                                    [ Cmd.map GameMsg cmd
-                                    , Browser.Navigation.replaceUrl model.navKey (Route.toUrlString Route.Game)
-                                    ]
-                            )
+                            (Cmd.map GameMsg)
 
                 Game _ ->
                     ( model, Cmd.none )
@@ -345,24 +350,17 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "SpaceTrader"
     , body =
-        [ Shared.viewHeader model.shared
-            |> Html.map SharedMsg
-        , Ui.column
-            [ Html.Attributes.class model.shared.theme.class
-            , Html.Attributes.style "height" "100vh"
-            , Html.Attributes.style "overflow-y" "auto"
-            , Html.Attributes.style "padding-right" "1rem"
-            , Html.Attributes.style "padding-bottom" "1rem"
-            ]
-            [ case model.page of
-                Login m ->
-                    Page.Login.view m
-                        |> Html.map LoginMsg
+        [ --     Shared.viewHeader model.shared
+          --     |> Html.map SharedMsg
+          -- ,
+          case model.page of
+            Login m ->
+                Page.Login.view m
+                    |> Html.map LoginMsg
 
-                Game m ->
-                    Page.Game.view model.shared m
-                        |> Html.map GameMsg
-            ]
+            Game m ->
+                Page.Game.view model.shared m
+                    |> Html.map GameMsg
         ]
             ++ (Shared.viewModals model.shared
                     |> List.map (Html.map SharedMsg)

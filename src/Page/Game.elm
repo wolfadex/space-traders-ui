@@ -1,5 +1,6 @@
 module Page.Game exposing (..)
 
+import Browser.Navigation
 import Cacheable exposing (Cacheable(..))
 import Color
 import Dict exposing (Dict)
@@ -19,7 +20,7 @@ import List.NonEmpty
 import Point3d exposing (Point3d)
 import Port
 import RemoteData exposing (RemoteData(..))
-import Route
+import Route exposing (Route)
 import Scene3d
 import Scene3d.Material
 import Shared
@@ -51,6 +52,7 @@ import Util.Function
 
 type alias Model =
     { accessToken : String
+    , tab : Route.GameTab
     , agent : RemoteData SpaceTrader.Agent.Agent
     , waypoints : Dict String SpaceTrader.Waypoint.Waypoint
     , myContracts : Dict String SpaceTrader.Contract.Contract
@@ -70,6 +72,7 @@ type alias Model =
 
 init :
     { accessToken : String
+    , tab : Maybe Route.GameTab
     , agent : Maybe SpaceTrader.Agent.Agent
     , systems : Maybe (Dict String SpaceTrader.System.System)
     }
@@ -80,6 +83,7 @@ init opts =
             initSystems opts.systems
     in
     ( { accessToken = opts.accessToken
+      , tab = Maybe.withDefault Route.Ships opts.tab
       , agent =
             case opts.agent of
                 Nothing ->
@@ -124,6 +128,13 @@ init opts =
 
             Just _ ->
                 Cmd.none
+
+        -- TODO
+        -- , case opts.tab of
+        --     Nothing ->
+        --         Browser.Navigation.replaceUrl (Route.toUrlString (Route.Game (Just Route.Ships)))
+        --     Just _ ->
+        --         Cmd.none
         ]
     )
 
@@ -182,12 +193,13 @@ initSystems maybeSystems =
 
 type Msg
     = LogoutClicked
-    | SystemClicked String
     | Zoomed Json.Encode.Value
     | ZoomPressed Float
     | RotationPressed Float
-    | AgentResponded (Result Http.Error SpaceTrader.Agent.Agent)
+    | SystemClicked String
       -- game
+    | TabChangeeRequested Route.Route
+    | AgentResponded (Result Http.Error SpaceTrader.Agent.Agent)
     | MyContractsResponded (Result Http.Error (List SpaceTrader.Contract.Contract))
     | MyShipsResponded (Result Http.Error (List SpaceTrader.Ship.Ship))
     | WaypointResponded String (Result Http.Error SpaceTrader.Waypoint.Waypoint)
@@ -227,6 +239,9 @@ update ({ model } as opts) =
                                 |> RemoteData.fromResult
                     }
                         |> Update.succeeed
+
+                TabChangeeRequested route ->
+                    Debug.todo ""
 
                 WaypointResponded _ (Err err) ->
                     Debug.todo (Debug.toString err)
@@ -540,12 +555,79 @@ scalePointInLightYearsToOne point =
         }
 
 
+navLink : { label : String, route : Route } -> Bool -> Html Msg
+navLink opts focused =
+    Html.button
+        [ Html.Attributes.classList
+            [ ( "nav-button", True )
+            , ( "nav-button-focused", focused )
+            ]
+        , Ui.grid
+        ]
+        [ Html.div [ Html.Attributes.class "nav-button-top", Ui.justify.end ] []
+        , Html.div
+            [ Html.Attributes.class "nav-button-middle"
+            , Ui.grid
+            ]
+            [ Html.span
+                [ Html.Attributes.style "font-size" "1rem" ]
+                [ Html.text opts.label ]
+            ]
+        , Html.div [ Html.Attributes.class "nav-button-bottom", Ui.justify.end ] []
+        ]
+
+
 view : Shared.Model -> Model -> Html Msg
 view shared model =
-    Ui.row []
-        [ Ui.column
-            [ Html.Attributes.style "justify-self" "start"
-            , Html.Attributes.style "padding" "1rem"
+    Html.a
+        [ Html.Attributes.class shared.theme.class
+        , Html.Attributes.style "display" "grid"
+        , Html.Attributes.style "height" "100vh"
+        , Html.Attributes.style "width" "100vw"
+        , Html.Attributes.style "grid-template-columns" "15rem 1fr"
+
+        -- , Html.Attributes.style "grid-template-rows" "10rem 1fr"
+        , Html.Attributes.style "grid-template-areas" """
+            "sidebar content"
+        """
+        ]
+        [ Html.div
+            [ Html.Attributes.class "sidebar"
+            , Html.Attributes.style "background-color" "var(--blue)"
+
+            -- Html.Attributes.style "align-contents" "start"
+            ]
+            [ Ui.header.one
+                [ Ui.justify.center
+                , Html.Attributes.style "padding" "1rem"
+                , Html.Attributes.style "background-color" "var(--blue)"
+                ]
+                [ Html.text "SpaceTrader" ]
+            , navLink
+                { label = "Ships"
+                , route = Route.Game (Just Route.Ships)
+                }
+                True
+            , navLink
+                { label = "Contracts"
+                , route = Route.Game (Just Route.Contracts)
+                }
+                False
+            , navLink
+                { label = "Waypoints"
+                , route = Route.Game (Just Route.Waypoints)
+                }
+                False
+            , Ui.Button.default []
+                { label = Html.text "⚙️"
+                , onClick = Nothing -- Just OpenSettingsClicked
+                }
+            ]
+        , Html.div
+            [ Html.Attributes.class "sidebar"
+
+            -- Html.Attributes.style "justify-self" "start"
+            -- , Html.Attributes.style "padding" "1rem"
             ]
             [ Ui.viewLabelGroup
                 (Html.div []
@@ -615,64 +697,59 @@ view shared model =
                 |> (::) (Ui.header.three [] [ Html.text "My Ships" ])
                 |> Html.div []
             ]
-        , Ui.column []
-            [ Ui.Galaxy3d.viewSystems
-                { onSystemClick = SystemClicked
-                , onZoom = Zoomed
-                , onZoomPress = ZoomPressed
-                , onRotationPress = RotationPressed
-                , selected =
-                    case model.selectedSystem of
-                        Just (Loaded system) ->
-                            Just system.id
 
-                        _ ->
-                            Nothing
-                }
-                { galaxyViewSize = { width = 750, height = 500 }
-                , zoom = model.zoom
-                , viewRotation = model.viewRotation
-                , systems = Dict.toList model.systems3d
-                }
-            , case model.systems of
-                Uncached ->
-                    Ui.Button.default
-                        []
-                        { label = Html.text "Load Systems"
-                        , onClick = Just SystemsLoadRequested
-                        }
-
-                Caching { current, max } ->
-                    Ui.row []
-                        [ Html.text "Loading Systems..."
-                        , Ui.progress []
-                            { max = toFloat max
-                            , current = toFloat current
-                            }
-                        ]
-
-                Cached _ ->
-                    Ui.row []
-                        [ Html.text "Systems Loaded & Cached"
-                        , Ui.Button.default
-                            []
-                            { label = Html.text "Reload Systems"
-                            , onClick = Just SystemsLoadRequested
-                            }
-                        ]
-            , case model.selectedSystem of
-                Nothing ->
-                    Html.text ""
-
-                Just Loading ->
-                    Html.text "Loading System..."
-
-                Just (Failure error) ->
-                    Html.text ("Failed to load system: " ++ error)
-
-                Just (Loaded system) ->
-                    Ui.System.view
-                        { myShips = Dict.values model.myShips }
-                        system
-            ]
+        -- , Ui.column []
+        --     [ Ui.Galaxy3d.viewSystems
+        --         { onSystemClick = SystemClicked
+        --         , onZoom = Zoomed
+        --         , onZoomPress = ZoomPressed
+        --         , onRotationPress = RotationPressed
+        --         , selected =
+        --             case model.selectedSystem of
+        --                 Just (Loaded system) ->
+        --                     Just system.id
+        --                 _ ->
+        --                     Nothing
+        --         }
+        --         { galaxyViewSize = { width = 750, height = 500 }
+        --         , zoom = model.zoom
+        --         , viewRotation = model.viewRotation
+        --         , systems = Dict.toList model.systems3d
+        --         }
+        --     , case model.systems of
+        --         Uncached ->
+        --             Ui.Button.default
+        --                 []
+        --                 { label = Html.text "Load Systems"
+        --                 , onClick = Just SystemsLoadRequested
+        --                 }
+        --         Caching { current, max } ->
+        --             Ui.row []
+        --                 [ Html.text "Loading Systems..."
+        --                 , Ui.progress []
+        --                     { max = toFloat max
+        --                     , current = toFloat current
+        --                     }
+        --                 ]
+        --         Cached _ ->
+        --             Ui.row []
+        --                 [ Html.text "Systems Loaded & Cached"
+        --                 , Ui.Button.default
+        --                     []
+        --                     { label = Html.text "Reload Systems"
+        --                     , onClick = Just SystemsLoadRequested
+        --                     }
+        --                 ]
+        --     , case model.selectedSystem of
+        --         Nothing ->
+        --             Html.text ""
+        --         Just Loading ->
+        --             Html.text "Loading System..."
+        --         Just (Failure error) ->
+        --             Html.text ("Failed to load system: " ++ error)
+        --         Just (Loaded system) ->
+        --             Ui.System.view
+        --                 { myShips = Dict.values model.myShips }
+        --                 system
+        --     ]
         ]

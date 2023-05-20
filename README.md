@@ -5,13 +5,10 @@ A UI for [SpaceTraders](https://spacetraders.io/), built with [Elm](https://elm-
 ## Current Features
 
 - auth
-- ui color themes
 - view your Agent
 - view your Contracts
 - view (parts of) your ships
   - move ships between being docked and being in orbit
 - view systems, in 3D!
 
-<img src="./Screenshot 2023-05-14 at 3.26.16 PM.png" />
-
-<img src="./Screenshot 2023-05-14 at 4.04.40 PM.png" />
+<img src="./Screenshot 2023-05-20 at 5.09.40 PM.png"/>

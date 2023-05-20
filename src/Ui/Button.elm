@@ -10,11 +10,7 @@ default : List (Html.Attribute msg) -> { label : Html msg, onClick : Maybe msg }
 default attr { label, onClick } =
     Html.button
         (attr
-            ++ [ Html.Attributes.style "cursor" "pointer"
-               , Html.Attributes.style "border-radius" "3rem"
-               , Html.Attributes.style "border-style" "solid"
-               , Html.Attributes.style "padding" "0.5rem 1.5rem"
-               , case onClick of
+            ++ [ case onClick of
                     Nothing ->
                         Html.Attributes.disabled True
 
@@ -25,11 +21,28 @@ default attr { label, onClick } =
         [ label ]
 
 
+primary : List (Html.Attribute msg) -> { label : Html msg, onClick : Maybe msg } -> Html msg
+primary attr { label, onClick } =
+    Html.button
+        (attr
+            ++ [ case onClick of
+                    Nothing ->
+                        Html.Attributes.disabled True
+
+                    Just msg ->
+                        Html.Events.onClick msg
+               , Html.Attributes.style "background-color" "var(--blue-light)"
+               , Html.Attributes.style "border-color" "var(--blur-dar)"
+               ]
+        )
+        [ label ]
+
+
 link : List (Html.Attribute msg) -> { label : Html msg, onClick : Maybe msg } -> Html msg
 link attr { label, onClick } =
     Html.button
         (attr
-            ++ [ Html.Attributes.style "cursor" "pointer"
+            ++ [ Html.Attributes.class "button-link"
                , Html.Attributes.style "border" "none"
                , Html.Attributes.style "text-decoration" "underline"
                , case onClick of
@@ -55,8 +68,7 @@ multi attr btns =
             (\i { label, onClick, selected } ->
                 Html.button
                     (attr
-                        ++ [ Html.Attributes.style "cursor" "pointer"
-                           , Html.Attributes.style "grid-column" (String.fromInt (i + 1))
+                        ++ [ Html.Attributes.style "grid-column" (String.fromInt (i + 1))
 
                            --    , Html.Attributes.style "border-radius" "3rem"
                            , Html.Attributes.style "border-top-left-radius" <|

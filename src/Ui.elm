@@ -29,6 +29,11 @@ row attrs =
         )
 
 
+grid : Html.Attribute msg
+grid =
+    Html.Attributes.style "display" "grid"
+
+
 
 -- width : { fill : Html.Attribute msg }
 -- width =

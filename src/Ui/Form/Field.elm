@@ -69,12 +69,8 @@ submit : { label : String, disabled : Bool } -> List (Html msg)
 submit { label, disabled } =
     [ Html.button
         [ Html.Attributes.style "grid-column" "2"
-        , Html.Attributes.style "cursor" "pointer"
-        , Html.Attributes.style "border-radius" "3rem"
-        , Html.Attributes.style "border-style" "solid"
-        , Html.Attributes.style "padding" "0.5rem 1.5rem"
-        , Html.Attributes.style "background-color" "var(--primary-color)"
-        , Html.Attributes.style "color" "var(--secondary-color)"
+        , Html.Attributes.style "border-color" "var(--blue-dark)"
+        , Html.Attributes.style "background-color" "var(--blue-light)"
         , Html.Attributes.disabled disabled
         ]
         [ Html.text label ]

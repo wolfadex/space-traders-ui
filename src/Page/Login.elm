@@ -1,5 +1,6 @@
 module Page.Login exposing (..)
 
+import Browser.Events
 import Cacheable exposing (Cacheable(..))
 import Dict exposing (Dict)
 import Form
@@ -32,6 +33,7 @@ type alias Model =
     , submittingLogin : Bool
     , loginServerError : Maybe String
     , systems : Maybe (Dict String SpaceTrader.System.System)
+    , backgroundRotation : Float
     }
 
 
@@ -44,6 +46,7 @@ init opts =
     , submittingLogin = False
     , loginServerError = Nothing
     , systems = opts.systems
+    , backgroundRotation = 0
     }
 
 
@@ -52,8 +55,14 @@ withSubmitting model =
     { model | submittingRegistration = True }
 
 
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Browser.Events.onAnimationFrameDelta Tick
+
+
 type Msg
-    = RegistrationFormMsg (Form.Msg Msg)
+    = Tick Float
+    | RegistrationFormMsg (Form.Msg Msg)
     | RegistrationFormSubmitted (Ui.Form.Submission String RegisterForm)
     | RegistrationResponded
         (Result
@@ -82,6 +91,10 @@ update ({ model } as opts) =
     Update.mapModel opts.toModel <|
         Update.mapMsg opts.toMsg <|
             case opts.msg of
+                Tick detlaMs ->
+                    { model | backgroundRotation = model.backgroundRotation + detlaMs }
+                        |> Update.succeeed
+
                 -- registration
                 RegistrationFormMsg msg_ ->
                     let
@@ -177,47 +190,69 @@ update ({ model } as opts) =
                             )
 
 
-
--- ( initRegistered
---     { accessToken = accessToken
---     , agent = agent
---     }
---     model
---     , Port.setToken accessToken
--- )
-
-
 view : Model -> Html Msg
 view model =
-    Ui.row
-        [ Ui.justify.center
-        , Ui.gap 1
+    Html.div
+        [ Ui.grid
+        , Html.Attributes.style "align-content" "start"
+        , Html.Attributes.style "height" "100vh"
+        , Html.Attributes.style "width" "100vw"
+        , Html.Attributes.class "sunburst"
+        , Html.Attributes.style "background" ("""repeating-conic-gradient(
+            from """ ++ String.fromFloat (model.backgroundRotation / 100) ++ """deg at 50% 102%,
+            transparent 0deg 5deg,
+            transparent 27deg 32deg,
+            var(--blue-light) 35deg 37deg,
+            transparent 40deg 45deg,
+            transparent 47deg 50deg
+        ), repeating-conic-gradient(
+            from """ ++ String.fromFloat (model.backgroundRotation / 200) ++ """deg at 50% 102%,
+            var(--blue-dark) 0deg 5deg,
+            var(--blue) 27deg 32deg,
+            var(--blue-light) 35deg 37deg,
+            var(--blue) 40deg 45deg,
+            var(--blue-dark) 47deg 50deg
+        )""")
         ]
-        [ Ui.Form.view
-            { submitting = model.submittingRegistration
-            , title = "Register"
-            , model = model.registerFormModel
-            , toMsg = RegistrationFormMsg
-            , id = "registration-form"
-            , onSubmit = RegistrationFormSubmitted
-            , serverSideErrors =
-                Maybe.map
-                    (\registrationServerError ->
-                        Dict.singleton "callsign" [ registrationServerError ]
-                    )
-                    model.registrationServerError
-            }
-            registrationForm
-        , Ui.Form.view
-            { submitting = model.submittingLogin
-            , title = "Login"
-            , model = model.loginFormModel
-            , toMsg = LoginFormMsg
-            , id = "login-form"
-            , onSubmit = LoginFormSubmitted
-            , serverSideErrors = Nothing
-            }
-            loginForm
+        [ Html.div
+            [ Html.Attributes.style "color" "var(--red)"
+            , Html.Attributes.style "font-size" "8rem"
+            , Html.Attributes.style "font-weight" "bold"
+            , Html.Attributes.style "text-align" "center"
+            , Html.Attributes.style "-webkit-text-stroke" "0.3rem var(--yellow)"
+            ]
+            [ Html.text "Space Trader" ]
+        , Html.div
+            [ Ui.grid
+            , Ui.gap 1
+            , Ui.justify.center
+            ]
+            [ Ui.Form.view
+                { submitting = model.submittingRegistration
+                , title = "Register"
+                , model = model.registerFormModel
+                , toMsg = RegistrationFormMsg
+                , id = "registration-form"
+                , onSubmit = RegistrationFormSubmitted
+                , serverSideErrors =
+                    Maybe.map
+                        (\registrationServerError ->
+                            Dict.singleton "callsign" [ registrationServerError ]
+                        )
+                        model.registrationServerError
+                }
+                registrationForm
+            , Ui.Form.view
+                { submitting = model.submittingLogin
+                , title = "Login"
+                , model = model.loginFormModel
+                , toMsg = LoginFormMsg
+                , id = "login-form"
+                , onSubmit = LoginFormSubmitted
+                , serverSideErrors = Nothing
+                }
+                loginForm
+            ]
         ]
 
 
