@@ -4,14 +4,14 @@
   "scripts": {
     "dev": "run-pty run-pty.json",
     "dev:elm": "elm-watch hot",
-    "dev:server": "http-server",
+    "dev:server": "web-dev-server --root-dir public --app-index public/index.html --open",
     "review": "elm-review --watch --fix"
   },
   "devDependencies": {
+    "@web/dev-server": "^0.2.1",
     "elm-review": "^2.10.1",
     "elm-test": "^0.19.1-revision12",
     "elm-watch": "^1.1.2",
-    "http-server": "^14.1.1",
     "run-pty": "^4.0.3"
   }
 }

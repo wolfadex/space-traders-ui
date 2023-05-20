@@ -514,6 +514,18 @@ update ({ model } as opts) =
                         |> Update.succeeed
 
 
+updateTab : Maybe Route.GameTab -> Model -> Model
+updateTab maybeTab model =
+    case maybeTab of
+        Just tab ->
+            { model
+                | tab = tab
+            }
+
+        Nothing ->
+            model
+
+
 setZoom : Model -> Float -> Update Model Msg
 setZoom model delta =
     { model | zoom = max 5000000 (model.zoom + delta) }
@@ -557,11 +569,12 @@ scalePointInLightYearsToOne point =
 
 navLink : { label : String, route : Route } -> Bool -> Html Msg
 navLink opts focused =
-    Html.button
+    Html.a
         [ Html.Attributes.classList
             [ ( "nav-button", True )
             , ( "nav-button-focused", focused )
             ]
+        , Html.Attributes.href (Route.toUrlString opts.route)
         , Ui.grid
         ]
         [ Html.div [ Html.Attributes.class "nav-button-top", Ui.justify.end ] []
@@ -593,31 +606,32 @@ view shared model =
         ]
         [ Html.div
             [ Html.Attributes.class "sidebar"
-            , Html.Attributes.style "background-color" "var(--blue)"
+            , Html.Attributes.style "background-color" "var(--blue-dark)"
 
             -- Html.Attributes.style "align-contents" "start"
             ]
             [ Ui.header.one
                 [ Ui.justify.center
                 , Html.Attributes.style "padding" "1rem"
-                , Html.Attributes.style "background-color" "var(--blue)"
+                , Html.Attributes.style "background-color" "var(--blue-dark)"
+                , Html.Attributes.style "color" "var(--blue-light)"
                 ]
                 [ Html.text "SpaceTrader" ]
             , navLink
                 { label = "Ships"
                 , route = Route.Game (Just Route.Ships)
                 }
-                True
+                (model.tab == Route.Ships)
             , navLink
                 { label = "Contracts"
                 , route = Route.Game (Just Route.Contracts)
                 }
-                False
+                (model.tab == Route.Contracts)
             , navLink
                 { label = "Waypoints"
                 , route = Route.Game (Just Route.Waypoints)
                 }
-                False
+                (model.tab == Route.Waypoints)
             , Ui.Button.default []
                 { label = Html.text "⚙️"
                 , onClick = Nothing -- Just OpenSettingsClicked

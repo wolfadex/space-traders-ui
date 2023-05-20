@@ -84,9 +84,10 @@ init flags url navKey =
 
         route =
             Route.fromAppUrl appUrl
+                |> Debug.log "route"
 
         initialState =
-            case Json.Decode.decodeValue decodeFlags flags of
+            case Json.Decode.decodeValue decodeFlags flags |> Debug.log "flags" of
                 Err _ ->
                     { accessToken = Nothing
                     , cachedSystemd = Nothing
@@ -264,8 +265,15 @@ update msg model =
 
                 Route.Game tab ->
                     case model.page of
-                        Game _ ->
-                            ( model, Cmd.none )
+                        Game gameModel ->
+                            ( { model
+                                | page =
+                                    gameModel
+                                        |> Page.Game.updateTab tab
+                                        |> Game
+                              }
+                            , Cmd.none
+                            )
 
                         Login loginModel ->
                             case Dict.get "token" appUrl.queryParameters of

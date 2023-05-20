@@ -41,24 +41,25 @@ toUrlString : Route -> String
 toUrlString route =
     case route of
         Login ->
-            ""
+            "/"
 
         Game tab ->
-            String.join "/"
-                [ "game"
-                , case tab of
-                    Nothing ->
-                        "ships"
+            "/"
+                ++ String.join "/"
+                    [ "game"
+                    , case tab of
+                        Nothing ->
+                            "ships"
 
-                    Just Ships ->
-                        "ships"
+                        Just Ships ->
+                            "ships"
 
-                    Just Contracts ->
-                        "contracts"
+                        Just Contracts ->
+                            "contracts"
 
-                    Just Waypoints ->
-                        "waypoints"
-                ]
+                        Just Waypoints ->
+                            "waypoints"
+                    ]
 
         NotFound ->
-            "404"
+            "/"

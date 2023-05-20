@@ -48,12 +48,16 @@
       }
 
       .nav-button {
-        background-color: var(--blue);
+        background-color: var(--blue-dark);
         height: 6rem;
         width: 100%;
         border: none;
         margin: 0;
         padding: 0;
+      }
+
+      .nav-button:focus {
+        outline: none;
       }
 
       .nav-button-top {
@@ -62,7 +66,7 @@
         background: radial-gradient(
           circle at 0px 0px,
           transparent 1.5rem,
-          var(--blue) 0px
+          var(--blue-dark) 0px
         );
       }
 
@@ -70,7 +74,7 @@
         background: radial-gradient(
           circle at 0px 0px,
           transparent 1.5rem,
-          var(--blue-light) 0px
+          var(--blue) 0px
         );
       }
 
@@ -92,12 +96,14 @@
       }
 
       .nav-button-middle span {
-        background-color: var(--blue);
+        background-color: var(--blue-dark);
+        color: var(--blue-light);
       }
 
       .nav-button-focused .nav-button-middle,
       .nav-button-focused .nav-button-middle span {
-        background-color: var(--blue-light);
+        background-color: var(--blue);
+        color: var(--blue-dark);
       }
 
       .nav-button:hover .nav-button-middle,
@@ -105,6 +111,7 @@
       .nav-button:hover .nav-button-middle span,
       .nav-button:focus .nav-button-middle span {
         background-color: var(--yellow);
+        color: var(--blue-dark);
       }
 
       .nav-button-bottom {
@@ -113,7 +120,7 @@
         background: radial-gradient(
           circle at 0px 100%,
           transparent 1.5rem,
-          var(--blue) 0px
+          var(--blue-dark) 0px
         );
       }
 
@@ -121,7 +128,7 @@
         background: radial-gradient(
           circle at 0px 100%,
           transparent 1.5rem,
-          var(--blue-light) 0px
+          var(--blue) 0px
         );
       }
 
@@ -147,7 +154,7 @@
     </style>
   </head>
   <body>
-    <script src="elm.js"></script>
+    <script src="/elm.js"></script>
     <script>
       const TOKEN_KEY = "token";
       const SETTINGS_KEY = "settings";
