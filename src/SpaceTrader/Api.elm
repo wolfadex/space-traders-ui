@@ -60,9 +60,9 @@ decodeRegister =
             , token = token
             }
         )
-        (Json.Decode.field "user" SpaceTrader.Agent.decode)
-        (Json.Decode.field "ship" SpaceTrader.Contract.decode)
-        (Json.Decode.field "ship" SpaceTrader.Faction.decode)
+        (Json.Decode.field "agent" SpaceTrader.Agent.decode)
+        (Json.Decode.field "contract" SpaceTrader.Contract.decode)
+        (Json.Decode.field "faction" SpaceTrader.Faction.decode)
         (Json.Decode.field "ship" SpaceTrader.Ship.decode)
         (Json.Decode.field "token" Json.Decode.string)
 
