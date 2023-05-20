@@ -1,10 +1,7 @@
 module Ui.Galaxy3d exposing
-    ( LightYear
-      -- , viewSolarSystem
-    , MinRenderableWorld
-    , ScaledViewPoint
+    ( -- , viewSolarSystem
+      MinRenderableWorld
     , getGalaxyViewport
-    , renderSystem
     , viewSystems
     )
 
@@ -59,6 +56,7 @@ import Scene3d.Light
 import Scene3d.Material as Material
 import Scene3d.Mesh
 import Set exposing (Set)
+import Shared exposing (LightYear, ScaledViewPoint)
 import SpaceTrader.System
 import Sphere3d
 import Svg exposing (Svg)
@@ -94,10 +92,6 @@ type alias MinRenderableWorld r =
 
 type AstronomicalUnit
     = AstronomicalUnit Never
-
-
-type LightYear
-    = LightYear Never
 
 
 viewSystems :
@@ -166,7 +160,7 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, selected } wo
                         vertex =
                             Point3d.Projection.toScreenSpace camera
                                 screenRectangle
-                                (Point3d.rotateAround Axis3d.z angle (scalePointInLightYearsToOne point))
+                                (Point3d.rotateAround Axis3d.z angle (Shared.scalePointInLightYearsToOne point))
 
                         isSelected : Bool
                         isSelected =
@@ -891,29 +885,6 @@ spaceCss =
 
 
 -- Helpers
-
-
-renderSystem : Point3d Meters LightYear -> Scene3d.Entity ScaledViewPoint
-renderSystem position =
-    Scene3d.sphere
-        (Material.color Color.gray)
-        (Sphere3d.atPoint (scalePointInLightYearsToOne position) (Length.lightYears 60))
-
-
-type ScaledViewPoint
-    = ScaledViewPoint Never
-
-
-scalePointInLightYearsToOne : Point3d Meters LightYear -> Point3d Meters ScaledViewPoint
-scalePointInLightYearsToOne point =
-    Point3d.fromMeters
-        { x = Length.inMeters (Point3d.xCoordinate point)
-        , y = Length.inMeters (Point3d.yCoordinate point)
-        , z = Length.inMeters (Point3d.zCoordinate point)
-        }
-
-
-
 -- renderPlanet : Settings -> PlanetRenderDetails -> List (Scene3d.Entity ScaledViewPoint)
 -- renderPlanet settings details =
 --     let

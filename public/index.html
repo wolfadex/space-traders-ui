@@ -104,7 +104,7 @@
         localStorage.setItem(TOKEN_KEY, token);
       });
 
-      app.ports.clearToken.subscribe(function () {
+      app.ports.clearToken_.subscribe(function () {
         localStorage.removeItem(TOKEN_KEY);
       });
 

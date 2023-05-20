@@ -27,7 +27,10 @@ view opts nav =
                 , value =
                     Ui.Button.link [ Html.Attributes.style "font-weight" "bold" ]
                         { label = Html.text nav.system
-                        , onClick = opts.onSystemClicked nav.system
+                        , onClick =
+                            nav.system
+                                |> opts.onSystemClicked
+                                |> Just
                         }
                 }
             ++ Ui.viewLabeled

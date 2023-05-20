@@ -72,6 +72,7 @@ view { timeZone, currentTime, onDestinationClicked } contract =
                                                 |> List.take 2
                                                 |> String.join "-"
                                                 |> onDestinationClicked
+                                                |> Just
                                         }
                                     ]
                             )

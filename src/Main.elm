@@ -1,6 +1,9 @@
-port module Main exposing (main)
+module Main exposing (main)
 
+import AppUrl exposing (AppUrl)
 import Browser
+import Browser.Navigation
+import Cacheable exposing (Cacheable(..))
 import Dict exposing (Dict)
 import Form
 import Form.Field
@@ -15,8 +18,14 @@ import Json.Decode
 import Json.Encode
 import Length exposing (Meters)
 import List.NonEmpty
+import Page.Game
+import Page.Login
 import Point3d exposing (Point3d)
+import Port
+import RemoteData exposing (RemoteData(..))
+import Route exposing (Route)
 import Scene3d
+import Shared
 import SpaceTrader.Agent
 import SpaceTrader.Api
 import SpaceTrader.Contract
@@ -32,196 +41,111 @@ import Ui.Button
 import Ui.Contract
 import Ui.Form
 import Ui.Form.Field
-import Ui.Galaxy3d exposing (LightYear, ScaledViewPoint)
+import Ui.Galaxy3d
 import Ui.Modal
 import Ui.Select
 import Ui.Ship
 import Ui.System
 import Ui.Theme
+import Update
+import Url exposing (Url)
+import Util.Function
 
 
 main : Program Json.Encode.Value Model Msg
 main =
-    Browser.document
+    Browser.application
         { init = init
         , view = view
         , update = update
         , subscriptions = subscriptions
+        , onUrlRequest = OnUrlRequest
+        , onUrlChange = OnUrlChange
         }
 
 
-type Cacheable a
-    = Uncached
-    | Caching { data : Dict String a, current : Int, max : Int }
-    | Cached (Dict String a)
-
-
-type Remote a
-    = Loading
-    | Failure String
-    | Loaded a
-
-
-cachedData : Cacheable a -> Dict String a
-cachedData cacheable =
-    case cacheable of
-        Uncached ->
-            Dict.empty
-
-        Caching { data } ->
-            data
-
-        Cached data ->
-            data
-
-
 type alias Model =
-    { timeZone : Time.Zone
-    , currentTime : Time.Posix
-    , theme : Ui.Theme.Theme
-    , authed : Authed
-
-    -- cached data
-    , systems : Cacheable SpaceTrader.System.System
-
-    -- game stuffs
-    , spaceFocus : SpaceFocus
-    , zoom : Float
-    , viewRotation : Float
-    , systems3d : Dict String ( Point3d Meters LightYear, Scene3d.Entity ScaledViewPoint )
+    { navKey : Browser.Navigation.Key
+    , shared : Shared.Model
+    , page : Page
     }
 
 
-type Authed
-    = Unregistered UnregisteredModel
-    | Registered RegisteredModel
+type Page
+    = Login Page.Login.Model
+    | Game Page.Game.Model
 
 
-type alias UnregisteredModel =
-    { registerFormModel : Form.Model
-    , submittingRegistration : Bool
-    , registrationServerError : Maybe String
-    , loginFormModel : Form.Model
-    , submittingLogin : Bool
-    , loginServerError : Maybe String
-    }
+init : Json.Encode.Value -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
+init flags url navKey =
+    let
+        appUrl =
+            AppUrl.fromUrl url
 
+        route =
+            Route.fromAppUrl appUrl
 
-type alias RegisteredModel =
-    { accessToken : String
-    , agent : SpaceTrader.Agent.Agent
-    , waypoints : Dict String SpaceTrader.Waypoint.Waypoint
-    , myContracts : Dict String SpaceTrader.Contract.Contract
-    , myShips : Dict String SpaceTrader.Ship.Ship
-    , selectedSystem : Maybe (Remote SpaceTrader.System.System)
-    }
+        initialState =
+            case Json.Decode.decodeValue decodeFlags flags of
+                Err _ ->
+                    { accessToken = Nothing
+                    , cachedSystemd = Nothing
+                    , shared =
+                        Shared.init
+                            { theme = Nothing
+                            , systems = Nothing
+                            }
+                    }
 
+                Ok { accessToken, settings, cached } ->
+                    { accessToken = accessToken
+                    , cachedSystemd = Just cached.systems
+                    , shared =
+                        Shared.init
+                            { theme = Just settings.theme
+                            , systems = Just cached.systems
+                            }
+                    }
 
-init : Json.Encode.Value -> ( Model, Cmd Msg )
-init flags =
-    case Json.Decode.decodeValue decodeFlags flags of
-        Err _ ->
-            ( { timeZone = Time.utc
-              , currentTime = Time.millisToPosix 0
-              , theme = List.NonEmpty.head Ui.Theme.themes
-              , authed =
-                    Unregistered
-                        { registerFormModel = Form.init
-                        , submittingRegistration = False
-                        , registrationServerError = Nothing
-                        , loginFormModel = Form.init
-                        , submittingLogin = False
-                        , loginServerError = Nothing
-                        }
-              , systems = Uncached
+        ( sharedModel, sharedCmd ) =
+            initialState.shared
 
-              -- game stuffs
-              , spaceFocus = FGalaxy
-              , viewRotation = 0
+        ( pageModel, pageCmd ) =
+            case route of
+                Route.Login ->
+                    ( Login <| Page.Login.init { systems = initialState.cachedSystemd }
+                    , Cmd.none
+                    )
 
-              -- a nice default
-              , zoom = 6621539845261203 * 10000
-              , systems3d = Dict.empty
-              }
-            , Task.map2 CurrentTimeAndZoneReceived
-                Time.now
-                Time.here
-                |> Task.perform identity
-            )
-
-        Ok { accessToken, settings, cached } ->
-            ( { timeZone = Time.utc
-              , currentTime = Time.millisToPosix 0
-              , theme = settings.theme
-              , authed =
-                    Unregistered
-                        { registerFormModel = Form.init
-                        , submittingRegistration = False
-                        , registrationServerError = Nothing
-                        , loginFormModel = Form.init
-                        , submittingLogin =
-                            case accessToken of
-                                Nothing ->
-                                    False
-
-                                Just _ ->
-                                    True
-                        , loginServerError = Nothing
-                        }
-              , systems = Cached cached.systems
-
-              -- game stuffs
-              , spaceFocus = FGalaxy
-              , zoom =
-                    cached.systems
-                        |> Dict.values
-                        |> List.map
-                            (\system ->
-                                Length.inMeters
-                                    (Point3d.distanceFrom Point3d.origin
-                                        (Point3d.xyz
-                                            (system.x |> toFloat |> Length.lightYears)
-                                            (system.y |> toFloat |> Length.lightYears)
-                                            (Length.lightYears 0)
-                                        )
-                                    )
+                Route.Game ->
+                    case initialState.accessToken of
+                        Nothing ->
+                            ( Login <| Page.Login.init { systems = initialState.cachedSystemd }
+                            , Cmd.none
                             )
-                        |> List.sort
-                        |> List.reverse
-                        |> List.head
-                        |> Maybe.map (\a -> a / 2)
-                        |> Maybe.withDefault (25000 + (100 * 9460730000000000))
-              , viewRotation = 0
-              , systems3d =
-                    cached.systems
-                        |> Dict.map
-                            (\_ system ->
-                                let
-                                    point =
-                                        Point3d.xyz
-                                            (system.x |> toFloat |> Length.lightYears)
-                                            (system.y |> toFloat |> Length.lightYears)
-                                            (Length.lightYears 0)
-                                in
-                                ( point
-                                , Ui.Galaxy3d.renderSystem point
-                                )
-                            )
-              }
-            , Cmd.batch
-                [ case accessToken of
-                    Nothing ->
-                        Cmd.none
 
-                    Just token ->
-                        SpaceTrader.Api.myAgent (LoginResponded token)
-                            { token = token }
-                , Task.map2 CurrentTimeAndZoneReceived
-                    Time.now
-                    Time.here
-                    |> Task.perform identity
-                ]
-            )
+                        Just accessToken ->
+                            Page.Game.init
+                                { accessToken = accessToken
+                                , agent = Nothing
+                                , systems = initialState.cachedSystemd
+                                }
+                                |> Tuple.mapBoth Game (Cmd.map GameMsg)
+
+                Route.NotFound ->
+                    ( Login <| Page.Login.init { systems = initialState.cachedSystemd }
+                    , Cmd.none
+                    )
+    in
+    ( { navKey = navKey
+      , shared = sharedModel
+      , page = pageModel
+      }
+    , Cmd.batch
+        [ Cmd.map SharedMsg sharedCmd
+        , pageCmd
+        ]
+    )
 
 
 decodeFlags :
@@ -272,964 +196,175 @@ decodeCached =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Time.every (5 * 1000 * 60) CurrentTimeReceived
+    Sub.map SharedMsg (Shared.subscriptions model.shared)
 
 
-port setToken : String -> Cmd msg
+type Msg
+    = SharedMsg Shared.Msg
+      -- common
+    | OnUrlRequest Browser.UrlRequest
+    | OnUrlChange Url
+    | FromEffect Update.Effect
+      -- page
+    | LoginMsg Page.Login.Msg
+    | GameMsg Page.Game.Msg
 
 
-port clearToken : () -> Cmd msg
-
-
-port openModal : String -> Cmd msg
-
-
-port closeModal : String -> Cmd msg
-
-
-port storeSettings : Json.Encode.Value -> Cmd msg
-
-
-port cacheSystems : Json.Encode.Value -> Cmd msg
-
-
-saveSettings : Model -> Cmd msg
-saveSettings model =
-    storeSettings
-        (Json.Encode.object
-            [ ( "theme", Ui.Theme.encode model.theme )
-            ]
-        )
-
-
-type
-    Msg
-    -- time
-    = CurrentTimeReceived Time.Posix
-    | CurrentTimeAndZoneReceived Time.Posix Time.Zone
-      -- settings
-    | OpenSettingsClicked
-    | CloseSettingsClicked
-    | ThemeSelected Ui.Theme.Theme
-      -- auth
-    | LogoutClicked
-    | RegistrationFormMsg (Form.Msg Msg)
-    | RegistrationFormSubmitted (Ui.Form.Submission String RegisterForm)
-    | RegistrationResponded
-        (Result
-            Http.Error
-            { agent : SpaceTrader.Agent.Agent
-            , contract : SpaceTrader.Contract.Contract
-            , faction : SpaceTrader.Faction.Faction
-            , ship : SpaceTrader.Ship.Ship
-            , token : String
-            }
-        )
-    | LoginFormMsg (Form.Msg Msg)
-    | LoginFormSubmitted (Ui.Form.Submission String LoginForm)
-    | LoginResponded String (Result Http.Error SpaceTrader.Agent.Agent)
-      -- game
-    | WaypointResponded String (Result Http.Error SpaceTrader.Waypoint.Waypoint)
-    | MyContractsResponded (Result Http.Error (List SpaceTrader.Contract.Contract))
-    | MyShipsResponded (Result Http.Error (List SpaceTrader.Ship.Ship))
-    | ShipDockRequested String
-    | ShipDockResponded String (Result Http.Error SpaceTrader.Ship.Nav.Nav)
-    | ShipOrbitRequested String
-    | ShipOrbitResponded String (Result Http.Error SpaceTrader.Ship.Nav.Nav)
-    | ShipMoveRequested String
-    | SystemsLoadRequested
-    | SystemsLongRequestMsg (Result Http.Error (SpaceTrader.Api.Msg SpaceTrader.System.System))
-    | SystemResponded (Result Http.Error SpaceTrader.System.System)
-      -- 3d view
-    | SystemClicked String
-    | Zoomed Json.Encode.Value
-    | ZoomPressed Float
-    | RotationPressed Float
-
-
-updateWithUnregistered : (UnregisteredModel -> ( UnregisteredModel, Cmd Msg )) -> Model -> ( Model, Cmd Msg )
-updateWithUnregistered f model =
-    case model.authed of
-        Unregistered m ->
-            let
-                ( newAuthedModel, cmd ) =
-                    f m
-            in
-            ( { model | authed = Unregistered newAuthedModel }, cmd )
-
-        Registered _ ->
-            ( model, Cmd.none )
-
-
-updateWithRegistered : (RegisteredModel -> ( RegisteredModel, Cmd Msg )) -> Model -> ( Model, Cmd Msg )
-updateWithRegistered f model =
-    case model.authed of
-        Unregistered _ ->
-            ( model, Cmd.none )
-
-        Registered m ->
-            let
-                ( newAuthedModel, cmd ) =
-                    f m
-            in
-            ( { model | authed = Registered newAuthedModel }, cmd )
+updateShared : (Shared.Model -> Shared.Model) -> Model -> Model
+updateShared fn model =
+    { model | shared = fn model.shared }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        -- time
-        CurrentTimeReceived time ->
-            ( { model
-                | currentTime = time
-              }
-            , Cmd.none
-            )
-
-        CurrentTimeAndZoneReceived time zone ->
-            ( { model
-                | currentTime = time
-                , timeZone = zone
-              }
-            , Cmd.none
-            )
-
-        -- settings
-        OpenSettingsClicked ->
-            ( model
-            , openModal modalIds.settings
-            )
-
-        CloseSettingsClicked ->
-            ( model
-            , Cmd.batch
-                [ closeModal modalIds.settings
-                , saveSettings model
-                ]
-            )
-
-        ThemeSelected theme ->
-            ( { model | theme = theme }
-            , Cmd.none
-            )
-
-        ---- auth
-        LogoutClicked ->
-            ( { model
-                | authed =
-                    Unregistered
-                        { registerFormModel = Form.init
-                        , submittingRegistration = False
-                        , registrationServerError = Nothing
-                        , loginFormModel = Form.init
-                        , submittingLogin = False
-                        , loginServerError = Nothing
-                        }
-              }
-            , clearToken ()
-            )
-
-        -- registration
-        RegistrationFormMsg msg_ ->
-            updateWithUnregistered
-                (\unregisteredModel ->
-                    let
-                        ( registerFormModel, formCmd ) =
-                            Form.update msg_ unregisteredModel.registerFormModel
-                    in
-                    ( { unregisteredModel
-                        | registerFormModel = registerFormModel
-                      }
-                    , formCmd
-                    )
-                )
-                model
-
-        RegistrationFormSubmitted { parsed } ->
-            updateWithUnregistered
-                (\unregisteredModel ->
-                    case parsed of
-                        Form.Valid registerData ->
-                            ( { unregisteredModel
-                                | submittingRegistration = True
-                              }
-                            , SpaceTrader.Api.register RegistrationResponded
-                                registerData
-                            )
-
-                        Form.Invalid _ _ ->
-                            ( unregisteredModel, Cmd.none )
-                )
-                model
-
-        RegistrationResponded (Err err) ->
-            updateWithUnregistered
-                (\unregisteredModel ->
-                    ( { unregisteredModel
-                        | submittingRegistration = False
-                        , registrationServerError = Just (Debug.toString err)
-                      }
-                    , Cmd.none
-                    )
-                )
-                model
-
-        RegistrationResponded (Ok data) ->
-            ( initRegistered
-                { accessToken = data.token
-                , agent = data.agent
+        SharedMsg msg_ ->
+            Shared.update
+                { msg = msg_
+                , model = model.shared
+                , toMsg = SharedMsg
+                , toModel = \shared -> { model | shared = shared }
                 }
-                model
-            , setToken data.token
-            )
+                |> Update.toTuple { fromEffect = FromEffect }
 
-        -- login
-        LoginFormMsg msg_ ->
-            updateWithUnregistered
-                (\unregisteredModel ->
-                    let
-                        ( loginFormModel, formCmd ) =
-                            Form.update msg_ unregisteredModel.loginFormModel
-                    in
-                    ( { unregisteredModel
-                        | loginFormModel = loginFormModel
-                      }
-                    , formCmd
-                    )
-                )
-                model
-
-        LoginFormSubmitted { parsed } ->
-            updateWithUnregistered
-                (\unregisteredModel ->
-                    case parsed of
-                        Form.Valid loginData ->
-                            ( { unregisteredModel | submittingLogin = True }
-                            , SpaceTrader.Api.myAgent (LoginResponded loginData.accessToken)
-                                { token = loginData.accessToken
-                                }
-                            )
-
-                        Form.Invalid _ _ ->
-                            ( unregisteredModel, Cmd.none )
-                )
-                model
-
-        LoginResponded _ (Err err) ->
-            updateWithUnregistered
-                (\unregisteredModel ->
-                    ( { unregisteredModel
-                        | submittingLogin = False
-                        , loginServerError = Just (Debug.toString err)
-                      }
-                    , Cmd.none
-                    )
-                )
-                model
-
-        LoginResponded accessToken (Ok agent) ->
-            ( initRegistered
-                { accessToken = accessToken
-                , agent = agent
-                }
-                model
-            , Cmd.batch
-                [ SpaceTrader.Api.myContracts MyContractsResponded
-                    { token = accessToken }
-                , SpaceTrader.Api.myShips MyShipsResponded
-                    { token = accessToken }
-                , case model.systems of
-                    Uncached ->
-                        SpaceTrader.Api.getAllSystemsInit SystemsLongRequestMsg { token = accessToken }
-
-                    _ ->
-                        Cmd.none
-                , setToken accessToken
-                ]
-            )
-
-        WaypointResponded _ (Err err) ->
-            Debug.todo (Debug.toString err)
-
-        WaypointResponded id (Ok waypoint) ->
-            updateWithRegistered
-                (\registeredModel ->
-                    ( { registeredModel
-                        | waypoints = Dict.insert id waypoint registeredModel.waypoints
-                      }
-                    , Cmd.none
-                    )
-                )
-                model
-
-        MyContractsResponded (Err err) ->
-            Debug.todo (Debug.toString err)
-
-        MyContractsResponded (Ok contracts) ->
-            updateWithRegistered
-                (\registeredModel ->
-                    ( { registeredModel
-                        | myContracts =
-                            List.foldl
-                                (\contract dict ->
-                                    Dict.insert contract.id contract dict
-                                )
-                                Dict.empty
-                                contracts
-                      }
-                    , Cmd.none
-                    )
-                )
-                model
-
-        MyShipsResponded (Err err) ->
-            Debug.todo (Debug.toString err)
-
-        MyShipsResponded (Ok ships) ->
-            updateWithRegistered
-                (\registeredModel ->
-                    ( { registeredModel
-                        | myShips =
-                            List.foldl
-                                (\ship dict ->
-                                    Dict.insert ship.id ship dict
-                                )
-                                Dict.empty
-                                ships
-                      }
-                    , Cmd.none
-                    )
-                )
-                model
-
-        ShipDockRequested id ->
-            updateWithRegistered
-                (\registeredModel ->
-                    ( registeredModel
-                    , SpaceTrader.Api.dockShip (ShipDockResponded id)
-                        { token = registeredModel.accessToken
-                        , shipId = id
-                        }
-                    )
-                )
-                model
-
-        ShipDockResponded _ (Err err) ->
-            Debug.todo (Debug.toString err)
-
-        ShipDockResponded id (Ok nav) ->
-            updateWithRegistered
-                (\registeredModel ->
-                    ( { registeredModel
-                        | myShips =
-                            Dict.update id
-                                (Maybe.map
-                                    (\ship ->
-                                        { ship
-                                            | nav = nav
-                                        }
-                                    )
-                                )
-                                registeredModel.myShips
-                      }
-                    , Cmd.none
-                    )
-                )
-                model
-
-        ShipOrbitRequested id ->
-            updateWithRegistered
-                (\registeredModel ->
-                    ( registeredModel
-                    , SpaceTrader.Api.moveToOrbit (ShipOrbitResponded id)
-                        { token = registeredModel.accessToken
-                        , shipId = id
-                        }
-                    )
-                )
-                model
-
-        ShipOrbitResponded _ (Err err) ->
-            Debug.todo (Debug.toString err)
-
-        ShipOrbitResponded id (Ok nav) ->
-            updateWithRegistered
-                (\registeredModel ->
-                    ( { registeredModel
-                        | myShips =
-                            Dict.update id
-                                (Maybe.map
-                                    (\ship ->
-                                        { ship
-                                            | nav = nav
-                                        }
-                                    )
-                                )
-                                registeredModel.myShips
-                      }
-                    , Cmd.none
-                    )
-                )
-                model
-
-        ShipMoveRequested id ->
-            Debug.todo ""
-
-        SystemsLoadRequested ->
-            updateWithRegistered
-                (\registeredModel ->
-                    ( registeredModel
-                    , SpaceTrader.Api.getAllSystemsInit SystemsLongRequestMsg
-                        { token = registeredModel.accessToken }
-                    )
-                )
-                { model
-                    | systems =
-                        Caching
-                            { data = cachedData model.systems
-                            , current = 0
-                            , max = 1
-                            }
-                }
-
-        SystemsLongRequestMsg (Err err) ->
-            Debug.todo (Debug.toString err)
-
-        SystemsLongRequestMsg (Ok msg_) ->
-            case msg_ of
-                SpaceTrader.Api.Complete systems ->
-                    let
-                        updatedSystems =
-                            List.foldl
-                                (\system dict ->
-                                    Dict.insert system.id system dict
-                                )
-                                (cachedData model.systems)
-                                systems
-                    in
-                    ( { model
-                        | systems = Cached updatedSystems
-                        , systems3d =
-                            List.foldl
-                                (\system dict ->
-                                    Dict.insert system.id
-                                        (let
-                                            point =
-                                                Point3d.xyz
-                                                    (system.x |> toFloat |> Length.lightYears)
-                                                    (system.y |> toFloat |> Length.lightYears)
-                                                    (Length.lightYears 0)
-                                         in
-                                         ( point
-                                         , Ui.Galaxy3d.renderSystem point
-                                         )
-                                        )
-                                        dict
-                                )
-                                model.systems3d
-                                systems
-                      }
-                    , updatedSystems
-                        |> Dict.values
-                        |> Json.Encode.list SpaceTrader.System.encode
-                        |> cacheSystems
+        -- common
+        OnUrlRequest urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model
+                    , Browser.Navigation.pushUrl model.navKey (Url.toString url)
                     )
 
-                SpaceTrader.Api.NeedsMore data ->
-                    let
-                        updatedSystems =
-                            List.foldl
-                                (\system dict ->
-                                    Dict.insert system.id system dict
-                                )
-                                (cachedData model.systems)
-                                data.data
-                    in
-                    ( { model
-                        | systems = Caching { data = updatedSystems, current = data.current, max = data.max }
-                        , systems3d =
-                            List.foldl
-                                (\system dict ->
-                                    Dict.insert system.id
-                                        (let
-                                            point =
-                                                Point3d.xyz
-                                                    (system.x |> toFloat |> Length.lightYears)
-                                                    (system.y |> toFloat |> Length.lightYears)
-                                                    (Length.lightYears 0)
-                                         in
-                                         ( point
-                                         , Ui.Galaxy3d.renderSystem point
-                                         )
-                                        )
-                                        dict
-                                )
-                                model.systems3d
-                                data.data
-                      }
-                    , Cmd.batch
-                        [ SpaceTrader.Api.getAllSystemsUpdate SystemsLongRequestMsg data
-                        , updatedSystems
-                            |> Dict.values
-                            |> Json.Encode.list SpaceTrader.System.encode
-                            |> cacheSystems
-                        ]
+                Browser.External url ->
+                    ( model
+                    , Browser.Navigation.load url
                     )
 
-        -- 3d view
-        SystemClicked systemId ->
-            updateWithRegistered
-                (\registeredModel ->
-                    let
-                        systemFound : Maybe SpaceTrader.System.System
-                        systemFound =
-                            model.systems
-                                |> cachedData
-                                |> Dict.get systemId
-                    in
-                    ( { registeredModel
-                        | selectedSystem =
-                            Just <|
-                                case systemFound of
-                                    Just system ->
-                                        Loaded system
+        OnUrlChange url ->
+            let
+                appUrl =
+                    AppUrl.fromUrl url
 
-                                    Nothing ->
-                                        Loading
-                      }
-                    , case systemFound of
-                        Just _ ->
-                            Cmd.none
-
-                        Nothing ->
-                            SpaceTrader.Api.getSystem SystemResponded
-                                { token = registeredModel.accessToken
-                                , systemId = systemId
-                                }
-                    )
-                )
-                model
-
-        SystemResponded (Err err) ->
-            Debug.todo (Debug.toString err)
-
-        SystemResponded (Ok system) ->
-            ( { model
-                | systems = Cached (Dict.insert system.id system (cachedData model.systems))
-                , systems3d =
-                    Dict.insert system.id
-                        (let
-                            point =
-                                Point3d.xyz
-                                    (system.x |> toFloat |> Length.lightYears)
-                                    (system.y |> toFloat |> Length.lightYears)
-                                    (Length.lightYears 0)
-                         in
-                         ( point
-                         , Ui.Galaxy3d.renderSystem point
-                         )
-                        )
-                        model.systems3d
-              }
-            , Cmd.none
-            )
-
-        Zoomed value ->
-            case Json.Decode.decodeValue decodeZoomEvent value of
-                Ok delta ->
-                    setZoom model (delta * zoomMultiplier model.spaceFocus)
-
-                Err _ ->
+                route =
+                    Route.fromAppUrl appUrl
+            in
+            case route of
+                Route.Login ->
+                    -- TODO: Should we redirect here?
                     ( model, Cmd.none )
 
-        ZoomPressed change ->
-            setZoom model (change * zoomMultiplier model.spaceFocus)
+                Route.Game ->
+                    case model.page of
+                        Game _ ->
+                            ( model, Cmd.none )
 
-        RotationPressed change ->
-            ( { model | viewRotation = toFloat (remainderBy 360 (floor (model.viewRotation + change))) }
-            , Cmd.none
+                        Login loginModel ->
+                            case Dict.get "token" appUrl.queryParameters of
+                                Just [ accessToken ] ->
+                                    Page.Game.init
+                                        { accessToken = accessToken
+                                        , agent = Nothing
+                                        , systems = loginModel.systems
+                                        }
+                                        |> Tuple.mapBoth
+                                            (\gameModel -> { model | page = Game gameModel })
+                                            (\cmd ->
+                                                Cmd.batch
+                                                    [ Cmd.map GameMsg cmd
+                                                    , Browser.Navigation.replaceUrl model.navKey (Route.toUrlString Route.Game)
+                                                    , Port.setToken accessToken
+                                                    ]
+                                            )
+
+                                _ ->
+                                    ( model, Cmd.none )
+
+                Route.NotFound ->
+                    ( model
+                    , Cmd.none
+                    )
+
+        FromEffect (Update.Authenticated { accessToken, systems, agent }) ->
+            case model.page of
+                Login _ ->
+                    Page.Game.init
+                        { accessToken = accessToken
+                        , agent = agent
+                        , systems = systems
+                        }
+                        |> Tuple.mapBoth
+                            (\gameModel -> { model | page = Game gameModel })
+                            (\cmd ->
+                                Cmd.batch
+                                    [ Cmd.map GameMsg cmd
+                                    , Browser.Navigation.replaceUrl model.navKey (Route.toUrlString Route.Game)
+                                    ]
+                            )
+
+                Game _ ->
+                    ( model, Cmd.none )
+
+        FromEffect (Update.RouteChangeRequested route) ->
+            ( model
+            , Browser.Navigation.pushUrl model.navKey (Route.toUrlString route)
             )
 
+        -- page
+        LoginMsg msg_ ->
+            case model.page of
+                Game _ ->
+                    ( model, Cmd.none )
 
-setZoom : Model -> Float -> ( Model, Cmd Msg )
-setZoom model delta =
-    ( { model | zoom = max 5000000 (model.zoom + delta) }, Cmd.none )
+                Login loginModel ->
+                    Page.Login.update
+                        { shared = model.shared
+                        , msg = msg_
+                        , model = loginModel
+                        , toMsg = LoginMsg
+                        , toModel = \newLoginModel -> { model | page = Login newLoginModel }
+                        }
+                        |> Update.toTuple { fromEffect = FromEffect }
 
+        GameMsg msg_ ->
+            case model.page of
+                Login _ ->
+                    ( model, Cmd.none )
 
-decodeZoomEvent : Json.Decode.Decoder Float
-decodeZoomEvent =
-    Json.Decode.field "deltaY" Json.Decode.float
-
-
-zoomMultiplier : SpaceFocus -> Float
-zoomMultiplier focus =
-    case focus of
-        FGalaxy ->
-            -- One light year is 9460730000000000, this is about 10 light years
-            94607300000000000
-
-        FSystem _ ->
-            10000000000
-
-        FWaypoint _ ->
-            1
-
-
-type SpaceFocus
-    = FGalaxy
-    | FSystem String
-    | FWaypoint String
-
-
-initRegistered :
-    { accessToken : String
-    , agent : SpaceTrader.Agent.Agent
-    }
-    -> Model
-    -> Model
-initRegistered opt model =
-    { model
-        | authed =
-            Registered
-                { accessToken = opt.accessToken
-                , agent = opt.agent
-                , waypoints = Dict.empty
-                , myContracts = Dict.empty
-                , myShips = Dict.empty
-                , selectedSystem = Nothing
-                }
-    }
-
-
-modalIds : { settings : String }
-modalIds =
-    { settings = "settings" }
+                Game gameModel ->
+                    Page.Game.update
+                        { shared = model.shared
+                        , msg = msg_
+                        , model = gameModel
+                        , toMsg = GameMsg
+                        , toModel = \newGameModel -> { model | page = Game newGameModel }
+                        }
+                        |> Update.toTuple { fromEffect = FromEffect }
 
 
 view : Model -> Browser.Document Msg
 view model =
     { title = "SpaceTrader"
     , body =
-        [ Ui.column
-            [ Html.Attributes.class model.theme.class
+        [ Shared.viewHeader model.shared
+            |> Html.map SharedMsg
+        , Ui.column
+            [ Html.Attributes.class model.shared.theme.class
             , Html.Attributes.style "height" "100vh"
             , Html.Attributes.style "overflow-y" "auto"
             , Html.Attributes.style "padding-right" "1rem"
             , Html.Attributes.style "padding-bottom" "1rem"
             ]
-            [ Ui.header.one
-                [ Ui.justify.center
-                , Html.Attributes.style "padding" "1rem"
-                ]
-                [ Html.text "SpaceTrader" ]
-            , case model.authed of
-                Unregistered m ->
-                    viewUnregistered m
+            [ case model.page of
+                Login m ->
+                    Page.Login.view m
+                        |> Html.map LoginMsg
 
-                Registered m ->
-                    viewRegistered model m
-            , Ui.Button.default
-                [ Ui.justify.end
-                , Ui.align.end
-                , Html.Attributes.style "padding" "1rem"
-                ]
-                { label = Html.text "⚙️"
-                , onClick = Just OpenSettingsClicked
-                }
-            , Ui.Modal.view modalIds.settings
-                [-- Html.Attributes.class model.theme
-                ]
-                [ Ui.column
-                    [ Ui.gap 1 ]
-                    [ Html.label
-                        []
-                        [ Html.text "Theme: "
-                        , Ui.Select.view
-                            []
-                            { options = List.NonEmpty.toList Ui.Theme.themes
-                            , toString = .label
-                            , value = model.theme
-                            , onChange = ThemeSelected
-                            }
-                        ]
-                    , Ui.Button.default
-                        [ Ui.justify.end
-                        , Ui.align.end
-                        ]
-                        { label = Html.text "Save Settings"
-                        , onClick = Just CloseSettingsClicked
-                        }
-                    ]
-                ]
+                Game m ->
+                    Page.Game.view model.shared m
+                        |> Html.map GameMsg
             ]
         ]
+            ++ (Shared.viewModals model.shared
+                    |> List.map (Html.map SharedMsg)
+               )
     }
-
-
-viewUnregistered : UnregisteredModel -> Html Msg
-viewUnregistered model =
-    Ui.row
-        [ Ui.justify.center
-        , Ui.gap 1
-        ]
-        [ Ui.Form.view
-            { submitting = model.submittingRegistration
-            , title = "Register"
-            , model = model.registerFormModel
-            , toMsg = RegistrationFormMsg
-            , id = "registration-form"
-            , onSubmit = RegistrationFormSubmitted
-            , serverSideErrors =
-                Maybe.map
-                    (\registrationServerError ->
-                        Dict.singleton "callsign" [ registrationServerError ]
-                    )
-                    model.registrationServerError
-            }
-            registrationForm
-        , Ui.Form.view
-            { submitting = model.submittingLogin
-            , title = "Login"
-            , model = model.loginFormModel
-            , toMsg = LoginFormMsg
-            , id = "login-form"
-            , onSubmit = LoginFormSubmitted
-            , serverSideErrors = Nothing
-            }
-            loginForm
-        ]
-
-
-type alias RegisterForm =
-    { callsign : String
-    , faction : SpaceTrader.Faction.Group
-    }
-
-
-registrationForm : Form.HtmlForm String RegisterForm input Msg
-registrationForm =
-    (\callsign faction ->
-        { combine =
-            Form.Validation.succeed RegisterForm
-                |> Form.Validation.andMap
-                    (Form.Validation.map
-                        (\callsignValue ->
-                            Form.Validation.succeed callsignValue
-                                |> Form.Validation.withErrorIf (String.length callsignValue < 3) callsign "Must be at least 3 characters"
-                                |> Form.Validation.withErrorIf (String.length callsignValue > 14) callsign "Must can't be more than 14 characters"
-                        )
-                        callsign
-                        |> Form.Validation.andThen identity
-                    )
-                |> Form.Validation.andMap faction
-        , view =
-            \formState ->
-                List.concat
-                    [ Ui.Form.Field.text formState "Callsign" callsign
-                    , Ui.Form.Field.select
-                        { toString = SpaceTrader.Faction.groupToPrettyString }
-                        formState
-                        "Faction"
-                        faction
-                    , Ui.Form.Field.submit
-                        { label =
-                            if formState.submitting then
-                                "Registering..."
-
-                            else
-                                "Register"
-                        , disabled = formState.submitting
-                        }
-                    ]
-        }
-    )
-        |> Form.form
-        |> Form.field "callsign"
-            (Form.Field.text
-                |> Form.Field.required "Required"
-            )
-        |> Form.field "faction"
-            (Form.Field.select
-                (SpaceTrader.Faction.groups
-                    |> List.map (\group -> ( SpaceTrader.Faction.groupToPrettyString group, group ))
-                )
-                identity
-                |> Form.Field.required "Required"
-            )
-
-
-type alias LoginForm =
-    { accessToken : String
-    }
-
-
-loginForm : Form.HtmlForm String LoginForm input Msg
-loginForm =
-    (\accessToken ->
-        { combine =
-            Form.Validation.succeed LoginForm
-                |> Form.Validation.andMap accessToken
-        , view =
-            \formState ->
-                List.concat
-                    [ Ui.Form.Field.text formState "Access Token" accessToken
-                    , Ui.Form.Field.submit
-                        { label =
-                            if formState.submitting then
-                                "Logging in..."
-
-                            else
-                                "Login"
-                        , disabled = formState.submitting
-                        }
-                    ]
-        }
-    )
-        |> Form.form
-        |> Form.field "accessToken"
-            (Form.Field.text
-                |> Form.Field.required "Required"
-                |> Form.Field.password
-            )
-
-
-errorsView : Form.Context String input -> Form.Validation.Field String parsed kind -> Html msg
-errorsView { submitAttempted, errors } field =
-    if submitAttempted || Form.Validation.statusAtLeast Form.Validation.Blurred field then
-        errors
-            |> Form.errorsForField field
-            |> List.map (\error -> Html.li [ Html.Attributes.style "color" "red" ] [ Html.text error ])
-            |> Html.ul []
-
-    else
-        Html.ul [] []
-
-
-viewField : Form.Context String input -> String -> Form.Validation.Field String parsed Form.FieldView.Input -> Html msg
-viewField formState label field =
-    Html.div []
-        [ Html.label []
-            [ Html.text (label ++ " ")
-            , Form.FieldView.input [] field
-            , errorsView formState field
-            ]
-        ]
-
-
-viewRegistered : Model -> RegisteredModel -> Html Msg
-viewRegistered m model =
-    Ui.row []
-        [ Ui.column
-            [ Html.Attributes.style "justify-self" "start"
-            , Html.Attributes.style "padding" "1rem"
-            ]
-            [ Ui.viewLabelGroup
-                (Html.div []
-                    [ Html.text "Agent"
-                    , Ui.Button.default
-                        [ Html.Attributes.style "float" "right" ]
-                        { label = Html.text "Logout"
-                        , onClick = Just LogoutClicked
-                        }
-                    ]
-                )
-                [ { label = "Callsign", value = Html.text <| model.agent.callsign }
-                , { label = "Headquarters"
-                  , value =
-                        Ui.Button.link []
-                            { label = Html.text model.agent.headquarters
-                            , onClick =
-                                model.agent.headquarters
-                                    |> String.split "-"
-                                    |> List.take 2
-                                    |> String.join "-"
-                                    |> SystemClicked
-                            }
-                  }
-                , { label = "Credits", value = Html.text <| String.fromInt model.agent.credits }
-                ]
-            , model.myContracts
-                |> Dict.values
-                |> List.map
-                    (Ui.Contract.view
-                        { timeZone = m.timeZone
-                        , currentTime = m.currentTime
-                        , onDestinationClicked = SystemClicked
-                        }
-                    )
-                |> (::) (Html.h3 [] [ Html.text "My Contracts" ])
-                |> Html.div []
-            , model.myShips
-                |> Dict.values
-                |> List.map
-                    (Ui.Ship.view
-                        { onDock = ShipDockRequested
-                        , onOrbit = ShipOrbitRequested
-                        , onMove = ShipMoveRequested
-                        , onSystemClicked = SystemClicked
-                        }
-                    )
-                |> (::) (Ui.header.three [] [ Html.text "My Ships" ])
-                |> Html.div []
-            ]
-        , Ui.column []
-            [ Ui.Galaxy3d.viewSystems
-                { onSystemClick = SystemClicked
-                , onZoom = Zoomed
-                , onZoomPress = ZoomPressed
-                , onRotationPress = RotationPressed
-                , selected =
-                    case model.selectedSystem of
-                        Just (Loaded system) ->
-                            Just system.id
-
-                        _ ->
-                            Nothing
-                }
-                { galaxyViewSize = { width = 750, height = 500 }
-                , zoom = m.zoom
-                , viewRotation = m.viewRotation
-                , systems = Dict.toList m.systems3d
-                }
-            , case m.systems of
-                Uncached ->
-                    Ui.Button.default
-                        []
-                        { label = Html.text "Load Systems"
-                        , onClick = Just SystemsLoadRequested
-                        }
-
-                Caching { current, max } ->
-                    Ui.row []
-                        [ Html.text "Loading Systems..."
-                        , Ui.progress []
-                            { max = toFloat max
-                            , current = toFloat current
-                            }
-                        ]
-
-                Cached _ ->
-                    Ui.row []
-                        [ Html.text "Systems Loaded & Cached"
-                        , Ui.Button.default
-                            []
-                            { label = Html.text "Reload Systems"
-                            , onClick = Just SystemsLoadRequested
-                            }
-                        ]
-            , case model.selectedSystem of
-                Nothing ->
-                    Html.text ""
-
-                Just Loading ->
-                    Html.text "Loading System..."
-
-                Just (Failure error) ->
-                    Html.text ("Failed to load system: " ++ error)
-
-                Just (Loaded system) ->
-                    Ui.System.view
-                        { myShips = Dict.values model.myShips }
-                        system
-            ]
-        ]

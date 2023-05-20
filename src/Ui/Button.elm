@@ -25,14 +25,19 @@ default attr { label, onClick } =
         [ label ]
 
 
-link : List (Html.Attribute msg) -> { label : Html msg, onClick : msg } -> Html msg
+link : List (Html.Attribute msg) -> { label : Html msg, onClick : Maybe msg } -> Html msg
 link attr { label, onClick } =
     Html.button
         (attr
             ++ [ Html.Attributes.style "cursor" "pointer"
                , Html.Attributes.style "border" "none"
                , Html.Attributes.style "text-decoration" "underline"
-               , Html.Events.onClick onClick
+               , case onClick of
+                    Nothing ->
+                        Html.Attributes.disabled True
+
+                    Just msg ->
+                        Html.Events.onClick msg
                ]
         )
         [ label ]
