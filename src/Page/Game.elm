@@ -77,68 +77,75 @@ init :
     , tab : Maybe Route.GameTab
     , agent : Maybe SpaceTrader.Agent.Agent
     , systems : Maybe (Dict String SpaceTrader.System.System)
+    , toMsg : Msg -> msg
+    , toModel : Model -> model
     }
-    -> ( Model, Cmd Msg )
+    -> Update model msg
 init opts =
     let
         sys =
             initSystems opts.systems
     in
-    ( { accessToken = opts.accessToken
-      , tab = Maybe.withDefault Route.Ships opts.tab
-      , agent =
-            case opts.agent of
-                Nothing ->
-                    Loading
-
-                Just agent ->
-                    Loaded agent
-      , waypoints = Dict.empty
-      , myContracts = Dict.empty
-      , myShips = Dict.empty
-      , selectedSystem = Nothing
-      , systems =
-            case opts.systems of
-                Nothing ->
-                    Uncached
-
-                Just systems ->
-                    Cached systems
-
-      -- 3d stuffs
-      , spaceFocus = Shared.FGalaxy
-      , viewRotation = 0
-      , zoom = sys.zoom
-      , systems3d = sys.systems3d
-      }
-    , Cmd.batch
-        [ SpaceTrader.Api.myContracts MyContractsResponded
-            { token = opts.accessToken }
-        , SpaceTrader.Api.myShips MyShipsResponded
-            { token = opts.accessToken }
-        , case opts.systems of
+    { accessToken = opts.accessToken
+    , tab = Maybe.withDefault Route.Ships opts.tab
+    , agent =
+        case opts.agent of
             Nothing ->
-                SpaceTrader.Api.getAllSystemsInit SystemsLongRequestMsg { token = opts.accessToken }
+                Loading
 
-            Just _ ->
-                Cmd.none
-        , Port.setToken opts.accessToken
-        , case opts.agent of
+            Just agent ->
+                Loaded agent
+    , waypoints = Dict.empty
+    , myContracts = Dict.empty
+    , myShips = Dict.empty
+    , selectedSystem = Nothing
+    , systems =
+        case opts.systems of
             Nothing ->
-                SpaceTrader.Api.myAgent AgentResponded
+                Uncached
+
+            Just systems ->
+                Cached systems
+
+    -- 3d stuffs
+    , spaceFocus = Shared.FGalaxy
+    , viewRotation = 0
+    , zoom = sys.zoom
+    , systems3d = sys.systems3d
+    }
+        |> Update.succeeed
+        |> Update.withCmd
+            (Cmd.batch
+                [ SpaceTrader.Api.myContracts MyContractsResponded
                     { token = opts.accessToken }
+                , SpaceTrader.Api.myShips MyShipsResponded
+                    { token = opts.accessToken }
+                , case opts.systems of
+                    Nothing ->
+                        SpaceTrader.Api.getAllSystemsInit SystemsLongRequestMsg { token = opts.accessToken }
 
-            Just _ ->
-                Cmd.none
+                    Just _ ->
+                        Cmd.none
+                , Port.setToken opts.accessToken
+                , case opts.agent of
+                    Nothing ->
+                        SpaceTrader.Api.myAgent AgentResponded
+                            { token = opts.accessToken }
 
-        -- TODO
-        -- , case opts.tab of
-        --     Nothing ->
-        --         Browser.Navigation.replaceUrl (Route.toUrlString (Route.Game (Just Route.Ships)))
-        --     Just _ ->
-        --         Cmd.none
-        ]
-    )
+                    Just _ ->
+                        Cmd.none
+                ]
+            )
+        |> (\updatedModel ->
+                case opts.tab of
+                    Nothing ->
+                        Update.withEffect (Update.RouteModifyRequested (Route.Game (Just Route.Ships))) updatedModel
+
+                    Just _ ->
+                        updatedModel
+           )
+        |> Update.mapMsg opts.toMsg
+        |> Update.mapModel opts.toModel
 
 
 initSystems :
@@ -148,7 +155,7 @@ initSystems :
         , systems3d : Dict String ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
         }
 initSystems maybeSystems =
-    case maybeSystems of
+    case Debug.log "systems" maybeSystems of
         Nothing ->
             { -- a nice default
               zoom = 6621539845261203 * 10000
@@ -726,11 +733,11 @@ view shared model =
                                 , onDestinationClicked = SystemClicked
                                 }
                             )
-                        |> (::) (Html.h3 [] [ Html.text "My Contracts" ])
                         |> Html.div []
+                        |> viewContent "My Contracts"
 
                 Route.Waypoints ->
-                    Ui.column []
+                    Ui.column [ Ui.gap 0.5 ]
                         [ Ui.Galaxy3d.viewSystems
                             { onSystemClick = SystemClicked
                             , onZoom = Zoomed
@@ -747,7 +754,9 @@ view shared model =
                             { galaxyViewSize = { width = 750, height = 500 }
                             , zoom = model.zoom
                             , viewRotation = model.viewRotation
-                            , systems = Dict.toList model.systems3d
+                            , systems =
+                                Dict.toList model.systems3d
+                                    |> Debug.log "systems3d"
                             }
                         , case model.systems of
                             Uncached ->

@@ -14,6 +14,7 @@ type Effect
         , systems : Maybe (Dict String SpaceTrader.System.System)
         }
     | RouteChangeRequested Route
+    | RouteModifyRequested Route
 
 
 type Update model msg

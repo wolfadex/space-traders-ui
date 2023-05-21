@@ -37,7 +37,12 @@ type alias Model =
     }
 
 
-init : { systems : Maybe (Dict String SpaceTrader.System.System) } -> Model
+init :
+    { systems : Maybe (Dict String SpaceTrader.System.System)
+    , toMsg : Msg -> msg
+    , toModel : Model -> model
+    }
+    -> Update model msg
 init opts =
     { registerFormModel = Form.init
     , submittingRegistration = False
@@ -48,6 +53,9 @@ init opts =
     , systems = opts.systems
     , backgroundRotation = 0
     }
+        |> Update.succeeed
+        |> Update.mapMsg opts.toMsg
+        |> Update.mapModel opts.toModel
 
 
 withSubmitting : Model -> Model

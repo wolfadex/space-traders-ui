@@ -32,7 +32,7 @@ primary attr { label, onClick } =
                     Just msg ->
                         Html.Events.onClick msg
                , Html.Attributes.style "background-color" "var(--blue-light)"
-               , Html.Attributes.style "border-color" "var(--blur-dar)"
+               , Html.Attributes.style "border-color" "var(--blur-dark)"
                ]
         )
         [ label ]

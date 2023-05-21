@@ -100,11 +100,11 @@ init flags url navKey =
 
                 Ok { accessToken, settings, cached } ->
                     { accessToken = accessToken
-                    , cachedSystemd = Just cached.systems
+                    , cachedSystemd = cached.systems
                     , shared =
                         Shared.init
                             { theme = Just settings.theme
-                            , systems = Just cached.systems
+                            , systems = cached.systems
                             }
                     }
 
@@ -114,16 +114,22 @@ init flags url navKey =
         ( pageModel, pageCmd ) =
             case route of
                 Route.Login ->
-                    ( Login <| Page.Login.init { systems = initialState.cachedSystemd }
-                    , Cmd.none
-                    )
+                    Page.Login.init
+                        { systems = initialState.cachedSystemd
+                        , toMsg = LoginMsg
+                        , toModel = \m -> Login m
+                        }
+                        |> Update.toTuple { fromEffect = FromEffect }
 
                 Route.Game tab ->
                     case initialState.accessToken of
                         Nothing ->
-                            ( Login <| Page.Login.init { systems = initialState.cachedSystemd }
-                            , Cmd.none
-                            )
+                            Page.Login.init
+                                { systems = initialState.cachedSystemd
+                                , toMsg = LoginMsg
+                                , toModel = \m -> Login m
+                                }
+                                |> Update.toTuple { fromEffect = FromEffect }
 
                         Just accessToken ->
                             Page.Game.init
@@ -131,13 +137,18 @@ init flags url navKey =
                                 , agent = Nothing
                                 , systems = initialState.cachedSystemd
                                 , tab = tab
+                                , toMsg = GameMsg
+                                , toModel = \m -> Game m
                                 }
-                                |> Tuple.mapBoth Game (Cmd.map GameMsg)
+                                |> Update.toTuple { fromEffect = FromEffect }
 
                 Route.NotFound ->
-                    ( Login <| Page.Login.init { systems = initialState.cachedSystemd }
-                    , Cmd.none
-                    )
+                    Page.Login.init
+                        { systems = initialState.cachedSystemd
+                        , toMsg = LoginMsg
+                        , toModel = \m -> Login m
+                        }
+                        |> Update.toTuple { fromEffect = FromEffect }
     in
     ( { navKey = navKey
       , shared = sharedModel
@@ -154,7 +165,7 @@ decodeFlags :
     Json.Decode.Decoder
         { accessToken : Maybe String
         , settings : { theme : Ui.Theme.Theme }
-        , cached : { systems : Dict String SpaceTrader.System.System }
+        , cached : { systems : Maybe (Dict String SpaceTrader.System.System) }
         }
 decodeFlags =
     Json.Decode.map3
@@ -181,7 +192,7 @@ decodeSettings =
         )
 
 
-decodeCached : Json.Decode.Decoder { systems : Dict String SpaceTrader.System.System }
+decodeCached : Json.Decode.Decoder { systems : Maybe (Dict String SpaceTrader.System.System) }
 decodeCached =
     Json.Decode.map
         (\systems ->
@@ -190,9 +201,7 @@ decodeCached =
         )
         (Json.Decode.maybe (Json.Decode.field "systems" (Json.Decode.list SpaceTrader.System.decode))
             |> Json.Decode.map
-                (Maybe.map (List.foldl (\system systems -> Dict.insert system.id system systems) Dict.empty)
-                    >> Maybe.withDefault Dict.empty
-                )
+                (Maybe.map (List.foldl (\system systems -> Dict.insert system.id system systems) Dict.empty))
         )
 
 
@@ -283,12 +292,14 @@ update msg model =
                                         , agent = Nothing
                                         , systems = loginModel.systems
                                         , tab = tab
+                                        , toMsg = GameMsg
+                                        , toModel = \m -> { model | page = Game m }
                                         }
-                                        |> Tuple.mapBoth
-                                            (\gameModel -> { model | page = Game gameModel })
+                                        |> Update.toTuple { fromEffect = FromEffect }
+                                        |> Tuple.mapSecond
                                             (\cmd ->
                                                 Cmd.batch
-                                                    [ Cmd.map GameMsg cmd
+                                                    [ cmd
                                                     , Port.setToken accessToken
                                                     ]
                                             )
@@ -309,10 +320,10 @@ update msg model =
                         , agent = agent
                         , systems = systems
                         , tab = Nothing
+                        , toMsg = GameMsg
+                        , toModel = \m -> { model | page = Game m }
                         }
-                        |> Tuple.mapBoth
-                            (\gameModel -> { model | page = Game gameModel })
-                            (Cmd.map GameMsg)
+                        |> Update.toTuple { fromEffect = FromEffect }
 
                 Game _ ->
                     ( model, Cmd.none )
@@ -320,6 +331,11 @@ update msg model =
         FromEffect (Update.RouteChangeRequested route) ->
             ( model
             , Browser.Navigation.pushUrl model.navKey (Route.toUrlString route)
+            )
+
+        FromEffect (Update.RouteModifyRequested route) ->
+            ( model
+            , Browser.Navigation.replaceUrl model.navKey (Route.toUrlString route)
             )
 
         -- page

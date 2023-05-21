@@ -6,6 +6,7 @@ import Html.Events
 import Json.Decode
 import Json.Encode
 import List.NonEmpty
+import Route exposing (Route)
 import Time
 
 
@@ -207,3 +208,13 @@ progress attr opt =
             ]
             []
         ]
+
+
+link : List (Html.Attribute msg) -> { label : Html msg, route : Route } -> Html msg
+link attr opts =
+    Html.a
+        ([ Html.Attributes.href (Route.toUrlString opts.route)
+         ]
+            ++ attr
+        )
+        [ opts.label ]

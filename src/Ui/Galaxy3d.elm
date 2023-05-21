@@ -772,13 +772,14 @@ viewSpace options labels scene =
             labels
         , Html.div
             [ Html.Attributes.style "position" "absolute"
-            , Html.Attributes.style "transform" "translateY(-100%)"
+            , Html.Attributes.style "transform" "translate(-0.5rem, calc(-100% - 0.5rem)"
             , Html.Attributes.style "background" "rgba(0, 0, 0, 0)"
             , Html.Attributes.style "width" (String.fromInt (floor options.galaxyViewSize.width) ++ "px")
             , Html.Attributes.style "display" "flex"
             , Html.Attributes.style "flex-direction" "column"
             , Html.Attributes.style "align-items" "end"
             , Html.Attributes.style "gap" "1rem"
+            , Html.Attributes.style "pointer-events" "none"
 
             -- DEBUG
             -- , Html.Attributes.style "border" "1px solid red"
@@ -794,7 +795,10 @@ viewSpace options labels scene =
                         Html.text ""
 
                     Just onZoomPress ->
-                        Ui.Button.default [ Html.Attributes.style "pointer-events" "all" ]
+                        Ui.Button.default
+                            [ Html.Attributes.style "pointer-events" "all"
+                            , Html.Attributes.style "backgorund-color" "rgba(0, 0, 0, 0.5)"
+                            ]
                             { onClick = Just (onZoomPress -10.0)
                             , label = Html.text "+"
                             }
@@ -803,7 +807,10 @@ viewSpace options labels scene =
                         Html.text ""
 
                     Just onZoomPress ->
-                        Ui.Button.default [ Html.Attributes.style "pointer-events" "all" ]
+                        Ui.Button.default
+                            [ Html.Attributes.style "pointer-events" "all"
+                            , Html.Attributes.style "backgorund-color" "rgba(0, 0, 0, 0.5)"
+                            ]
                             { onClick = Just (onZoomPress 10.0)
                             , label = Html.text "-"
                             }
@@ -818,7 +825,10 @@ viewSpace options labels scene =
                         Html.text ""
 
                     Just onRotationPress ->
-                        Ui.Button.default [ Html.Attributes.style "pointer-events" "all" ]
+                        Ui.Button.default
+                            [ Html.Attributes.style "pointer-events" "all"
+                            , Html.Attributes.style "backgorund-color" "rgba(0, 0, 0, 0.5)"
+                            ]
                             { onClick = Just (onRotationPress -5)
                             , label = Html.text "<-"
                             }
@@ -827,7 +837,10 @@ viewSpace options labels scene =
                         Html.text ""
 
                     Just onRotationPress ->
-                        Ui.Button.default [ Html.Attributes.style "pointer-events" "all" ]
+                        Ui.Button.default
+                            [ Html.Attributes.style "pointer-events" "all"
+                            , Html.Attributes.style "backgorund-color" "rgba(0, 0, 0, 0.5)"
+                            ]
                             { onClick = Just (onRotationPress 5)
                             , label = Html.text "->"
                             }
