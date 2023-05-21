@@ -53,6 +53,7 @@ type alias MinRenderableWorld r =
         | galaxyViewSize : { width : Float, height : Float }
         , zoom : Float
         , viewRotation : Float
+        , eyeHeight : Float
         , systems : List ( SpaceTrader.Point.System.System, ( Point3d Meters LightYear, Scene3d.Entity ScaledViewPoint ) )
 
         -- , civilizationPopulations : Logic.Component.Set (Dict EntityID Population)
@@ -79,11 +80,12 @@ viewSystems :
     , onZoom : Value -> msg
     , onZoomPress : Float -> msg
     , onRotationPress : Float -> msg
+    , onPitchPress : Float -> msg
     , selected : Maybe SpaceTrader.Point.System.System
     }
     -> MinRenderableWorld r
     -> Html msg
-viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, selected } world =
+viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, onPitchPress, selected } world =
     let
         eyePoint : Point3d Meters coordinates
         eyePoint =
@@ -91,7 +93,8 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, selected } wo
                 (Angle.degrees world.viewRotation)
                 (Point3d.scaleAbout Point3d.origin
                     world.zoom
-                    (Point3d.meters 5 2 3)
+                    -- (Point3d.meters 5 2 3)
+                    (Point3d.meters 5 2 world.eyeHeight)
                 )
 
         -- |> Point3d.rotateAround Axis3d.y (Angle.degrees -22.5)
@@ -253,6 +256,8 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, selected } wo
         , onZoomPress = Just onZoomPress
         , zoomPressMagnitude = 150
         , onRotationPress = Just onRotationPress
+        , onPitchPress = onPitchPress
+        , pitchPressMagnitude = 0.2
         , galaxyViewSize = world.galaxyViewSize
         }
         galaxyLabels
@@ -679,6 +684,8 @@ viewSpace :
         , onZoomPress : Maybe (Float -> msg)
         , zoomPressMagnitude : Float
         , onRotationPress : Maybe (Float -> msg)
+        , onPitchPress : Float -> msg
+        , pitchPressMagnitude : Float
         , galaxyViewSize : { width : Float, height : Float }
     }
     -> List (Svg msg)
@@ -752,34 +759,109 @@ viewSpace options labels scene =
             -- , Html.Attributes.style "border" "1px solid red"
             ]
             labels
+
+        -- controls
         , Html.div
-            [ Html.Attributes.style "transform" "translate(-0.5rem, calc(-100% - 0.5rem)"
+            [ Html.Attributes.style "transform" "translateY(-100%)"
             , Html.Attributes.style "position" "absolute"
             , Html.Attributes.style "background" "rgba(0, 0, 0, 0)"
             , Html.Attributes.style "width" (String.fromInt (floor options.galaxyViewSize.width) ++ "px")
-            , Html.Attributes.style "display" "flex"
-            , Html.Attributes.style "flex-direction" "column"
-            , Html.Attributes.style "align-items" "end"
-            , Html.Attributes.style "gap" "1rem"
+            , Html.Attributes.style "display" "grid"
+            , Html.Attributes.style "grid-template-columns" "1fr 1fr"
             , Html.Attributes.style "pointer-events" "none"
 
             -- DEBUG
             -- , Html.Attributes.style "border" "1px solid red"
             ]
-            [ Html.div
+            [ --left
+              Html.div
                 [ Html.Attributes.style "background" "rgba(0, 0, 0, 0)"
-                , Html.Attributes.style "display" "flex"
-                , Html.Attributes.style "flex-direction" "column"
+                , Html.Attributes.style "display" "grid"
                 , Html.Attributes.style "gap" "1rem"
+                , Html.Attributes.style "padding" "0 0 0.5rem 0.5rem"
+                , Html.Attributes.style "grid-template-columns" "3rem 3rem 1fr"
+                , Html.Attributes.style "grid-template-rows" "1fr 1fr 1fr"
                 ]
                 [ case options.onZoomPress of
                     Nothing ->
                         Html.text ""
 
                     Just onZoomPress ->
-                        Ui.Button.default
+                        Ui.Button.small
                             [ Html.Attributes.style "pointer-events" "all"
                             , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
+                            , Html.Attributes.style "grid-column" "1"
+                            , Html.Attributes.style "grid-row" "1"
+                            , Html.Attributes.title "Pitch up"
+                            ]
+                            { onClick = Just (options.onPitchPress options.pitchPressMagnitude)
+                            , label = Html.text "+P"
+                            }
+                , case options.onZoomPress of
+                    Nothing ->
+                        Html.text ""
+
+                    Just onZoomPress ->
+                        Ui.Button.small
+                            [ Html.Attributes.style "pointer-events" "all"
+                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
+                            , Html.Attributes.style "grid-column" "1"
+                            , Html.Attributes.style "grid-row" "2"
+                            , Html.Attributes.title "Pitch down"
+                            ]
+                            { onClick = Just (options.onPitchPress -options.pitchPressMagnitude)
+                            , label = Html.text "-P"
+                            }
+                , case options.onRotationPress of
+                    Nothing ->
+                        Html.text ""
+
+                    Just onRotationPress ->
+                        Ui.Button.small
+                            [ Html.Attributes.style "pointer-events" "all"
+                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
+                            , Html.Attributes.style "grid-column" "1"
+                            , Html.Attributes.style "grid-row" "3"
+                            ]
+                            { onClick = Nothing
+                            , label = Html.text "TBD"
+                            }
+                , case options.onRotationPress of
+                    Nothing ->
+                        Html.text ""
+
+                    Just onRotationPress ->
+                        Ui.Button.small
+                            [ Html.Attributes.style "pointer-events" "all"
+                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
+                            , Html.Attributes.style "grid-column" "2"
+                            , Html.Attributes.style "grid-row" "3"
+                            ]
+                            { onClick = Nothing
+                            , label = Html.text "TBD"
+                            }
+                ]
+
+            -- right
+            , Html.div
+                [ Html.Attributes.style "background" "rgba(0, 0, 0, 0)"
+                , Html.Attributes.style "display" "grid"
+                , Html.Attributes.style "gap" "1rem"
+                , Html.Attributes.style "padding" "0 0.5rem 0.5rem 0"
+                , Html.Attributes.style "grid-template-columns" "1fr 3rem 3rem"
+                , Html.Attributes.style "grid-template-rows" "1fr 1fr 1fr"
+                ]
+                [ case options.onZoomPress of
+                    Nothing ->
+                        Html.text ""
+
+                    Just onZoomPress ->
+                        Ui.Button.small
+                            [ Html.Attributes.style "pointer-events" "all"
+                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
+                            , Html.Attributes.style "grid-column" "3"
+                            , Html.Attributes.style "grid-row" "1"
+                            , Html.Attributes.title "Zoom in"
                             ]
                             { onClick = Just (onZoomPress -options.zoomPressMagnitude)
                             , label = Html.text "+"
@@ -789,42 +871,45 @@ viewSpace options labels scene =
                         Html.text ""
 
                     Just onZoomPress ->
-                        Ui.Button.default
+                        Ui.Button.small
                             [ Html.Attributes.style "pointer-events" "all"
                             , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
+                            , Html.Attributes.style "grid-column" "3"
+                            , Html.Attributes.style "grid-row" "2"
+                            , Html.Attributes.title "Zoom out"
                             ]
                             { onClick = Just (onZoomPress options.zoomPressMagnitude)
                             , label = Html.text "-"
-                            }
-                ]
-            , Html.div
-                [ Html.Attributes.style "background" "rgba(0, 0, 0, 0)"
-                , Html.Attributes.style "display" "flex"
-                , Html.Attributes.style "gap" "1rem"
-                ]
-                [ case options.onRotationPress of
-                    Nothing ->
-                        Html.text ""
-
-                    Just onRotationPress ->
-                        Ui.Button.default
-                            [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            ]
-                            { onClick = Just (onRotationPress -5)
-                            , label = Html.text "<-"
                             }
                 , case options.onRotationPress of
                     Nothing ->
                         Html.text ""
 
                     Just onRotationPress ->
-                        Ui.Button.default
+                        Ui.Button.small
                             [ Html.Attributes.style "pointer-events" "all"
                             , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
+                            , Html.Attributes.style "grid-column" "2"
+                            , Html.Attributes.style "grid-row" "3"
+                            , Html.Attributes.title "Rotate left"
+                            ]
+                            { onClick = Just (onRotationPress -5)
+                            , label = Html.text "-R"
+                            }
+                , case options.onRotationPress of
+                    Nothing ->
+                        Html.text ""
+
+                    Just onRotationPress ->
+                        Ui.Button.small
+                            [ Html.Attributes.style "pointer-events" "all"
+                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
+                            , Html.Attributes.style "grid-column" "3"
+                            , Html.Attributes.style "grid-row" "3"
+                            , Html.Attributes.title "Rotate right"
                             ]
                             { onClick = Just (onRotationPress 5)
-                            , label = Html.text "->"
+                            , label = Html.text "+R"
                             }
                 ]
             ]

@@ -1,4 +1,10 @@
-module Ui.Button exposing (default, link, multi, primary)
+module Ui.Button exposing
+    ( default
+    , link
+    , multi
+    , primary
+    , small
+    )
 
 import Html exposing (Html)
 import Html.Attributes
@@ -28,6 +34,34 @@ default attr { label, onClick } =
 
                     Just _ ->
                         Html.Attributes.style "" ""
+               ]
+        )
+        [ label ]
+
+
+small : List (Html.Attribute msg) -> { label : Html msg, onClick : Maybe msg } -> Html msg
+small attr { label, onClick } =
+    Html.button
+        (attr
+            ++ [ case onClick of
+                    Nothing ->
+                        Html.Attributes.disabled True
+
+                    Just msg ->
+                        Html.Events.onClick msg
+               , case onClick of
+                    Nothing ->
+                        Html.Attributes.style "color" "rgb(var(--blue-light) / 0.5)"
+
+                    Just _ ->
+                        Html.Attributes.style "" ""
+               , case onClick of
+                    Nothing ->
+                        Html.Attributes.style "border-color" "rgb(var(--blue-light) / 0.5)"
+
+                    Just _ ->
+                        Html.Attributes.style "" ""
+               , Html.Attributes.style "padding" "0"
                ]
         )
         [ label ]

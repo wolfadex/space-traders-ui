@@ -11,8 +11,11 @@ import Http
 import Json.Decode
 import Json.Encode
 import Length exposing (Meters)
+import Point2d exposing (Point2d)
 import Point3d exposing (Point3d)
 import Port
+import Quantity
+import Random
 import RemoteData exposing (RemoteData(..))
 import Route exposing (Route)
 import Scene3d
@@ -46,7 +49,7 @@ type alias Model =
     { accessToken : String
     , tab : Route.GameTab
     , agent : RemoteData SpaceTrader.Agent.Agent
-    , waypoints : WaypointDict SpaceTrader.Waypoint.Waypoint
+    , waypoints : WaypointDict (RemoteData SpaceTrader.Waypoint.Waypoint)
     , myContracts : Dict String SpaceTrader.Contract.Contract
     , myShips : Dict String SpaceTrader.Ship.Ship
     , surveys : WaypointDict (List SpaceTrader.Survey.Survey)
@@ -58,6 +61,8 @@ type alias Model =
     , spaceFocus : Shared.SpaceFocus
     , zoom : Float
     , viewRotation : Float
+    , eyeHeight : Float
+    , seed : Random.Seed
     , systems3d : SystemDict ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
     }
 
@@ -80,9 +85,10 @@ init opts =
         sys :
             { zoom : Float
             , systems3d : SystemDict ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
+            , seed : Random.Seed
             }
         sys =
-            initSystems opts.systems
+            initSystems (Random.initialSeed 0) opts.systems
     in
     { accessToken = opts.accessToken
     , tab = Maybe.withDefault Route.Ships opts.tab
@@ -109,7 +115,9 @@ init opts =
     , spaceFocus = Shared.FGalaxy
     , viewRotation = 0
     , zoom = sys.zoom
+    , eyeHeight = 3
     , systems3d = sys.systems3d
+    , seed = sys.seed
     }
         |> Update.succeeed
         |> Update.withRequest MyContractsResponded
@@ -147,20 +155,37 @@ init opts =
 
 
 initSystems :
-    Maybe (SystemDict SpaceTrader.System.System)
+    Random.Seed
+    -> Maybe (SystemDict SpaceTrader.System.System)
     ->
         { zoom : Float
         , systems3d : SystemDict ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
+        , seed : Random.Seed
         }
-initSystems maybeSystems =
+initSystems seed maybeSystems =
     case maybeSystems of
         Nothing ->
             { -- a nice default
               zoom = 6621539845261203 * 10000
             , systems3d = SystemDict.empty
+            , seed = seed
             }
 
         Just systems ->
+            let
+                ( systems3d, finalSeed ) =
+                    systems
+                        |> SystemDict.toList
+                        |> List.foldl
+                            (\( systemId, system ) ( dict, sd ) ->
+                                let
+                                    ( val, s ) =
+                                        buildSystem3d sd system
+                                in
+                                ( SystemDict.insert systemId val dict, s )
+                            )
+                            ( SystemDict.empty, seed )
+            in
             { zoom =
                 systems
                     |> SystemDict.values
@@ -180,22 +205,8 @@ initSystems maybeSystems =
                     |> List.head
                     |> Maybe.map (\a -> a / 2)
                     |> Maybe.withDefault (25000 + (100 * 9460730000000000))
-            , systems3d =
-                systems
-                    |> SystemDict.map
-                        (\_ system ->
-                            let
-                                point : Point3d Meters Shared.LightYear
-                                point =
-                                    Point3d.xyz
-                                        (system.x |> toFloat |> Length.lightYears)
-                                        (system.y |> toFloat |> Length.lightYears)
-                                        (Length.lightYears 0)
-                            in
-                            ( point
-                            , renderSystem point
-                            )
-                        )
+            , systems3d = systems3d
+            , seed = finalSeed
             }
 
 
@@ -204,6 +215,7 @@ type Msg
     | Zoomed Json.Encode.Value
     | ZoomPressed Float
     | RotationPressed Float
+    | PitchPressed Float
     | SystemClicked SpaceTrader.Point.System.System
       -- game
     | CreateSurveyRequested { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : String }
@@ -299,7 +311,7 @@ update ({ model } as opts) =
                         |> Update.withResponse response
                             (\waypoint ->
                                 { model
-                                    | waypoints = WaypointDict.insert id waypoint model.waypoints
+                                    | waypoints = WaypointDict.insert id (Loaded waypoint) model.waypoints
                                 }
                                     |> Update.succeeed
                             )
@@ -431,28 +443,27 @@ update ({ model } as opts) =
                                             |> Maybe.withDefault SystemDict.empty
                                         )
                                         systems
+
+                                ( systems3d, finalSeed ) =
+                                    List.foldl
+                                        (\system ( dict, seed ) ->
+                                            let
+                                                ( sys, s ) =
+                                                    buildSystem3d seed system
+                                            in
+                                            ( SystemDict.insert system.id
+                                                sys
+                                                dict
+                                            , s
+                                            )
+                                        )
+                                        ( model.systems3d, model.seed )
+                                        systems
                             in
                             { model
                                 | systems = Cached updatedSystems
-                                , systems3d =
-                                    List.foldl
-                                        (\system dict ->
-                                            SystemDict.insert system.id
-                                                (let
-                                                    point =
-                                                        Point3d.xyz
-                                                            (system.x |> toFloat |> Length.lightYears)
-                                                            (system.y |> toFloat |> Length.lightYears)
-                                                            (Length.lightYears 0)
-                                                 in
-                                                 ( point
-                                                 , renderSystem point
-                                                 )
-                                                )
-                                                dict
-                                        )
-                                        model.systems3d
-                                        systems
+                                , systems3d = systems3d
+                                , seed = finalSeed
                             }
                                 |> Update.succeeed
                                 |> Update.withCmd
@@ -475,28 +486,27 @@ update ({ model } as opts) =
                                             |> Maybe.withDefault SystemDict.empty
                                         )
                                         data.data
+
+                                ( systems3d, finalSeed ) =
+                                    List.foldl
+                                        (\system ( dict, seed ) ->
+                                            let
+                                                ( sys, s ) =
+                                                    buildSystem3d seed system
+                                            in
+                                            ( SystemDict.insert system.id
+                                                sys
+                                                dict
+                                            , s
+                                            )
+                                        )
+                                        ( model.systems3d, model.seed )
+                                        data.data
                             in
                             { model
                                 | systems = Caching { data = updatedSystems, current = data.current, max = data.max }
-                                , systems3d =
-                                    List.foldl
-                                        (\system dict ->
-                                            SystemDict.insert system.id
-                                                (let
-                                                    point =
-                                                        Point3d.xyz
-                                                            (system.x |> toFloat |> Length.lightYears)
-                                                            (system.y |> toFloat |> Length.lightYears)
-                                                            (Length.lightYears 0)
-                                                 in
-                                                 ( point
-                                                 , renderSystem point
-                                                 )
-                                                )
-                                                dict
-                                        )
-                                        model.systems3d
-                                        data.data
+                                , systems3d = systems3d
+                                , seed = finalSeed
                             }
                                 |> Update.succeeed
                                 |> Update.withCmd
@@ -514,22 +524,14 @@ update ({ model } as opts) =
                     Debug.todo (Debug.toString err)
 
                 SystemResponded (Ok system) ->
+                    let
+                        ( sys, seed ) =
+                            buildSystem3d model.seed system
+                    in
                     { model
                         | systems = Cacheable.insert SystemDict.insert system.id (RemoteData.Loaded system) model.systems
-                        , systems3d =
-                            SystemDict.insert system.id
-                                (let
-                                    point =
-                                        Point3d.xyz
-                                            (system.x |> toFloat |> Length.lightYears)
-                                            (system.y |> toFloat |> Length.lightYears)
-                                            (Length.lightYears 0)
-                                 in
-                                 ( point
-                                 , renderSystem point
-                                 )
-                                )
-                                model.systems3d
+                        , systems3d = SystemDict.insert system.id sys model.systems3d
+                        , seed = seed
                     }
                         |> Update.succeeed
 
@@ -552,6 +554,12 @@ update ({ model } as opts) =
                     }
                         |> Update.succeeed
 
+                PitchPressed change ->
+                    { model
+                        | eyeHeight = model.eyeHeight + change
+                    }
+                        |> Update.succeeed
+
 
 withTab : { tab : Maybe Route.GameTab, model : Model, toMsg : Msg -> msg, toModel : Model -> model } -> Update model msg
 withTab ({ model } as opts) =
@@ -570,7 +578,7 @@ withTab ({ model } as opts) =
                                             systemSelected systemId
 
                                         Just (Route.ViewWaypoint waypointId) ->
-                                            Debug.todo ""
+                                            waytpointSelected waypointId
 
                                 _ ->
                                     Update.succeeed
@@ -615,6 +623,39 @@ systemSelected systemId model =
            )
 
 
+waytpointSelected : SpaceTrader.Point.Waypoint.Waypoint -> Model -> Update Model Msg
+waytpointSelected waypointId model =
+    { model
+        | waypoints =
+            WaypointDict.update waypointId
+                (\maybeWaypoint ->
+                    case maybeWaypoint of
+                        Just (Loaded waypoint) ->
+                            Just (Loaded waypoint)
+
+                        _ ->
+                            Just Loading
+                )
+                model.waypoints
+    }
+        |> Update.succeeed
+        |> (case WaypointDict.get waypointId model.waypoints of
+                Just (Loaded _) ->
+                    identity
+
+                Just Loading ->
+                    identity
+
+                _ ->
+                    Update.withRequest (WaypointResponded waypointId)
+                        (SpaceTrader.Api.getWaypoint
+                            { token = model.accessToken
+                            , waypointId = waypointId
+                            }
+                        )
+           )
+
+
 setZoom : Model -> Float -> Update Model Msg
 setZoom model delta =
     { model | zoom = max 5000000 (model.zoom + delta) }
@@ -638,6 +679,79 @@ zoomMultiplier focus =
 
         Shared.FWaypoint _ ->
             1
+
+
+buildSystem3d : Random.Seed -> { a | x : Int, y : Int } -> ( ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint ), Random.Seed )
+buildSystem3d seed system =
+    let
+        -- zMax =
+        --     Point2d.unitless (toFloat system.x) (toFloat system.y)
+        --         |> Point2d.distanceFrom Point2d.origin
+        --         |> Quantity.toFloat
+        --         |> normalize 0 45000
+        --         |> zScale
+        --         |> Tuple.second
+        -- ( z, nextSeed ) =
+        --     Random.step
+        --         (Random.float -zMax zMax)
+        --         seed
+        point : Point3d Meters Shared.LightYear
+        point =
+            Point3d.xyz
+                (system.x |> toFloat |> Length.lightYears)
+                (system.y |> toFloat |> Length.lightYears)
+                -- (Length.lightYears z)
+                (Length.lightYears 0)
+    in
+    ( ( point
+      , renderSystem point
+      )
+    , seed
+      -- nextSeed
+    )
+
+
+normalize : Float -> Float -> Float -> Float
+normalize min max value =
+    (value - min) / (max - min)
+
+
+zScale : Float -> ( Float, Float )
+zScale t =
+    let
+        -- the max distance from the center of the galaxy
+        x_0 =
+            45000
+
+        -- magic number
+        x_1 =
+            5500
+
+        -- magic number
+        x_2 =
+            21000
+
+        -- magic number
+        x_3 =
+            0
+
+        -- max height, magic
+        y_0 =
+            900
+
+        -- magic number
+        y_1 =
+            600
+
+        -- magic number
+        y_2 =
+            4800
+
+        -- magic number
+        y_3 =
+            4400
+    in
+    ( (1 - t) * ((1 - t) * ((1 - t) * x_0 + t * x_1) + t * ((1 - t) * x_1 + t * x_2)) + t * ((1 - t) * ((1 - t) * x_1 + t * x_2) + t * ((1 - t) * x_2 + t * x_3)), (1 - t) * ((1 - t) * ((1 - t) * y_0 + t * y_1) + t * ((1 - t) * y_1 + t * y_2)) + t * ((1 - t) * ((1 - t) * y_1 + t * y_2) + t * ((1 - t) * y_2 + t * y_3)) )
 
 
 renderSystem : Point3d Meters Shared.LightYear -> Scene3d.Entity Shared.ScaledViewPoint
@@ -827,90 +941,122 @@ view shared model =
                         |> viewContent "My Contracts"
 
                 Route.Waypoints details ->
-                    Html.div [ Ui.grid, Ui.gap 0.5 ]
-                        [ Ui.Galaxy3d.viewSystems
-                            { onSystemClick = SystemClicked
-                            , onZoom = Zoomed
-                            , onZoomPress = ZoomPressed
-                            , onRotationPress = RotationPressed
-                            , selected =
-                                case details.id of
-                                    Nothing ->
-                                        Nothing
+                    case details.id of
+                        Nothing ->
+                            viewSystem model Nothing
 
-                                    Just (Route.ViewSystem systemId) ->
-                                        model.systems
-                                            |> Cacheable.get SystemDict.get systemId
-                                            |> Maybe.andThen RemoteData.toMaybe
-                                            |> Maybe.map .id
+                        Just (Route.ViewSystem systemId) ->
+                            viewSystem model <| Just systemId
 
-                                    Just _ ->
-                                        Nothing
-                            }
-                            { galaxyViewSize = { width = 750, height = 500 }
-                            , zoom = model.zoom
-                            , viewRotation = model.viewRotation
-                            , systems = SystemDict.toList model.systems3d
-                            }
-                        , case model.systems of
-                            Uncached ->
-                                Ui.Button.default
-                                    []
-                                    { label = Html.text "Load Systems"
-                                    , onClick = Just SystemsLoadRequested
-                                    }
-
-                            Caching { current, max } ->
-                                Ui.row []
-                                    [ Html.text "Loading Systems..."
-                                    , Ui.progress []
-                                        { max = toFloat max
-                                        , current = toFloat current
-                                        }
-                                    ]
-
-                            Cached _ ->
-                                Ui.row []
-                                    [ Html.text "Systems Loaded & Cached"
-                                    , Ui.Button.default
-                                        []
-                                        { label = Html.text "Reload Systems"
-                                        , onClick = Just SystemsLoadRequested
-                                        }
-                                    ]
-                        , let
-                            selectedSystem : Maybe (RemoteData.RemoteData SpaceTrader.System.System)
-                            selectedSystem =
-                                case details.id of
-                                    Nothing ->
-                                        Nothing
-
-                                    Just (Route.ViewSystem systemId) ->
-                                        model.systems
-                                            |> Cacheable.get SystemDict.get systemId
-
-                                    Just _ ->
-                                        Nothing
-                          in
-                          case selectedSystem of
-                            Nothing ->
-                                Html.text ""
-
-                            Just Loading ->
-                                Html.text "Loading System..."
-
-                            Just (Failure error) ->
-                                Html.text ("Failed to load system: " ++ error)
-
-                            Just (Loaded system) ->
-                                Ui.System.view
-                                    { myShips = Dict.values model.myShips
-                                    , onCreateSurveyClicked = CreateSurveyRequested
-                                    }
-                                    system
-                        ]
+                        Just (Route.ViewWaypoint waypointId) ->
+                            viewWaypoint model waypointId
             ]
         ]
+
+
+viewSystem : Model -> Maybe SpaceTrader.Point.System.System -> Html Msg
+viewSystem model maybeSystemId =
+    Html.div [ Ui.grid, Ui.gap 0.5 ]
+        [ Ui.Galaxy3d.viewSystems
+            { onSystemClick = SystemClicked
+            , onZoom = Zoomed
+            , onZoomPress = ZoomPressed
+            , onRotationPress = RotationPressed
+            , onPitchPress = PitchPressed
+            , selected =
+                case maybeSystemId of
+                    Nothing ->
+                        Nothing
+
+                    Just systemId ->
+                        model.systems
+                            |> Cacheable.get SystemDict.get systemId
+                            |> Maybe.andThen RemoteData.toMaybe
+                            |> Maybe.map .id
+            }
+            { galaxyViewSize = { width = 750, height = 500 }
+            , zoom = model.zoom
+            , viewRotation = model.viewRotation
+            , systems = SystemDict.toList model.systems3d
+            , eyeHeight = model.eyeHeight
+            }
+        , case model.systems of
+            Uncached ->
+                Ui.Button.default
+                    []
+                    { label = Html.text "Load Systems"
+                    , onClick = Just SystemsLoadRequested
+                    }
+
+            Caching { current, max } ->
+                Ui.row []
+                    [ Html.text "Loading Systems..."
+                    , Ui.progress []
+                        { max = toFloat max
+                        , current = toFloat current
+                        }
+                    ]
+
+            Cached _ ->
+                Ui.row []
+                    [ Html.text "Systems Loaded & Cached"
+                    , Ui.Button.default
+                        []
+                        { label = Html.text "Reload Systems"
+                        , onClick = Just SystemsLoadRequested
+                        }
+                    ]
+        , let
+            selectedSystem : Maybe (RemoteData.RemoteData SpaceTrader.System.System)
+            selectedSystem =
+                case maybeSystemId of
+                    Nothing ->
+                        Nothing
+
+                    Just systemId ->
+                        model.systems
+                            |> Cacheable.get SystemDict.get systemId
+          in
+          case selectedSystem of
+            Nothing ->
+                Html.text ""
+
+            Just Loading ->
+                Html.text "Loading System..."
+
+            Just (Failure error) ->
+                Html.text ("Failed to load system: " ++ error)
+
+            Just (Loaded system) ->
+                Ui.System.view
+                    { myShips = Dict.values model.myShips
+                    , onCreateSurveyClicked = CreateSurveyRequested
+                    }
+                    system
+        ]
+
+
+viewWaypoint : Model -> SpaceTrader.Point.Waypoint.Waypoint -> Html Msg
+viewWaypoint model waypointId =
+    viewContent ("Waypoint: " ++ SpaceTrader.Point.Waypoint.toShortLabel waypointId)
+        (case WaypointDict.get waypointId model.waypoints of
+            Nothing ->
+                Html.text "Waypoint not found"
+
+            Just Loading ->
+                Html.text "Gathering waypoints data..."
+
+            Just (Failure _) ->
+                Html.text "Failed to load waypoint data"
+
+            Just (Loaded waypoint) ->
+                -- Ui.System.Waypoint.view
+                --     { timeZone = shared.timeZone
+                --     , currentTime = shared.currentTime
+                --     }
+                --     waypoint
+                Debug.todo ""
+        )
 
 
 viewContent : String -> Html msg -> Html msg

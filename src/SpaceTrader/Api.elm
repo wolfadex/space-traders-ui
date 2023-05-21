@@ -170,14 +170,21 @@ getSystem toMsg options =
         }
 
 
-getWaypoint : (Result Http.Error SpaceTrader.Waypoint.Waypoint -> msg) -> { token : String, systemId : String, waypointId : String } -> Cmd msg
-getWaypoint toMsg options =
-    v2
+getWaypoint : { token : String, waypointId : SpaceTrader.Point.Waypoint.Waypoint } -> Task Error SpaceTrader.Waypoint.Waypoint
+getWaypoint options =
+    v2_3
         { method = "GET"
         , token = options.token
-        , url = [ "systems", options.systemId, "waypoints", options.waypointId ]
+        , url =
+            [ "systems"
+            , options.waypointId
+                |> SpaceTrader.Point.Waypoint.toSystem
+                |> SpaceTrader.Point.System.toKey
+            , "waypoints"
+            , SpaceTrader.Point.Waypoint.toKey options.waypointId
+            ]
         , body = Http.emptyBody
-        , expect = Http.expectJson toMsg (decodeSuccess SpaceTrader.Waypoint.decode)
+        , decoder = SpaceTrader.Waypoint.decode
         }
 
 

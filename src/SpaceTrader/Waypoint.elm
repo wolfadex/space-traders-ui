@@ -10,7 +10,7 @@ import SpaceTrader.Waypoint.Type
 
 
 type alias Waypoint =
-    { symbol : SpaceTrader.Point.Waypoint.Waypoint
+    { id : SpaceTrader.Point.Waypoint.Waypoint
     , type_ : SpaceTrader.Waypoint.Type.Type
     , system : SpaceTrader.Point.System.System
     , x : Int
