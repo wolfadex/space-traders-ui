@@ -1,4 +1,4 @@
-module Ui exposing (align, column, dateTime, gap, grid, header, justify, link, progress, row, viewLabeled)
+module Ui exposing (align, column, dateTime, gap, grid, header, justify, link, progress, row)
 
 import Html exposing (Html)
 import Html.Attributes
@@ -135,34 +135,6 @@ monthToString month =
 
         Time.Dec ->
             "December"
-
-
-viewLabeled : { label : String, value : Html msg } -> List (Html msg)
-viewLabeled options =
-    [ Html.span
-        [ Html.Attributes.style "grid-column" "1"
-        , Html.Attributes.style "font-weight" "bold"
-        , Html.Attributes.style "padding" "0.5rem "
-        , Html.Attributes.style "border-width" "1px "
-        , Html.Attributes.style "margin-bottom" "0.5rem"
-        , Html.Attributes.style "border-top-left-radius" "0.25rem"
-        , Html.Attributes.style "border-bottom-left-radius" "0.25rem"
-        , Html.Attributes.style "background" "var(--primary-color)"
-        , Html.Attributes.style "color" "var(--secondary-color)"
-        , Html.Attributes.style "border-right" "none"
-        ]
-        [ Html.text options.label ]
-    , Html.span
-        [ Html.Attributes.style "grid-column" "2"
-        , Html.Attributes.style "padding" "0.5rem"
-        , Html.Attributes.style "border" "1px solid"
-        , Html.Attributes.style "margin-bottom" "0.5rem"
-        , Html.Attributes.style "border-top-right-radius" "0.25rem"
-        , Html.Attributes.style "border-bottom-right-radius" "0.25rem"
-        , Html.Attributes.style "border-left" "none"
-        ]
-        [ options.value ]
-    ]
 
 
 header :

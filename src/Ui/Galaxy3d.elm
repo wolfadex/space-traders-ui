@@ -750,8 +750,8 @@ viewSpace options labels scene =
             ]
             labels
         , Html.div
-            [ Html.Attributes.style "position" "absolute"
-            , Html.Attributes.style "transform" "translate(-0.5rem, calc(-100% - 0.5rem)"
+            [ Html.Attributes.style "transform" "translate(-0.5rem, calc(-100% - 0.5rem)"
+            , Html.Attributes.style "position" "absolute"
             , Html.Attributes.style "background" "rgba(0, 0, 0, 0)"
             , Html.Attributes.style "width" (String.fromInt (floor options.galaxyViewSize.width) ++ "px")
             , Html.Attributes.style "display" "flex"

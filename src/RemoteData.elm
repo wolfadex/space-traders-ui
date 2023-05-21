@@ -1,4 +1,8 @@
-module RemoteData exposing (RemoteData(..), fromResult)
+module RemoteData exposing
+    ( RemoteData(..)
+    , fromResult
+    , toMaybe
+    )
 
 
 type RemoteData a
@@ -15,3 +19,13 @@ fromResult result =
 
         Err e ->
             Failure e
+
+
+toMaybe : RemoteData a -> Maybe a
+toMaybe remoteData =
+    case remoteData of
+        Loaded a ->
+            Just a
+
+        _ ->
+            Nothing

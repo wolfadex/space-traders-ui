@@ -21,18 +21,6 @@ view opts waypoint =
     -- , x : Int
     -- , y : Int
     -- }
-    let
-        shipsHere =
-            opts.myShips
-                |> List.filterMap
-                    (\ship ->
-                        if ship.nav.waypoint == waypoint.symbol then
-                            Just ship
-
-                        else
-                            Nothing
-                    )
-    in
     Html.div
         [ Ui.grid
         , Html.Attributes.style "grid-template-columns" "12rem 1fr"
@@ -47,6 +35,18 @@ view opts waypoint =
         , Ui.Button.default [ Html.Attributes.style "width" "fit-content" ]
             { label = Html.text "Create survey"
             , onClick =
+                let
+                    shipsHere =
+                        opts.myShips
+                            |> List.filterMap
+                                (\ship ->
+                                    if ship.nav.waypoint == waypoint.symbol then
+                                        Just ship
+
+                                    else
+                                        Nothing
+                                )
+                in
                 case shipsHere of
                     [] ->
                         Nothing

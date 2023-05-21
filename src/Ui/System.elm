@@ -24,18 +24,26 @@ view opts system =
     -- , waypoints : List SpaceTrader.System.Waypoint.Waypoint
     -- , factions : List String
     -- }
-    Ui.column
-        [ Ui.gap 1
+    Html.div
+        [ Ui.grid
+        , Ui.gap 1
         , Html.Attributes.style "border" "0.125rem solid"
         , Html.Attributes.style "border-radius" "0.25rem"
         , Html.Attributes.style "padding" "0.5rem"
         ]
         [ Ui.header.three [] [ Html.text system.id ]
-        , Html.div [] <|
-            Ui.viewLabeled
-                { label = "Type"
-                , value = Html.text <| Ui.System.Type.view system.type_
-                }
+        , Html.div
+            [ Ui.grid
+            , Html.Attributes.style "grid-template-columns" "4rem 1fr"
+            ]
+            -- Ui.viewLabeled
+            --     { label = "Type"
+            --     , value = Html.text <| Ui.System.Type.view system.type_
+            --     }
+            [ Html.span [ Html.Attributes.style "font-weight" "bold" ]
+                [ Html.text "Type:" ]
+            , Html.span [] [ Html.text <| Ui.System.Type.view system.type_ ]
+            ]
         , Ui.header.four [] [ Html.text "Waypoints:" ]
         , Ui.column [ Ui.gap 0.5 ]
             (List.map

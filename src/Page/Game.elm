@@ -45,11 +45,10 @@ type alias Model =
     , waypoints : Dict String SpaceTrader.Waypoint.Waypoint
     , myContracts : Dict String SpaceTrader.Contract.Contract
     , myShips : Dict String SpaceTrader.Ship.Ship
-    , selectedSystem : Maybe (RemoteData SpaceTrader.System.System)
     , surveys : Dict String (List SpaceTrader.Survey.Survey)
 
     -- cached data
-    , systems : Cacheable SpaceTrader.System.System
+    , systems : Cacheable (RemoteData SpaceTrader.System.System)
 
     -- game stuffs
     , spaceFocus : Shared.SpaceFocus
@@ -70,7 +69,10 @@ init :
     -> Update model msg
 init opts =
     let
-        sys : { zoom : Float, systems3d : Dict String ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint ) }
+        sys :
+            { zoom : Float
+            , systems3d : Dict String ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
+            }
         sys =
             initSystems opts.systems
     in
@@ -86,7 +88,6 @@ init opts =
     , waypoints = Dict.empty
     , myContracts = Dict.empty
     , myShips = Dict.empty
-    , selectedSystem = Nothing
     , surveys = Dict.empty
     , systems =
         case opts.systems of
@@ -94,7 +95,7 @@ init opts =
                 Uncached
 
             Just systems ->
-                Cached systems
+                Cached (Dict.map (\_ v -> RemoteData.Loaded v) systems)
 
     -- 3d stuffs
     , spaceFocus = Shared.FGalaxy
@@ -413,11 +414,11 @@ update ({ model } as opts) =
                     case msg_ of
                         SpaceTrader.Api.Complete systems ->
                             let
-                                updatedSystems : Dict.Dict String SpaceTrader.System.System
+                                updatedSystems : Dict.Dict String (RemoteData SpaceTrader.System.System)
                                 updatedSystems =
                                     List.foldl
                                         (\system dict ->
-                                            Dict.insert system.id system dict
+                                            Dict.insert system.id (RemoteData.Loaded system) dict
                                         )
                                         (Cacheable.getData model.systems)
                                         systems
@@ -448,17 +449,18 @@ update ({ model } as opts) =
                                 |> Update.withCmd
                                     (updatedSystems
                                         |> Dict.values
+                                        |> List.filterMap RemoteData.toMaybe
                                         |> Json.Encode.list SpaceTrader.System.encode
                                         |> Port.cacheSystems
                                     )
 
                         SpaceTrader.Api.NeedsMore data ->
                             let
-                                updatedSystems : Dict String SpaceTrader.System.System
+                                updatedSystems : Dict String (RemoteData SpaceTrader.System.System)
                                 updatedSystems =
                                     List.foldl
                                         (\system dict ->
-                                            Dict.insert system.id system dict
+                                            Dict.insert system.id (RemoteData.Loaded system) dict
                                         )
                                         (Cacheable.getData model.systems)
                                         data.data
@@ -491,6 +493,7 @@ update ({ model } as opts) =
                                         [ SpaceTrader.Api.getAllSystemsUpdate SystemsLongRequestMsg data
                                         , updatedSystems
                                             |> Dict.values
+                                            |> List.filterMap RemoteData.toMaybe
                                             |> Json.Encode.list SpaceTrader.System.encode
                                             |> Port.cacheSystems
                                         ]
@@ -501,7 +504,7 @@ update ({ model } as opts) =
 
                 SystemResponded (Ok system) ->
                     { model
-                        | systems = Cached (Dict.insert system.id system (Cacheable.getData model.systems))
+                        | systems = Cacheable.insert system.id (RemoteData.Loaded system) model.systems
                         , systems3d =
                             Dict.insert system.id
                                 (let
@@ -545,10 +548,7 @@ withTab ({ model } as opts) =
         Update.mapModel opts.toModel <|
             case opts.tab of
                 Just tab ->
-                    { model
-                        | tab = tab
-                        , selectedSystem = Nothing
-                    }
+                    { model | tab = tab }
                         |> (case tab of
                                 Route.Waypoints details ->
                                     case details.systemId of
@@ -569,35 +569,35 @@ withTab ({ model } as opts) =
 
 systemSelected : String -> Model -> Update Model Msg
 systemSelected systemId model =
-    let
-        systemFound : Maybe SpaceTrader.System.System
-        systemFound =
-            model.systems
-                |> Cacheable.getData
-                |> Dict.get systemId
-    in
     { model
-        | selectedSystem =
-            Just <|
-                case systemFound of
-                    Just system ->
-                        Loaded system
+        | systems =
+            Cacheable.update systemId
+                (\maybeSystem ->
+                    case maybeSystem of
+                        Just (Loaded system) ->
+                            Just (Loaded system)
 
-                    Nothing ->
-                        Loading
+                        _ ->
+                            Just Loading
+                )
+                model.systems
     }
         |> Update.succeeed
-        |> Update.withCmd
-            (case systemFound of
-                Just _ ->
-                    Cmd.none
+        |> (case Cacheable.get systemId model.systems of
+                Just (Loaded _) ->
+                    identity
 
-                Nothing ->
-                    SpaceTrader.Api.getSystem SystemResponded
-                        { token = model.accessToken
-                        , systemId = systemId
-                        }
-            )
+                Just Loading ->
+                    identity
+
+                _ ->
+                    Update.withCmd
+                        (SpaceTrader.Api.getSystem SystemResponded
+                            { token = model.accessToken
+                            , systemId = systemId
+                            }
+                        )
+           )
 
 
 setZoom : Model -> Float -> Update Model Msg
@@ -819,12 +819,13 @@ view shared model =
                             , onZoomPress = ZoomPressed
                             , onRotationPress = RotationPressed
                             , selected =
-                                case model.selectedSystem of
-                                    Just (Loaded system) ->
-                                        Just system.id
-
-                                    _ ->
-                                        Nothing
+                                details.systemId
+                                    |> Maybe.andThen
+                                        (\systemId ->
+                                            Cacheable.get systemId model.systems
+                                        )
+                                    |> Maybe.andThen RemoteData.toMaybe
+                                    |> Maybe.map .id
                             }
                             { galaxyViewSize = { width = 750, height = 500 }
                             , zoom = model.zoom
@@ -857,7 +858,15 @@ view shared model =
                                         , onClick = Just SystemsLoadRequested
                                         }
                                     ]
-                        , case model.selectedSystem of
+                        , let
+                            selectedSystem =
+                                details.systemId
+                                    |> Maybe.andThen
+                                        (\systemId ->
+                                            Cacheable.get systemId model.systems
+                                        )
+                          in
+                          case selectedSystem of
                             Nothing ->
                                 Html.text ""
 
