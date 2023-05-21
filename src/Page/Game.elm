@@ -762,10 +762,13 @@ view shared model =
                             (Ui.Contract.view
                                 { timeZone = shared.timeZone
                                 , currentTime = shared.currentTime
-                                , onDestinationClicked = SystemClicked
                                 }
                             )
-                        |> Html.div []
+                        |> Html.div
+                            [ Ui.grid
+                            , Html.Attributes.style "grid-template-columns" "1fr 1fr 1fr"
+                            , Ui.gap 1
+                            ]
                         |> viewContent "My Contracts"
 
                 Route.Waypoints details ->
@@ -832,46 +835,6 @@ view shared model =
                                     system
                         ]
             ]
-
-        --     Ui.viewLabelGroup
-        --     (Html.div []
-        --         [ Html.text "Agent"
-        --         ]
-        --     )
-        --     [ { label = "Callsign"
-        --       , value =
-        --             model.agent
-        --                 |> RemoteData.mapToString .callsign
-        --                 |> Html.text
-        --       }
-        --     , { label = "Headquarters"
-        --       , value =
-        --             Ui.Button.link []
-        --                 { label =
-        --                     model.agent
-        --                         |> RemoteData.mapToString .headquarters
-        --                         |> Html.text
-        --                 , onClick =
-        --                     case model.agent of
-        --                         Loaded { headquarters } ->
-        --                             headquarters
-        --                                 |> String.split "-"
-        --                                 |> List.take 2
-        --                                 |> String.join "-"
-        --                                 |> SystemClicked
-        --                                 |> Just
-        --                         _ ->
-        --                             Nothing
-        --                 }
-        --       }
-        --     , { label = "Credits"
-        --       , value =
-        --             model.agent
-        --                 |> RemoteData.mapToString (.credits >> String.fromInt)
-        --                 |> Html.text
-        --       }
-        --     ]
-        -- ]
         ]
 
 

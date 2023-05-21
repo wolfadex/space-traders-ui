@@ -2,6 +2,7 @@ module Ui.Contract exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
+import Route
 import SpaceTrader.Contract
 import SpaceTrader.Contract.Good
 import SpaceTrader.Contract.Term
@@ -12,8 +13,8 @@ import Ui
 import Ui.Button
 
 
-view : { timeZone : Time.Zone, currentTime : Time.Posix, onDestinationClicked : String -> msg } -> SpaceTrader.Contract.Contract -> Html msg
-view { timeZone, currentTime, onDestinationClicked } contract =
+view : { timeZone : Time.Zone, currentTime : Time.Posix } -> SpaceTrader.Contract.Contract -> Html msg
+view { timeZone, currentTime } contract =
     Html.div
         [ Html.Attributes.style "border" "0.125rem solid"
         , Html.Attributes.style "border-radius" "0.25rem"
@@ -64,15 +65,56 @@ view { timeZone, currentTime, onDestinationClicked } contract =
                                     , important good.tradeSymbol
                                     , Html.br [] []
                                     , Html.text "and deliver them to "
-                                    , Ui.Button.link [ Html.Attributes.style "font-weight" "bold" ]
-                                        { label = Html.text good.destinationSymbol
-                                        , onClick =
+
+                                    -- , Ui.Button.link [ Html.Attributes.style "font-weight" "bold" ]
+                                    --     { label = Html.text good.destinationSymbol
+                                    --     , onClick =
+                                    --         good.destinationSymbol
+                                    --             |> String.split "-"
+                                    --             |> List.take 2
+                                    --             |> String.join "-"
+                                    --             |> onDestinationClicked
+                                    --             |> Just
+                                    --     }
+                                    , let
+                                        systemId =
                                             good.destinationSymbol
                                                 |> String.split "-"
                                                 |> List.take 2
                                                 |> String.join "-"
-                                                |> onDestinationClicked
-                                                |> Just
+                                      in
+                                      Ui.link []
+                                        { label =
+                                            systemId
+                                                |> Html.text
+                                        , route =
+                                            Route.Game
+                                                { tab =
+                                                    Just
+                                                        (Route.Waypoints
+                                                            { systemId = Just systemId }
+                                                        )
+                                                }
+                                        }
+                                    , Html.text "-"
+                                    , Ui.link []
+                                        { label =
+                                            good.destinationSymbol
+                                                |> String.split "-"
+                                                |> List.drop 2
+                                                |> String.join "-"
+                                                |> Html.text
+                                        , route =
+                                            Route.Game
+                                                { tab =
+                                                    Just
+                                                        (Route.Waypoints
+                                                            { systemId =
+                                                                Just
+                                                                    good.destinationSymbol
+                                                            }
+                                                        )
+                                                }
                                         }
                                     ]
                             )
