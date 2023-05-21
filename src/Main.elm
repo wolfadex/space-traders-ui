@@ -121,7 +121,7 @@ init flags url navKey =
                         }
                         |> Update.toTuple { fromEffect = FromEffect }
 
-                Route.Game tab ->
+                Route.Game { tab } ->
                     case initialState.accessToken of
                         Nothing ->
                             Page.Login.init
@@ -272,17 +272,16 @@ update msg model =
                     -- TODO: Should we redirect here?
                     ( model, Cmd.none )
 
-                Route.Game tab ->
+                Route.Game { tab } ->
                     case model.page of
                         Game gameModel ->
-                            ( { model
-                                | page =
-                                    gameModel
-                                        |> Page.Game.updateTab tab
-                                        |> Game
-                              }
-                            , Cmd.none
-                            )
+                            Page.Game.withTab
+                                { tab = tab
+                                , model = gameModel
+                                , toMsg = GameMsg
+                                , toModel = \m -> { model | page = Game m }
+                                }
+                                |> Update.toTuple { fromEffect = FromEffect }
 
                         Login loginModel ->
                             case Dict.get "token" appUrl.queryParameters of

@@ -214,6 +214,7 @@ link : List (Html.Attribute msg) -> { label : Html msg, route : Route } -> Html 
 link attr opts =
     Html.a
         ([ Html.Attributes.href (Route.toUrlString opts.route)
+         , Html.Attributes.style "color" "var(--blue-light)"
          ]
             ++ attr
         )

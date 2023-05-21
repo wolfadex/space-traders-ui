@@ -139,7 +139,7 @@ init opts =
         |> (\updatedModel ->
                 case opts.tab of
                     Nothing ->
-                        Update.withEffect (Update.RouteModifyRequested (Route.Game (Just Route.Ships))) updatedModel
+                        Update.withEffect (Update.RouteModifyRequested (Route.Game { tab = Just Route.Ships })) updatedModel
 
                     Just _ ->
                         updatedModel
@@ -351,34 +351,11 @@ update ({ model } as opts) =
                         |> Update.succeeed
 
                 SystemClicked systemId ->
-                    let
-                        systemFound : Maybe SpaceTrader.System.System
-                        systemFound =
-                            model.systems
-                                |> Cacheable.getData
-                                |> Dict.get systemId
-                    in
-                    { model
-                        | selectedSystem =
-                            Just <|
-                                case systemFound of
-                                    Just system ->
-                                        Loaded system
-
-                                    Nothing ->
-                                        Loading
-                    }
+                    model
                         |> Update.succeeed
-                        |> Update.withCmd
-                            (case systemFound of
-                                Just _ ->
-                                    Cmd.none
-
-                                Nothing ->
-                                    SpaceTrader.Api.getSystem SystemResponded
-                                        { token = model.accessToken
-                                        , systemId = systemId
-                                        }
+                        |> Update.withEffect
+                            (Update.RouteChangeRequested
+                                (Route.Game { tab = Just (Route.Waypoints { systemId = Just systemId }) })
                             )
 
                 SystemsLoadRequested ->
@@ -523,16 +500,64 @@ update ({ model } as opts) =
                         |> Update.succeeed
 
 
-updateTab : Maybe Route.GameTab -> Model -> Model
-updateTab maybeTab model =
-    case maybeTab of
-        Just tab ->
-            { model
-                | tab = tab
-            }
+systemSelected : String -> Model -> Update Model Msg
+systemSelected systemId model =
+    let
+        systemFound : Maybe SpaceTrader.System.System
+        systemFound =
+            model.systems
+                |> Cacheable.getData
+                |> Dict.get systemId
+    in
+    { model
+        | selectedSystem =
+            Just <|
+                case systemFound of
+                    Just system ->
+                        Loaded system
 
-        Nothing ->
-            model
+                    Nothing ->
+                        Loading
+    }
+        |> Update.succeeed
+        |> Update.withCmd
+            (case systemFound of
+                Just _ ->
+                    Cmd.none
+
+                Nothing ->
+                    SpaceTrader.Api.getSystem SystemResponded
+                        { token = model.accessToken
+                        , systemId = systemId
+                        }
+            )
+
+
+withTab : { tab : Maybe Route.GameTab, model : Model, toMsg : Msg -> msg, toModel : Model -> model } -> Update model msg
+withTab ({ model } as opts) =
+    Update.mapMsg opts.toMsg <|
+        Update.mapModel opts.toModel <|
+            case opts.tab of
+                Just tab ->
+                    { model
+                        | tab = tab
+                    }
+                        |> (case tab of
+                                Route.Waypoints details ->
+                                    case details.systemId of
+                                        Nothing ->
+                                            Update.succeeed
+
+                                        Just systemId ->
+                                            systemSelected systemId
+
+                                _ ->
+                                    Update.succeeed
+                           )
+
+                Nothing ->
+                    model
+                        |> Update.succeeed
 
 
 setZoom : Model -> Float -> Update Model Msg
@@ -657,7 +682,9 @@ view shared model =
                                     , Html.Attributes.style "font-weight" "bold"
                                     ]
                                     [ Html.text "Credits: " ]
-                                , Html.span [ Html.Attributes.style "color" "var(--blue-light)" ]
+                                , Html.span
+                                    [ Html.Attributes.style "color" "var(--blue-light)"
+                                    ]
                                     [ agent.credits
                                         |> toFloat
                                         |> FormatNumber.format FormatNumber.Locales.usLocale
@@ -669,19 +696,25 @@ view shared model =
                 ]
             , navLink
                 { label = "Ships"
-                , route = Route.Game (Just Route.Ships)
+                , route = Route.Game { tab = Just Route.Ships }
                 }
                 (model.tab == Route.Ships)
             , navLink
                 { label = "Contracts"
-                , route = Route.Game (Just Route.Contracts)
+                , route = Route.Game { tab = Just Route.Contracts }
                 }
                 (model.tab == Route.Contracts)
             , navLink
                 { label = "Waypoints"
-                , route = Route.Game (Just Route.Waypoints)
+                , route = Route.Game { tab = Just (Route.Waypoints { systemId = Nothing }) }
                 }
-                (model.tab == Route.Waypoints)
+                (case model.tab of
+                    Route.Waypoints _ ->
+                        True
+
+                    _ ->
+                        False
+                )
 
             -- , Ui.Button.default []
             --     { label = Html.text "⚙️"
@@ -713,7 +746,6 @@ view shared model =
                                 { onDock = ShipDockRequested
                                 , onOrbit = ShipOrbitRequested
                                 , onMove = ShipMoveRequested
-                                , onSystemClicked = SystemClicked
                                 }
                             )
                         |> Html.div
@@ -736,7 +768,7 @@ view shared model =
                         |> Html.div []
                         |> viewContent "My Contracts"
 
-                Route.Waypoints ->
+                Route.Waypoints details ->
                     Ui.column [ Ui.gap 0.5 ]
                         [ Ui.Galaxy3d.viewSystems
                             { onSystemClick = SystemClicked

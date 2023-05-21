@@ -43,6 +43,7 @@ link attr { label, onClick } =
     Html.button
         (attr
             ++ [ Html.Attributes.class "button-link"
+               , Html.Attributes.style "border-radius" "0.125rem"
                , Html.Attributes.style "border" "none"
                , Html.Attributes.style "text-decoration" "underline"
                , case onClick of

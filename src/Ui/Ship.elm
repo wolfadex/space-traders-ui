@@ -2,12 +2,14 @@ module Ui.Ship exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
+import Route
 import SpaceTrader.Faction
 import SpaceTrader.Ship
 import SpaceTrader.Ship.Nav.Status
 import Time
 import Time.Distance
 import Ui
+import Ui.Button
 import Ui.Ship.Nav
 import Ui.Ship.Nav.Status
 
@@ -16,7 +18,6 @@ view :
     { onDock : String -> msg
     , onOrbit : String -> msg
     , onMove : String -> msg
-    , onSystemClicked : String -> msg
     }
     -> SpaceTrader.Ship.Ship
     -> Html msg
@@ -48,18 +49,37 @@ view opts ship =
             { max = toFloat ship.fuel.capacity
             , current = toFloat ship.fuel.current
             }
-        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "System:" ]
-
-        -- , Ui.Button.link [ Html.Attributes.style "width" "fit-content" ]
-        --     { label = Html.text nav.system
-        --     , onClick =
-        --         nav.system
-        --             |> opts.onSystemClicked
-        --             |> Just
-        --     }
-        , Html.span [] [ Html.text ship.nav.system ]
         , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Waypoint:" ]
-        , Html.span [] [ Html.text ship.nav.waypoint ]
+        , Html.span []
+            [ Ui.link []
+                { label = Html.text ship.nav.system
+                , route =
+                    Route.Game
+                        { tab =
+                            Route.Waypoints
+                                { systemId = Just ship.nav.system
+                                }
+                                |> Just
+                        }
+                }
+            , Html.text "-"
+            , Ui.link []
+                { label =
+                    ship.nav.waypoint
+                        |> String.split "-"
+                        |> List.drop 2
+                        |> String.join "-"
+                        |> Html.text
+                , route =
+                    Route.Game
+                        { tab =
+                            Route.Waypoints
+                                { systemId = Just ship.nav.waypoint
+                                }
+                                |> Just
+                        }
+                }
+            ]
         , Html.div
             [ Html.Attributes.style "grid-column" "1 / 3" ]
             [ let

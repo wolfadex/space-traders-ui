@@ -5,14 +5,14 @@ import AppUrl exposing (AppUrl)
 
 type Route
     = Login
-    | Game (Maybe GameTab)
+    | Game { tab : Maybe GameTab }
     | NotFound
 
 
 type GameTab
     = Ships
     | Contracts
-    | Waypoints
+    | Waypoints { systemId : Maybe String }
 
 
 fromAppUrl : AppUrl -> Route
@@ -21,17 +21,31 @@ fromAppUrl url =
         [] ->
             Login
 
-        [ "game", "ships" ] ->
-            Game (Just Ships)
+        "game" :: rest ->
+            Game
+                { tab =
+                    case rest of
+                        [ "ships" ] ->
+                            Just Ships
 
-        [ "game", "contracts" ] ->
-            Game (Just Contracts)
+                        [ "contracts" ] ->
+                            Just Contracts
 
-        [ "game", "waypoints" ] ->
-            Game (Just Waypoints)
+                        "waypoints" :: rest_ ->
+                            Waypoints
+                                { systemId =
+                                    case rest_ of
+                                        [ systemId ] ->
+                                            Just systemId
 
-        "game" :: _ ->
-            Game Nothing
+                                        _ ->
+                                            Nothing
+                                }
+                                |> Just
+
+                        _ ->
+                            Nothing
+                }
 
         _ ->
             NotFound
@@ -43,23 +57,30 @@ toUrlString route =
         Login ->
             "/"
 
-        Game tab ->
+        Game { tab } ->
             "/"
-                ++ String.join "/"
-                    [ "game"
+                ++ ([ Just [ "game" ]
                     , case tab of
                         Nothing ->
-                            "ships"
+                            Nothing
 
                         Just Ships ->
-                            "ships"
+                            Just [ "ships" ]
 
                         Just Contracts ->
-                            "contracts"
+                            Just [ "contracts" ]
 
-                        Just Waypoints ->
-                            "waypoints"
+                        Just (Waypoints { systemId }) ->
+                            [ Just "waypoints"
+                            , systemId
+                            ]
+                                |> List.filterMap identity
+                                |> Just
                     ]
+                        |> List.filterMap identity
+                        |> List.concat
+                        |> String.join "/"
+                   )
 
         NotFound ->
             "/"
