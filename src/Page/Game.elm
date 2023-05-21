@@ -684,30 +684,31 @@ zoomMultiplier focus =
 buildSystem3d : Random.Seed -> { a | x : Int, y : Int } -> ( ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint ), Random.Seed )
 buildSystem3d seed system =
     let
-        -- zMax =
-        --     Point2d.unitless (toFloat system.x) (toFloat system.y)
-        --         |> Point2d.distanceFrom Point2d.origin
-        --         |> Quantity.toFloat
-        --         |> normalize 0 45000
-        --         |> zScale
-        --         |> Tuple.second
-        -- ( z, nextSeed ) =
-        --     Random.step
-        --         (Random.float -zMax zMax)
-        --         seed
+        zMax =
+            Point2d.unitless (toFloat system.x) (toFloat system.y)
+                |> Point2d.distanceFrom Point2d.origin
+                |> Quantity.toFloat
+                |> normalize 0 45000
+                |> (\a -> 1 - a)
+                |> zScale
+                |> Tuple.second
+
+        ( z, nextSeed ) =
+            Random.step
+                (Random.float -zMax zMax)
+                seed
+
         point : Point3d Meters Shared.LightYear
         point =
             Point3d.xyz
                 (system.x |> toFloat |> Length.lightYears)
                 (system.y |> toFloat |> Length.lightYears)
-                -- (Length.lightYears z)
-                (Length.lightYears 0)
+                (Length.lightYears z)
     in
     ( ( point
       , renderSystem point
       )
-    , seed
-      -- nextSeed
+    , nextSeed
     )
 
 
@@ -716,6 +717,8 @@ normalize min max value =
     (value - min) / (max - min)
 
 
+{-| <https://www.desmos.com/calculator/vxq5jjmlyu>
+-}
 zScale : Float -> ( Float, Float )
 zScale t =
     let
@@ -737,7 +740,7 @@ zScale t =
 
         -- max height, magic
         y_0 =
-            900
+            0
 
         -- magic number
         y_1 =

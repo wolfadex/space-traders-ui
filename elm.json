@@ -20,6 +20,7 @@
             "elm/time": "1.0.0",
             "elm/url": "1.0.0",
             "elm-community/json-extra": "4.3.0",
+            "elm-community/random-extra": "3.2.0",
             "gingko/time-distance": "2.4.0",
             "ianmackenzie/elm-3d-camera": "3.1.0",
             "ianmackenzie/elm-3d-scene": "1.0.1",
