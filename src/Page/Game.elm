@@ -119,11 +119,11 @@ init opts =
     , systems3d = sys.systems3d
     }
         |> Update.succeeed
+        |> Update.withRequest MyContractsResponded
+            (SpaceTrader.Api.myContracts { token = opts.accessToken })
         |> Update.withCmd
             (Cmd.batch
-                [ SpaceTrader.Api.myContracts MyContractsResponded
-                    { token = opts.accessToken }
-                , SpaceTrader.Api.myShips MyShipsResponded
+                [ SpaceTrader.Api.myShips MyShipsResponded
                     { token = opts.accessToken }
                 , case opts.systems of
                     Nothing ->
@@ -215,13 +215,13 @@ type Msg
     | CreateSurveyRequested { waypointId : String, shipId : String }
     | SurveyResponded String (Result SpaceTrader.Api.Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown ))
     | AgentResponded (Result Http.Error SpaceTrader.Agent.Agent)
-    | MyContractsResponded (Result Http.Error (List SpaceTrader.Contract.Contract))
+    | MyContractsResponded (Result SpaceTrader.Api.Error (List SpaceTrader.Contract.Contract))
     | MyShipsResponded (Result Http.Error (List SpaceTrader.Ship.Ship))
-    | WaypointResponded String (Result Http.Error SpaceTrader.Waypoint.Waypoint)
+    | WaypointResponded String (Result SpaceTrader.Api.Error SpaceTrader.Waypoint.Waypoint)
     | ShipDockRequested String
-    | ShipDockResponded String (Result Http.Error SpaceTrader.Ship.Nav.Nav)
+    | ShipDockResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
     | ShipOrbitRequested String
-    | ShipOrbitResponded String (Result Http.Error SpaceTrader.Ship.Nav.Nav)
+    | ShipOrbitResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
     | ShipMoveRequested String
     | SystemsLoadRequested
     | SystemsLongRequestMsg (Result Http.Error (SpaceTrader.Api.Msg SpaceTrader.System.System))
@@ -258,145 +258,131 @@ update ({ model } as opts) =
                 CreateSurveyRequested { waypointId, shipId } ->
                     model
                         |> Update.succeeed
-                        |> Update.withCmd
-                            (SpaceTrader.Api.createSurvey (SurveyResponded waypointId)
+                        |> Update.withRequest (SurveyResponded waypointId)
+                            (SpaceTrader.Api.createSurvey
                                 { token = model.accessToken
                                 , shipId = shipId
                                 }
                             )
 
-                SurveyResponded _ (Err error) ->
+                SurveyResponded waypointId response ->
                     model
-                        |> Update.succeeed
-                        |> Update.withEffect
-                            (Update.PushNotification
-                                (let
-                                    errMessage =
-                                        case error of
-                                            SpaceTrader.Api.ApiErrorDecodeError err ->
-                                                "API JSON mismatch: " ++ err
+                        |> Update.withResponse response
+                            (\( surveys, cooldown ) ->
+                                { model
+                                    | surveys =
+                                        Dict.update waypointId
+                                            (\waypointSurveys ->
+                                                case waypointSurveys of
+                                                    Nothing ->
+                                                        Just surveys
 
-                                            SpaceTrader.Api.ApiError err ->
-                                                err.message
-
-                                            SpaceTrader.Api.HttpError _ ->
-                                                "Server error"
-                                 in
-                                 Ui.Notification.new errMessage
-                                    |> Ui.Notification.withAlert
-                                )
+                                                    Just existingSurveys ->
+                                                        Just
+                                                            (List.filter
+                                                                (\existingSurvey ->
+                                                                    Time.posixToMillis existingSurvey.expiration > Time.posixToMillis opts.shared.currentTime
+                                                                )
+                                                                existingSurveys
+                                                                ++ surveys
+                                                            )
+                                            )
+                                            model.surveys
+                                    , myShips =
+                                        Dict.update cooldown.shipSymbol
+                                            (Maybe.map
+                                                (\ship ->
+                                                    { ship | cooldown = Just cooldown }
+                                                )
+                                            )
+                                            model.myShips
+                                }
+                                    |> Update.succeeed
                             )
 
-                SurveyResponded wyapointId (Ok ( surveys, cooldown )) ->
-                    { model
-                        | surveys =
-                            Dict.update wyapointId
-                                (\waypointSurveys ->
-                                    case waypointSurveys of
-                                        Nothing ->
-                                            Just surveys
+                WaypointResponded id response ->
+                    model
+                        |> Update.withResponse response
+                            (\waypoint ->
+                                { model
+                                    | waypoints = Dict.insert id waypoint model.waypoints
+                                }
+                                    |> Update.succeeed
+                            )
 
-                                        Just existingSurveys ->
-                                            Just
-                                                (List.filter
-                                                    (\existingSurvey ->
-                                                        Time.posixToMillis existingSurvey.expiration > Time.posixToMillis opts.shared.currentTime
-                                                    )
-                                                    existingSurveys
-                                                    ++ surveys
-                                                )
-                                )
-                                model.surveys
-                        , myShips =
-                            Dict.update cooldown.shipSymbol
-                                (Maybe.map
-                                    (\ship ->
-                                        { ship | cooldown = Just cooldown }
-                                    )
-                                )
-                                model.myShips
-                    }
-                        |> Update.succeeed
-
-                WaypointResponded _ (Err err) ->
-                    Debug.todo (Debug.toString err)
-
-                WaypointResponded id (Ok waypoint) ->
-                    { model
-                        | waypoints = Dict.insert id waypoint model.waypoints
-                    }
-                        |> Update.succeeed
-
-                MyContractsResponded (Err err) ->
-                    Debug.todo (Debug.toString err)
-
-                MyContractsResponded (Ok contracts) ->
-                    { model
-                        | myContracts =
-                            List.foldl
-                                (\contract dict ->
-                                    Dict.insert contract.id contract dict
-                                )
-                                Dict.empty
-                                contracts
-                    }
-                        |> Update.succeeed
+                MyContractsResponded response ->
+                    model
+                        |> Update.withResponse response
+                            (\contracts ->
+                                { model
+                                    | myContracts =
+                                        List.foldl
+                                            (\contract dict ->
+                                                Dict.insert contract.id contract dict
+                                            )
+                                            Dict.empty
+                                            contracts
+                                }
+                                    |> Update.succeeed
+                            )
 
                 ShipDockRequested id ->
                     model
                         |> Update.succeeed
-                        |> Update.withCmd
-                            (SpaceTrader.Api.dockShip (ShipDockResponded id)
+                        |> Update.withRequest (ShipDockResponded id)
+                            (SpaceTrader.Api.dockShip
                                 { token = model.accessToken
                                 , shipId = id
                                 }
                             )
 
-                ShipDockResponded _ (Err err) ->
-                    Debug.todo (Debug.toString err)
-
-                ShipDockResponded id (Ok nav) ->
-                    { model
-                        | myShips =
-                            Dict.update id
-                                (Maybe.map
-                                    (\ship ->
-                                        { ship
-                                            | nav = nav
-                                        }
-                                    )
-                                )
-                                model.myShips
-                    }
-                        |> Update.succeeed
+                ShipDockResponded id response ->
+                    model
+                        |> Update.withResponse response
+                            (\nav ->
+                                { model
+                                    | myShips =
+                                        Dict.update id
+                                            (Maybe.map
+                                                (\ship ->
+                                                    { ship
+                                                        | nav = nav
+                                                    }
+                                                )
+                                            )
+                                            model.myShips
+                                }
+                                    |> Update.succeeed
+                            )
 
                 ShipOrbitRequested id ->
                     model
                         |> Update.succeeed
-                        |> Update.withCmd
-                            (SpaceTrader.Api.moveToOrbit (ShipOrbitResponded id)
+                        |> Update.withRequest (ShipOrbitResponded id)
+                            (SpaceTrader.Api.moveToOrbit
                                 { token = model.accessToken
                                 , shipId = id
                                 }
                             )
 
-                ShipOrbitResponded _ (Err err) ->
-                    Debug.todo (Debug.toString err)
-
-                ShipOrbitResponded id (Ok nav) ->
-                    { model
-                        | myShips =
-                            Dict.update id
-                                (Maybe.map
-                                    (\ship ->
-                                        { ship
-                                            | nav = nav
-                                        }
-                                    )
-                                )
-                                model.myShips
-                    }
-                        |> Update.succeeed
+                ShipOrbitResponded id response ->
+                    model
+                        |> Update.withResponse response
+                            (\nav ->
+                                { model
+                                    | myShips =
+                                        Dict.update id
+                                            (Maybe.map
+                                                (\ship ->
+                                                    { ship
+                                                        | nav = nav
+                                                    }
+                                                )
+                                            )
+                                            model.myShips
+                                }
+                                    |> Update.succeeed
+                            )
 
                 ShipMoveRequested id ->
                     Debug.todo ""

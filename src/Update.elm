@@ -3,8 +3,9 @@ module Update exposing (..)
 import Dict exposing (Dict)
 import Route exposing (Route)
 import SpaceTrader.Agent
+import SpaceTrader.Api
 import SpaceTrader.System
-import Task
+import Task exposing (Task)
 import Ui.Notification exposing (Notification)
 
 
@@ -49,6 +50,41 @@ withMsg msg update =
 withEffect : Effect -> Update model msg -> Update model msg
 withEffect eff (Update update) =
     Update { update | effects = eff :: update.effects }
+
+
+withRequest : (Result SpaceTrader.Api.Error a -> msg) -> Task SpaceTrader.Api.Error a -> Update model msg -> Update model msg
+withRequest toMsg request update =
+    update
+        |> withCmd (request |> Task.attempt toMsg)
+
+
+withResponse : Result SpaceTrader.Api.Error a -> (a -> Update model msg) -> model -> Update model msg
+withResponse response onOk update =
+    case response of
+        Ok a ->
+            onOk a
+
+        Err error ->
+            update
+                |> succeeed
+                |> withEffect
+                    (PushNotification
+                        (let
+                            errMessage =
+                                case error of
+                                    SpaceTrader.Api.ApiErrorDecodeError err ->
+                                        "API JSON mismatch: " ++ err
+
+                                    SpaceTrader.Api.ApiError err ->
+                                        err.message
+
+                                    SpaceTrader.Api.HttpError _ ->
+                                        "Server error"
+                         in
+                         Ui.Notification.new errMessage
+                            |> Ui.Notification.withAlert
+                        )
+                    )
 
 
 

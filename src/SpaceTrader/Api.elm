@@ -84,14 +84,14 @@ myAgent toMsg options =
         }
 
 
-myContracts : (Result Http.Error (List SpaceTrader.Contract.Contract) -> msg) -> { token : String } -> Cmd msg
-myContracts toMsg options =
-    v2
+myContracts : { token : String } -> Task Error (List SpaceTrader.Contract.Contract)
+myContracts options =
+    v2_3
         { method = "GET"
         , token = options.token
         , url = [ "my", "contracts" ]
         , body = Http.emptyBody
-        , expect = Http.expectJson toMsg (decodeSuccess (Json.Decode.list SpaceTrader.Contract.decode))
+        , decoder = Json.Decode.list SpaceTrader.Contract.decode
         }
 
 
@@ -106,25 +106,25 @@ myShips toMsg options =
         }
 
 
-moveToOrbit : (Result Http.Error SpaceTrader.Ship.Nav.Nav -> msg) -> { token : String, shipId : String } -> Cmd msg
-moveToOrbit toMsg options =
-    v2
+moveToOrbit : { token : String, shipId : String } -> Task Error SpaceTrader.Ship.Nav.Nav
+moveToOrbit options =
+    v2_3
         { method = "POST"
         , token = options.token
         , url = [ "my", "ships", options.shipId, "orbit" ]
         , body = Http.emptyBody
-        , expect = Http.expectJson toMsg (decodeSuccess (Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode))
+        , decoder = Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode
         }
 
 
-dockShip : (Result Http.Error SpaceTrader.Ship.Nav.Nav -> msg) -> { token : String, shipId : String } -> Cmd msg
-dockShip toMsg options =
-    v2
+dockShip : { token : String, shipId : String } -> Task Error SpaceTrader.Ship.Nav.Nav
+dockShip options =
+    v2_3
         { method = "POST"
         , token = options.token
         , url = [ "my", "ships", options.shipId, "dock" ]
         , body = Http.emptyBody
-        , expect = Http.expectJson toMsg (decodeSuccess (Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode))
+        , decoder = Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode
         }
 
 
@@ -196,11 +196,11 @@ getWaypoint toMsg options =
 
 
 createSurvey :
-    (Result Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown ) -> msg)
-    -> { token : String, shipId : String }
-    -> Cmd msg
-createSurvey toMsg options =
-    v2_2 toMsg
+    { token : String, shipId : String }
+    -- -> (Result Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown ) -> msg)
+    -> Task Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown )
+createSurvey options =
+    v2_3
         { method = "POST"
         , token = options.token
         , url = [ "my", "ships", options.shipId, "survey" ]
@@ -427,6 +427,10 @@ decodeSuccess decoder =
     Json.Decode.field "data" decoder
 
 
+type alias Request a msg =
+    (Result Error a -> msg) -> Task Error msg
+
+
 v2 : { method : String, token : String, url : List String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
 v2 options =
     Http.request
@@ -465,6 +469,28 @@ v2_2 toMsg opts =
         , timeout = Nothing
         }
         |> Task.attempt toMsg
+
+
+v2_3 :
+    { method : String
+    , token : String
+    , body : Http.Body
+    , url : List String
+    , decoder : Json.Decode.Decoder a
+    }
+    -> Task Error a
+v2_3 opts =
+    Http.task
+        { method = opts.method
+        , headers = [ Http.header "Authorization" ("Bearer " ++ opts.token) ]
+        , url = toUrl (baseUri :: opts.url)
+        , body = opts.body
+        , resolver =
+            Http.stringResolver <|
+                jsonResolver2 <|
+                    opts.decoder
+        , timeout = Nothing
+        }
 
 
 v2Paged : { method : String, token : String, url : List String, body : Http.Body, expect : Http.Expect msg, page : Int } -> Cmd msg
