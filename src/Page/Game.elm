@@ -541,6 +541,7 @@ withTab ({ model } as opts) =
                 Just tab ->
                     { model
                         | tab = tab
+                        , selectedSystem = Nothing
                     }
                         |> (case tab of
                                 Route.Waypoints details ->
