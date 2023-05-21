@@ -186,10 +186,10 @@ header :
     , four : List (Html.Attribute msg) -> List (Html msg) -> Html msg
     }
 header =
-    { one = \attr -> Html.h1 (attr ++ [ Html.Attributes.style "margin" "0" ])
-    , two = \attr -> Html.h2 (attr ++ [ Html.Attributes.style "margin" "0" ])
-    , three = \attr -> Html.h3 (attr ++ [ Html.Attributes.style "margin" "0" ])
-    , four = \attr -> Html.h4 (attr ++ [ Html.Attributes.style "margin" "0" ])
+    { one = \attr -> Html.h1 ([ Html.Attributes.style "margin" "0" ] ++ attr)
+    , two = \attr -> Html.h2 ([ Html.Attributes.style "margin" "0" ] ++ attr)
+    , three = \attr -> Html.h3 ([ Html.Attributes.style "margin" "0" ] ++ attr)
+    , four = \attr -> Html.h4 ([ Html.Attributes.style "margin" "0" ] ++ attr)
     }
 
 
@@ -203,7 +203,7 @@ progress attr opt =
         [ Html.div
             [ Html.Attributes.style "width" (String.fromFloat (opt.current / opt.max * 100) ++ "%")
             , Html.Attributes.style "height" "100%"
-            , Html.Attributes.style "background-color" "var(--primary-color)"
+            , Html.Attributes.style "background-color" "var(--blue-dark)"
             ]
             []
         ]

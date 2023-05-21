@@ -9,6 +9,7 @@ import Time
 import Time.Distance
 import Ui
 import Ui.Ship.Nav
+import Ui.Ship.Nav.Status
 
 
 view :
@@ -32,24 +33,45 @@ view opts ship =
     -- , cargo : Cargo
     -- , fuel : Fuel
     -- }
-    Ui.column
+    Html.div
         [ Html.Attributes.style "border" "0.125rem solid"
         , Html.Attributes.style "border-radius" "0.25rem"
         , Html.Attributes.style "padding" "0.5rem"
+        , Ui.grid
+        , Ui.gap 0.5
+        , Html.Attributes.style "grid-template-columns" "6rem 1fr"
         ]
-        [ Html.div
-            [ Html.Attributes.style "display" "grid" ]
-            (Ui.viewLabeled { label = "Name", value = Html.text <| ship.id })
-        , Html.h3 [] [ Html.text "Fuel" ]
+        [ Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "ID:" ]
+        , Html.span [] [ Html.text ship.id ]
+        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Fuel:" ]
         , Ui.progress []
             { max = toFloat ship.fuel.capacity
             , current = toFloat ship.fuel.current
             }
-        , Ui.Ship.Nav.view
-            { onDock = opts.onDock ship.id
-            , onOrbit = opts.onOrbit ship.id
-            , onMove = opts.onMove ship.id
-            , onSystemClicked = opts.onSystemClicked
-            }
-            ship.nav
+        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "System:" ]
+
+        -- , Ui.Button.link [ Html.Attributes.style "width" "fit-content" ]
+        --     { label = Html.text nav.system
+        --     , onClick =
+        --         nav.system
+        --             |> opts.onSystemClicked
+        --             |> Just
+        --     }
+        , Html.span [] [ Html.text ship.nav.system ]
+        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Waypoint:" ]
+        , Html.span [] [ Html.text ship.nav.waypoint ]
+        , Html.div
+            [ Html.Attributes.style "grid-column" "1 / 3" ]
+            [ let
+                carl : Html msg
+                carl =
+                    Ui.Ship.Nav.Status.view
+                        { onDock = opts.onDock ship.id
+                        , onOrbit = opts.onOrbit ship.id
+                        , onMove = opts.onMove ship.id
+                        }
+                        ship.nav.status
+              in
+              carl
+            ]
         ]

@@ -98,17 +98,17 @@ multi attr btns =
                            , Html.Attributes.style "border-style" "solid"
                            , Html.Attributes.style "background-color"
                                 (if selected then
-                                    "var(--primary-color)"
+                                    "var(--blue-light)"
 
                                  else
-                                    "var(--secondary-color)"
+                                    "inherit"
                                 )
                            , Html.Attributes.style "color"
                                 (if selected then
-                                    "var(--secondary-color)"
+                                    "inherit"
 
                                  else
-                                    "var(--primary-color)"
+                                    "var(--blue-light)"
                                 )
                            , Html.Attributes.style "padding" "0.5rem 1.5rem"
                            , Html.Events.onClick onClick

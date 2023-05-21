@@ -191,7 +191,7 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, selected } wo
                         [ Geometry.Svg.circle2d
                             [ Svg.Attributes.stroke
                                 (if isSelected then
-                                    "var(--primary-color)"
+                                    "var(--yellow)"
 
                                  else
                                     "rgb(255, 255, 0)"

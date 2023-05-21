@@ -9,6 +9,8 @@ import Form.Field
 import Form.FieldView
 import Form.Handler
 import Form.Validation
+import FormatNumber
+import FormatNumber.Locales
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
@@ -604,6 +606,7 @@ view shared model =
         ]
         [ Html.div
             [ Html.Attributes.class "sidebar"
+            , Html.Attributes.style "height" "100vh"
             , Html.Attributes.style "display" "flex"
             , Html.Attributes.style "flex-direction" "column"
             , Html.Attributes.style "align-content" "start"
@@ -613,9 +616,50 @@ view shared model =
                 [ Ui.justify.center
                 , Html.Attributes.style "padding" "1rem"
                 , Html.Attributes.style "background-color" "var(--blue-dark)"
+                , Html.Attributes.style "white-space" "nowrap"
+                , Html.Attributes.style "color" "var(--red)"
+                , Html.Attributes.style "font-weight" "bold"
+                , Html.Attributes.style "text-align" "center"
+                , Html.Attributes.style "-webkit-text-stroke" "0.1rem var(--yellow)"
+                ]
+                [ Html.text "Space Trader" ]
+            , Html.div
+                [ Ui.align.center
+                , Html.Attributes.style "padding" "1rem"
+                , Html.Attributes.style "border" "0.125rem solid"
+                , Html.Attributes.style "border-radius" "0.5rem"
                 , Html.Attributes.style "color" "var(--blue-light)"
                 ]
-                [ Html.text "SpaceTrader" ]
+                [ case model.agent of
+                    Loading ->
+                        Html.text "Loading agent..."
+
+                    Failure _ ->
+                        Html.text "Failed to load agent"
+
+                    Loaded agent ->
+                        Html.div
+                            [ Ui.grid
+                            ]
+                            [ Html.span [ Html.Attributes.style "color" "var(--blue-light)" ]
+                                [ Html.text agent.callsign ]
+                            , Html.div
+                                []
+                                [ Html.span
+                                    [ Html.Attributes.style "color" "var(--blue-light)"
+                                    , Html.Attributes.style "font-weight" "bold"
+                                    ]
+                                    [ Html.text "Credits: " ]
+                                , Html.span [ Html.Attributes.style "color" "var(--blue-light)" ]
+                                    [ agent.credits
+                                        |> toFloat
+                                        |> FormatNumber.format FormatNumber.Locales.usLocale
+                                        |> (++) "₩"
+                                        |> Html.text
+                                    ]
+                                ]
+                            ]
+                ]
             , navLink
                 { label = "Ships"
                 , route = Route.Game (Just Route.Ships)
@@ -648,123 +692,151 @@ view shared model =
             ]
         , Html.div
             [ Html.Attributes.class "content"
+            , Html.Attributes.style "padding" "1rem"
+            , Html.Attributes.style "background-color" "var(--blue)"
+            , Html.Attributes.style "height" "100vh"
+            , Html.Attributes.style "overflow-y" "auto"
             ]
-            [ Ui.viewLabelGroup
-                (Html.div []
-                    [ Html.text "Agent"
-                    ]
-                )
-                [ { label = "Callsign"
-                  , value =
-                        model.agent
-                            |> RemoteData.mapToString .callsign
-                            |> Html.text
-                  }
-                , { label = "Headquarters"
-                  , value =
-                        Ui.Button.link []
-                            { label =
-                                model.agent
-                                    |> RemoteData.mapToString .headquarters
-                                    |> Html.text
-                            , onClick =
-                                case model.agent of
-                                    Loaded { headquarters } ->
-                                        headquarters
-                                            |> String.split "-"
-                                            |> List.take 2
-                                            |> String.join "-"
-                                            |> SystemClicked
-                                            |> Just
+            [ case model.tab of
+                Route.Ships ->
+                    model.myShips
+                        |> Dict.values
+                        |> List.map
+                            (Ui.Ship.view
+                                { onDock = ShipDockRequested
+                                , onOrbit = ShipOrbitRequested
+                                , onMove = ShipMoveRequested
+                                , onSystemClicked = SystemClicked
+                                }
+                            )
+                        |> Html.div
+                            [ Ui.grid
+                            , Html.Attributes.style "grid-template-columns" "1fr 1fr"
+                            , Ui.gap 1
+                            ]
+                        |> viewContent "My Ships"
+
+                Route.Contracts ->
+                    model.myContracts
+                        |> Dict.values
+                        |> List.map
+                            (Ui.Contract.view
+                                { timeZone = shared.timeZone
+                                , currentTime = shared.currentTime
+                                , onDestinationClicked = SystemClicked
+                                }
+                            )
+                        |> (::) (Html.h3 [] [ Html.text "My Contracts" ])
+                        |> Html.div []
+
+                Route.Waypoints ->
+                    Ui.column []
+                        [ Ui.Galaxy3d.viewSystems
+                            { onSystemClick = SystemClicked
+                            , onZoom = Zoomed
+                            , onZoomPress = ZoomPressed
+                            , onRotationPress = RotationPressed
+                            , selected =
+                                case model.selectedSystem of
+                                    Just (Loaded system) ->
+                                        Just system.id
 
                                     _ ->
                                         Nothing
                             }
-                  }
-                , { label = "Credits"
-                  , value =
-                        model.agent
-                            |> RemoteData.mapToString (.credits >> String.fromInt)
-                            |> Html.text
-                  }
-                ]
-            , model.myContracts
-                |> Dict.values
-                |> List.map
-                    (Ui.Contract.view
-                        { timeZone = shared.timeZone
-                        , currentTime = shared.currentTime
-                        , onDestinationClicked = SystemClicked
-                        }
-                    )
-                |> (::) (Html.h3 [] [ Html.text "My Contracts" ])
-                |> Html.div []
-            , model.myShips
-                |> Dict.values
-                |> List.map
-                    (Ui.Ship.view
-                        { onDock = ShipDockRequested
-                        , onOrbit = ShipOrbitRequested
-                        , onMove = ShipMoveRequested
-                        , onSystemClicked = SystemClicked
-                        }
-                    )
-                |> (::) (Ui.header.three [] [ Html.text "My Ships" ])
-                |> Html.div []
+                            { galaxyViewSize = { width = 750, height = 500 }
+                            , zoom = model.zoom
+                            , viewRotation = model.viewRotation
+                            , systems = Dict.toList model.systems3d
+                            }
+                        , case model.systems of
+                            Uncached ->
+                                Ui.Button.default
+                                    []
+                                    { label = Html.text "Load Systems"
+                                    , onClick = Just SystemsLoadRequested
+                                    }
+
+                            Caching { current, max } ->
+                                Ui.row []
+                                    [ Html.text "Loading Systems..."
+                                    , Ui.progress []
+                                        { max = toFloat max
+                                        , current = toFloat current
+                                        }
+                                    ]
+
+                            Cached _ ->
+                                Ui.row []
+                                    [ Html.text "Systems Loaded & Cached"
+                                    , Ui.Button.default
+                                        []
+                                        { label = Html.text "Reload Systems"
+                                        , onClick = Just SystemsLoadRequested
+                                        }
+                                    ]
+                        , case model.selectedSystem of
+                            Nothing ->
+                                Html.text ""
+
+                            Just Loading ->
+                                Html.text "Loading System..."
+
+                            Just (Failure error) ->
+                                Html.text ("Failed to load system: " ++ error)
+
+                            Just (Loaded system) ->
+                                Ui.System.view
+                                    { myShips = Dict.values model.myShips }
+                                    system
+                        ]
             ]
 
-        -- , Ui.column []
-        --     [ Ui.Galaxy3d.viewSystems
-        --         { onSystemClick = SystemClicked
-        --         , onZoom = Zoomed
-        --         , onZoomPress = ZoomPressed
-        --         , onRotationPress = RotationPressed
-        --         , selected =
-        --             case model.selectedSystem of
-        --                 Just (Loaded system) ->
-        --                     Just system.id
-        --                 _ ->
-        --                     Nothing
-        --         }
-        --         { galaxyViewSize = { width = 750, height = 500 }
-        --         , zoom = model.zoom
-        --         , viewRotation = model.viewRotation
-        --         , systems = Dict.toList model.systems3d
-        --         }
-        --     , case model.systems of
-        --         Uncached ->
-        --             Ui.Button.default
-        --                 []
-        --                 { label = Html.text "Load Systems"
-        --                 , onClick = Just SystemsLoadRequested
+        --     Ui.viewLabelGroup
+        --     (Html.div []
+        --         [ Html.text "Agent"
+        --         ]
+        --     )
+        --     [ { label = "Callsign"
+        --       , value =
+        --             model.agent
+        --                 |> RemoteData.mapToString .callsign
+        --                 |> Html.text
+        --       }
+        --     , { label = "Headquarters"
+        --       , value =
+        --             Ui.Button.link []
+        --                 { label =
+        --                     model.agent
+        --                         |> RemoteData.mapToString .headquarters
+        --                         |> Html.text
+        --                 , onClick =
+        --                     case model.agent of
+        --                         Loaded { headquarters } ->
+        --                             headquarters
+        --                                 |> String.split "-"
+        --                                 |> List.take 2
+        --                                 |> String.join "-"
+        --                                 |> SystemClicked
+        --                                 |> Just
+        --                         _ ->
+        --                             Nothing
         --                 }
-        --         Caching { current, max } ->
-        --             Ui.row []
-        --                 [ Html.text "Loading Systems..."
-        --                 , Ui.progress []
-        --                     { max = toFloat max
-        --                     , current = toFloat current
-        --                     }
-        --                 ]
-        --         Cached _ ->
-        --             Ui.row []
-        --                 [ Html.text "Systems Loaded & Cached"
-        --                 , Ui.Button.default
-        --                     []
-        --                     { label = Html.text "Reload Systems"
-        --                     , onClick = Just SystemsLoadRequested
-        --                     }
-        --                 ]
-        --     , case model.selectedSystem of
-        --         Nothing ->
-        --             Html.text ""
-        --         Just Loading ->
-        --             Html.text "Loading System..."
-        --         Just (Failure error) ->
-        --             Html.text ("Failed to load system: " ++ error)
-        --         Just (Loaded system) ->
-        --             Ui.System.view
-        --                 { myShips = Dict.values model.myShips }
-        --                 system
+        --       }
+        --     , { label = "Credits"
+        --       , value =
+        --             model.agent
+        --                 |> RemoteData.mapToString (.credits >> String.fromInt)
+        --                 |> Html.text
+        --       }
         --     ]
+        -- ]
+        ]
+
+
+viewContent : String -> Html msg -> Html msg
+viewContent title content =
+    Html.div []
+        [ Ui.header.two [ Html.Attributes.style "margin-bottom" "1rem" ] [ Html.text title ]
+        , content
         ]
