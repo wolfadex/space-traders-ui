@@ -16,6 +16,18 @@ default attr { label, onClick } =
 
                     Just msg ->
                         Html.Events.onClick msg
+               , case onClick of
+                    Nothing ->
+                        Html.Attributes.style "color" "rgb(var(--blue-light) / 0.5)"
+
+                    Just _ ->
+                        Html.Attributes.style "" ""
+               , case onClick of
+                    Nothing ->
+                        Html.Attributes.style "border-color" "rgb(var(--blue-light) / 0.5)"
+
+                    Just _ ->
+                        Html.Attributes.style "" ""
                ]
         )
         [ label ]

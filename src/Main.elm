@@ -43,6 +43,7 @@ import Ui.Form
 import Ui.Form.Field
 import Ui.Galaxy3d
 import Ui.Modal
+import Ui.Notification
 import Ui.Select
 import Ui.Ship
 import Ui.System
@@ -84,10 +85,9 @@ init flags url navKey =
 
         route =
             Route.fromAppUrl appUrl
-                |> Debug.log "route"
 
         initialState =
-            case Json.Decode.decodeValue decodeFlags flags |> Debug.log "flags" of
+            case Json.Decode.decodeValue decodeFlags flags of
                 Err _ ->
                     { accessToken = Nothing
                     , cachedSystemd = Nothing
@@ -337,6 +337,15 @@ update msg model =
             , Browser.Navigation.replaceUrl model.navKey (Route.toUrlString route)
             )
 
+        FromEffect (Update.PushNotification notification) ->
+            Shared.pushNotification
+                { model = model.shared
+                , notification = notification
+                , toMsg = SharedMsg
+                , toModel = \shared -> { model | shared = shared }
+                }
+                |> Update.toTuple { fromEffect = FromEffect }
+
         -- page
         LoginMsg msg_ ->
             case model.page of
@@ -384,6 +393,8 @@ view model =
             Game m ->
                 Page.Game.view model.shared m
                     |> Html.map GameMsg
+        , Shared.viewNotifications model.shared
+            |> Html.map SharedMsg
         ]
             ++ (Shared.viewModals model.shared
                     |> List.map (Html.map SharedMsg)

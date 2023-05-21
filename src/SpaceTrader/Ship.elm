@@ -3,6 +3,7 @@ module SpaceTrader.Ship exposing (..)
 import Json.Decode
 import Json.Decode.Extra
 import SpaceTrader.Ship.Cargo exposing (Cargo)
+import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Crew exposing (Crew)
 import SpaceTrader.Ship.Engine exposing (Engine)
 import SpaceTrader.Ship.Frame exposing (Frame)
@@ -26,6 +27,7 @@ type alias Ship =
     , mounts : List Mount
     , cargo : Cargo
     , fuel : Fuel
+    , cooldown : Maybe SpaceTrader.Ship.Cooldown.Cooldown
     }
 
 
@@ -43,3 +45,4 @@ decode =
         |> Json.Decode.Extra.andMap (Json.Decode.field "mounts" (Json.Decode.list SpaceTrader.Ship.Mount.decode))
         |> Json.Decode.Extra.andMap (Json.Decode.field "cargo" SpaceTrader.Ship.Cargo.decode)
         |> Json.Decode.Extra.andMap (Json.Decode.field "fuel" SpaceTrader.Ship.Fuel.decode)
+        |> Json.Decode.Extra.andMap (Json.Decode.succeed Nothing)

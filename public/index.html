@@ -157,6 +157,41 @@
         color: var(--blue-dark);
         background-color: var(--blue);
       }
+
+      .notifications {
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        color: var(--blue-dark);
+      }
+
+      .notification-alert,
+      .notification-info,
+      .notification-warning,
+      .notification-success {
+        border-radius: 0.25rem;
+        padding: 0.5rem;
+        margin: 0.5rem;
+        border: 0.125rem solid var(--blue-dark);
+      }
+
+      .notification-alert {
+        color: #aeaeae;
+        background-color: var(--red);
+      }
+
+      .notification-warning {
+        background-color: var(--yellow);
+      }
+
+      .notification-info {
+        background-color: var(--blue-light);
+      }
+
+      .notification-success {
+        /* TODO */
+        /* background-color: var(--blue); */
+      }
     </style>
   </head>
   <body>

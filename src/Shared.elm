@@ -25,6 +25,7 @@ import Time
 import Ui
 import Ui.Button
 import Ui.Modal
+import Ui.Notification
 import Ui.Select
 import Ui.Theme
 import Update exposing (Update)
@@ -34,6 +35,7 @@ type alias Model =
     { timeZone : Time.Zone
     , currentTime : Time.Posix
     , theme : Ui.Theme.Theme
+    , notifications : List Ui.Notification.TimedNotification
     }
 
 
@@ -70,6 +72,7 @@ init opts =
 
                 Just theme ->
                     theme
+      , notifications = []
       }
     , Task.map2 CurrentTimeAndZoneReceived
         Time.now
@@ -136,7 +139,17 @@ initSystems maybeSystems =
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    Time.every (5 * 1000 * 60) CurrentTimeReceived
+    Time.every
+        (case model.notifications of
+            [] ->
+                -- 5 minutes
+                5 * 1000 * 60
+
+            _ ->
+                -- 3 seconds
+                3 * 1000
+        )
+        CurrentTimeReceived
 
 
 type
@@ -144,6 +157,7 @@ type
     -- time
     = CurrentTimeReceived Time.Posix
     | CurrentTimeAndZoneReceived Time.Posix Time.Zone
+    | TimedNotificationCreated ( Time.Posix, Ui.Notification.TimedNotification )
       -- settings
     | OpenSettingsClicked
     | CloseSettingsClicked
@@ -162,9 +176,10 @@ update ({ model } as opts) =
         Update.mapMsg opts.toMsg <|
             case opts.msg of
                 -- time
-                CurrentTimeReceived time ->
+                CurrentTimeReceived currentTime ->
                     { model
-                        | currentTime = time
+                        | currentTime = currentTime
+                        , notifications = List.filter (Ui.Notification.isUnexpired currentTime) model.notifications
                     }
                         |> Update.succeeed
 
@@ -172,6 +187,13 @@ update ({ model } as opts) =
                     { model
                         | currentTime = time
                         , timeZone = zone
+                    }
+                        |> Update.succeeed
+
+                TimedNotificationCreated ( currentTime, notification ) ->
+                    { model
+                        | notifications = notification :: List.filter (Ui.Notification.isUnexpired currentTime) model.notifications
+                        , currentTime = currentTime
                     }
                         |> Update.succeeed
 
@@ -195,6 +217,19 @@ update ({ model } as opts) =
                 ThemeSelected theme ->
                     { model | theme = theme }
                         |> Update.succeeed
+
+
+pushNotification : { model : Model, notification : Ui.Notification.Notification, toMsg : Msg -> msg, toModel : Model -> model } -> Update model msg
+pushNotification opts =
+    opts.model
+        |> Update.succeeed
+        |> Update.withCmd
+            (Time.now
+                |> Task.map (\now -> ( now, Ui.Notification.toTimed opts.notification now ))
+                |> Task.perform TimedNotificationCreated
+            )
+        |> Update.mapMsg opts.toMsg
+        |> Update.mapModel opts.toModel
 
 
 saveSettings : Model -> Cmd msg
@@ -275,3 +310,9 @@ viewHeader model =
             , onClick = Just OpenSettingsClicked
             }
         ]
+
+
+viewNotifications : Model -> Html Msg
+viewNotifications model =
+    Html.div [ Html.Attributes.class "notifications" ]
+        (List.map Ui.Notification.view model.notifications)

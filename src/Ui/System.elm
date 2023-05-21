@@ -10,7 +10,12 @@ import Ui.System.Type
 import Ui.System.Waypoint
 
 
-view : { myShips : List SpaceTrader.Ship.Ship } -> SpaceTrader.System.System -> Html msg
+view :
+    { myShips : List SpaceTrader.Ship.Ship
+    , onCreateSurveyClicked : { waypointId : String, shipId : String } -> msg
+    }
+    -> SpaceTrader.System.System
+    -> Html msg
 view opts system =
     -- { id : String
     -- , sector : String

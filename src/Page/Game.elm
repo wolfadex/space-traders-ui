@@ -31,7 +31,9 @@ import SpaceTrader.Api
 import SpaceTrader.Contract
 import SpaceTrader.Faction
 import SpaceTrader.Ship
+import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Nav
+import SpaceTrader.Survey
 import SpaceTrader.System
 import SpaceTrader.Waypoint
 import Sphere3d
@@ -44,6 +46,7 @@ import Ui.Form
 import Ui.Form.Field
 import Ui.Galaxy3d
 import Ui.Modal
+import Ui.Notification
 import Ui.Select
 import Ui.Ship
 import Ui.System
@@ -60,6 +63,7 @@ type alias Model =
     , myContracts : Dict String SpaceTrader.Contract.Contract
     , myShips : Dict String SpaceTrader.Ship.Ship
     , selectedSystem : Maybe (RemoteData SpaceTrader.System.System)
+    , surveys : Dict String (List SpaceTrader.Survey.Survey)
 
     -- cached data
     , systems : Cacheable SpaceTrader.System.System
@@ -99,6 +103,7 @@ init opts =
     , myContracts = Dict.empty
     , myShips = Dict.empty
     , selectedSystem = Nothing
+    , surveys = Dict.empty
     , systems =
         case opts.systems of
             Nothing ->
@@ -155,7 +160,7 @@ initSystems :
         , systems3d : Dict String ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
         }
 initSystems maybeSystems =
-    case Debug.log "systems" maybeSystems of
+    case maybeSystems of
         Nothing ->
             { -- a nice default
               zoom = 6621539845261203 * 10000
@@ -207,7 +212,8 @@ type Msg
     | RotationPressed Float
     | SystemClicked String
       -- game
-    | TabChangeeRequested Route.Route
+    | CreateSurveyRequested { waypointId : String, shipId : String }
+    | SurveyResponded String (Result SpaceTrader.Api.Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown ))
     | AgentResponded (Result Http.Error SpaceTrader.Agent.Agent)
     | MyContractsResponded (Result Http.Error (List SpaceTrader.Contract.Contract))
     | MyShipsResponded (Result Http.Error (List SpaceTrader.Ship.Ship))
@@ -249,8 +255,68 @@ update ({ model } as opts) =
                     }
                         |> Update.succeeed
 
-                TabChangeeRequested route ->
-                    Debug.todo ""
+                CreateSurveyRequested { waypointId, shipId } ->
+                    model
+                        |> Update.succeeed
+                        |> Update.withCmd
+                            (SpaceTrader.Api.createSurvey (SurveyResponded waypointId)
+                                { token = model.accessToken
+                                , shipId = shipId
+                                }
+                            )
+
+                SurveyResponded _ (Err error) ->
+                    model
+                        |> Update.succeeed
+                        |> Update.withEffect
+                            (Update.PushNotification
+                                (let
+                                    errMessage =
+                                        case error of
+                                            SpaceTrader.Api.ApiErrorDecodeError err ->
+                                                "API JSON mismatch: " ++ err
+
+                                            SpaceTrader.Api.ApiError err ->
+                                                err.message
+
+                                            SpaceTrader.Api.HttpError _ ->
+                                                "Server error"
+                                 in
+                                 Ui.Notification.new errMessage
+                                    |> Ui.Notification.withAlert
+                                )
+                            )
+
+                SurveyResponded wyapointId (Ok ( surveys, cooldown )) ->
+                    { model
+                        | surveys =
+                            Dict.update wyapointId
+                                (\waypointSurveys ->
+                                    case waypointSurveys of
+                                        Nothing ->
+                                            Just surveys
+
+                                        Just existingSurveys ->
+                                            Just
+                                                (List.filter
+                                                    (\existingSurvey ->
+                                                        Time.posixToMillis existingSurvey.expiration > Time.posixToMillis opts.shared.currentTime
+                                                    )
+                                                    existingSurveys
+                                                    ++ surveys
+                                                )
+                                )
+                                model.surveys
+                        , myShips =
+                            Dict.update cooldown.shipSymbol
+                                (Maybe.map
+                                    (\ship ->
+                                        { ship | cooldown = Just cooldown }
+                                    )
+                                )
+                                model.myShips
+                    }
+                        |> Update.succeeed
 
                 WaypointResponded _ (Err err) ->
                     Debug.todo (Debug.toString err)
@@ -500,6 +566,34 @@ update ({ model } as opts) =
                         |> Update.succeeed
 
 
+withTab : { tab : Maybe Route.GameTab, model : Model, toMsg : Msg -> msg, toModel : Model -> model } -> Update model msg
+withTab ({ model } as opts) =
+    Update.mapMsg opts.toMsg <|
+        Update.mapModel opts.toModel <|
+            case opts.tab of
+                Just tab ->
+                    { model
+                        | tab = tab
+                        , selectedSystem = Nothing
+                    }
+                        |> (case tab of
+                                Route.Waypoints details ->
+                                    case details.systemId of
+                                        Nothing ->
+                                            Update.succeeed
+
+                                        Just systemId ->
+                                            systemSelected systemId
+
+                                _ ->
+                                    Update.succeeed
+                           )
+
+                Nothing ->
+                    model
+                        |> Update.succeeed
+
+
 systemSelected : String -> Model -> Update Model Msg
 systemSelected systemId model =
     let
@@ -531,34 +625,6 @@ systemSelected systemId model =
                         , systemId = systemId
                         }
             )
-
-
-withTab : { tab : Maybe Route.GameTab, model : Model, toMsg : Msg -> msg, toModel : Model -> model } -> Update model msg
-withTab ({ model } as opts) =
-    Update.mapMsg opts.toMsg <|
-        Update.mapModel opts.toModel <|
-            case opts.tab of
-                Just tab ->
-                    { model
-                        | tab = tab
-                        , selectedSystem = Nothing
-                    }
-                        |> (case tab of
-                                Route.Waypoints details ->
-                                    case details.systemId of
-                                        Nothing ->
-                                            Update.succeeed
-
-                                        Just systemId ->
-                                            systemSelected systemId
-
-                                _ ->
-                                    Update.succeeed
-                           )
-
-                Nothing ->
-                    model
-                        |> Update.succeeed
 
 
 setZoom : Model -> Float -> Update Model Msg
@@ -773,7 +839,7 @@ view shared model =
                         |> viewContent "My Contracts"
 
                 Route.Waypoints details ->
-                    Ui.column [ Ui.gap 0.5 ]
+                    Html.div [ Ui.grid, Ui.gap 0.5 ]
                         [ Ui.Galaxy3d.viewSystems
                             { onSystemClick = SystemClicked
                             , onZoom = Zoomed
@@ -790,9 +856,7 @@ view shared model =
                             { galaxyViewSize = { width = 750, height = 500 }
                             , zoom = model.zoom
                             , viewRotation = model.viewRotation
-                            , systems =
-                                Dict.toList model.systems3d
-                                    |> Debug.log "systems3d"
+                            , systems = Dict.toList model.systems3d
                             }
                         , case model.systems of
                             Uncached ->
@@ -832,7 +896,9 @@ view shared model =
 
                             Just (Loaded system) ->
                                 Ui.System.view
-                                    { myShips = Dict.values model.myShips }
+                                    { myShips = Dict.values model.myShips
+                                    , onCreateSurveyClicked = CreateSurveyRequested
+                                    }
                                     system
                         ]
             ]

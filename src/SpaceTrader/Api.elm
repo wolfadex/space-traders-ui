@@ -8,7 +8,9 @@ import SpaceTrader.Agent exposing (Agent)
 import SpaceTrader.Contract exposing (Contract)
 import SpaceTrader.Faction exposing (Faction)
 import SpaceTrader.Ship exposing (Ship)
+import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Nav
+import SpaceTrader.Survey
 import SpaceTrader.System
 import SpaceTrader.Waypoint exposing (Waypoint)
 import Task exposing (Task)
@@ -193,6 +195,23 @@ getWaypoint toMsg options =
         }
 
 
+createSurvey :
+    (Result Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown ) -> msg)
+    -> { token : String, shipId : String }
+    -> Cmd msg
+createSurvey toMsg options =
+    v2_2 toMsg
+        { method = "POST"
+        , token = options.token
+        , url = [ "my", "ships", options.shipId, "survey" ]
+        , body = Http.emptyBody
+        , decoder =
+            Json.Decode.map2 Tuple.pair
+                (Json.Decode.field "surveys" (Json.Decode.list SpaceTrader.Survey.decode))
+                (Json.Decode.field "cooldown" SpaceTrader.Ship.Cooldown.decode)
+        }
+
+
 
 -- HELPERS
 
@@ -300,6 +319,12 @@ getAllUpdate toMsg opts =
         |> Task.attempt toMsg
 
 
+type Error
+    = HttpError Http.Error
+    | ApiErrorDecodeError String
+    | ApiError { message : String, code : Int }
+
+
 jsonResolver : Json.Decode.Decoder a -> Http.Response String -> Result Http.Error a
 jsonResolver decode response =
     case response of
@@ -322,6 +347,53 @@ jsonResolver decode response =
 
                 Err err ->
                     Err (Http.BadBody (Json.Decode.errorToString err))
+
+
+jsonResolver2 : Json.Decode.Decoder a -> Http.Response String -> Result Error a
+jsonResolver2 decoder response =
+    case response of
+        Http.BadUrl_ url ->
+            Err (HttpError (Http.BadUrl url))
+
+        Http.Timeout_ ->
+            Err (HttpError Http.Timeout)
+
+        Http.NetworkError_ ->
+            Err (HttpError Http.NetworkError)
+
+        Http.BadStatus_ metadata body ->
+            if metadata.statusCode >= 400 && metadata.statusCode < 500 then
+                case Json.Decode.decodeString decodeApiError body of
+                    Ok err ->
+                        Err err
+
+                    Err err ->
+                        Err (ApiErrorDecodeError (Json.Decode.errorToString err))
+
+            else
+                Err (HttpError (Http.BadStatus metadata.statusCode))
+
+        Http.GoodStatus_ metadata body ->
+            case Json.Decode.decodeString (decodeSuccess decoder) body of
+                Ok value ->
+                    Ok value
+
+                Err err ->
+                    Err (HttpError (Http.BadBody (Json.Decode.errorToString err)))
+
+
+decodeApiError : Json.Decode.Decoder Error
+decodeApiError =
+    Json.Decode.field "error" <|
+        Json.Decode.map2
+            (\message code ->
+                ApiError
+                    { message = message
+                    , code = code
+                    }
+            )
+            (Json.Decode.field "message" Json.Decode.string)
+            (Json.Decode.field "code" Json.Decode.int)
 
 
 type alias PagedMeta =
@@ -368,6 +440,31 @@ v2 options =
         , timeout = Nothing
         , tracker = Nothing
         }
+
+
+v2_2 :
+    (Result Error a -> msg)
+    ->
+        { method : String
+        , token : String
+        , body : Http.Body
+        , url : List String
+        , decoder : Json.Decode.Decoder a
+        }
+    -> Cmd msg
+v2_2 toMsg opts =
+    Http.task
+        { method = opts.method
+        , headers = [ Http.header "Authorization" ("Bearer " ++ opts.token) ]
+        , url = toUrl (baseUri :: opts.url)
+        , body = opts.body
+        , resolver =
+            Http.stringResolver <|
+                jsonResolver2 <|
+                    opts.decoder
+        , timeout = Nothing
+        }
+        |> Task.attempt toMsg
 
 
 v2Paged : { method : String, token : String, url : List String, body : Http.Body, expect : Http.Expect msg, page : Int } -> Cmd msg

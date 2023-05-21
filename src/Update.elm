@@ -5,6 +5,7 @@ import Route exposing (Route)
 import SpaceTrader.Agent
 import SpaceTrader.System
 import Task
+import Ui.Notification exposing (Notification)
 
 
 type Effect
@@ -15,6 +16,7 @@ type Effect
         }
     | RouteChangeRequested Route
     | RouteModifyRequested Route
+    | PushNotification Notification
 
 
 type Update model msg

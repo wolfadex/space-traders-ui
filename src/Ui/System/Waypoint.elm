@@ -6,10 +6,16 @@ import Html.Events
 import SpaceTrader.Ship
 import SpaceTrader.System.Waypoint
 import Ui
+import Ui.Button
 import Ui.Waypoint.Type
 
 
-view : { myShips : List SpaceTrader.Ship.Ship } -> SpaceTrader.System.Waypoint.Waypoint -> Html msg
+view :
+    { myShips : List SpaceTrader.Ship.Ship
+    , onCreateSurveyClicked : { waypointId : String, shipId : String } -> msg
+    }
+    -> SpaceTrader.System.Waypoint.Waypoint
+    -> Html msg
 view opts waypoint =
     -- { symbol : String
     -- , type_ : SpaceTrader.Waypoint.Type.Type
@@ -22,13 +28,16 @@ view opts waypoint =
                 |> List.filterMap
                     (\ship ->
                         if ship.nav.waypoint == waypoint.symbol then
-                            Just ship.id
+                            Just ship
 
                         else
                             Nothing
                     )
     in
-    Ui.row []
+    Html.div
+        [ Ui.grid
+        , Html.Attributes.style "grid-template-columns" "12rem 1fr"
+        ]
         [ waypoint.symbol
             |> String.split "-"
             |> List.drop 2
@@ -36,13 +45,23 @@ view opts waypoint =
             |> Html.text
         , Html.text ": "
         , Html.text <| Ui.Waypoint.Type.view waypoint.type_
-        , case shipsHere of
-            [] ->
-                Html.text ""
+        , Ui.Button.default [ Html.Attributes.style "width" "fit-content" ]
+            { label = Html.text "Create survey"
+            , onClick =
+                case shipsHere of
+                    [] ->
+                        Nothing
 
-            _ ->
-                shipsHere
-                    |> String.join ", "
-                    |> (\s -> " [ " ++ s ++ " ]")
-                    |> Html.text
+                    ship :: _ ->
+                        case ship.cooldown of
+                            Nothing ->
+                                opts.onCreateSurveyClicked
+                                    { shipId = ship.id
+                                    , waypointId = waypoint.symbol
+                                    }
+                                    |> Just
+
+                            Just _ ->
+                                Nothing
+            }
         ]
