@@ -6,7 +6,8 @@
     "dev:elm": "elm-watch hot",
     "dev:server": "web-dev-server --root-dir public --app-index public/index.html --open",
     "dev:gen": "elm-codegen run --watch",
-    "review": "elm-review --watch --fix",
+    "dev:review": "elm-review --watch --fix",
+    "review": "elm-review --fix--all",
     "gen": "elm-codegen run"
   },
   "devDependencies": {

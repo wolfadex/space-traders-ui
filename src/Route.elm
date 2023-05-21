@@ -9,7 +9,6 @@ module Route exposing
     )
 
 import AppUrl exposing (AppUrl)
-import Json.Decode
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import Util.Maybe

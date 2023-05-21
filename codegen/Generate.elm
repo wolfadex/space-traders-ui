@@ -43,6 +43,32 @@ main =
                 |> GenericDict.useElmFastDict
                 |> GenericDict.generateDeclarations
       in
-      Elm.file [ "SpaceTrader", "Point", "SystemDict" ] decls
+      Elm.file [ "SpaceTrader", "Point", "WaypointDict" ] decls
+    , let
+        keyType : Elm.Annotation.Annotation
+        keyType =
+            Elm.Annotation.namedWith [] "SpaceTrader.Point.Waypoint.Waypoint" []
+
+        decls : List Elm.Declaration
+        decls =
+            GenericDict.init
+                { keyType = keyType
+                , toComparable =
+                    \e ->
+                        Elm.apply
+                            (Elm.value
+                                { importFrom = [ "SpaceTrader", "Point", "Waypoint" ]
+                                , name = "toKey"
+                                , annotation = Just (Elm.Annotation.function [ keyType ] Elm.Annotation.string)
+                                }
+                            )
+                            [ e ]
+                , namespace = []
+                }
+                |> GenericDict.withTypeName "WaypointDict"
+                |> GenericDict.useElmFastDict
+                |> GenericDict.generateDeclarations
+      in
+      Elm.file [ "SpaceTrader", "Point", "WaypointDict" ] decls
     ]
         |> Generate.run

@@ -1,4 +1,4 @@
-module Util.Result exposing (..)
+module Util.Result exposing (onError)
 
 
 onError : (x -> Result y a) -> Result x a -> Result y a

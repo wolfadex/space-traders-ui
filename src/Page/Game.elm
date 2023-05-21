@@ -24,6 +24,7 @@ import SpaceTrader.Contract
 import SpaceTrader.Point.System
 import SpaceTrader.Point.SystemDict as SystemDict exposing (SystemDict)
 import SpaceTrader.Point.Waypoint
+import SpaceTrader.Point.WaypointDict as WaypointDict exposing (WaypointDict)
 import SpaceTrader.Ship
 import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Nav
@@ -45,10 +46,10 @@ type alias Model =
     { accessToken : String
     , tab : Route.GameTab
     , agent : RemoteData SpaceTrader.Agent.Agent
-    , waypoints : Dict String SpaceTrader.Waypoint.Waypoint
+    , waypoints : WaypointDict SpaceTrader.Waypoint.Waypoint
     , myContracts : Dict String SpaceTrader.Contract.Contract
     , myShips : Dict String SpaceTrader.Ship.Ship
-    , surveys : Dict String (List SpaceTrader.Survey.Survey)
+    , surveys : WaypointDict (List SpaceTrader.Survey.Survey)
 
     -- cached data
     , systems : CacheableSystems
@@ -92,10 +93,10 @@ init opts =
 
             Just agent ->
                 Loaded agent
-    , waypoints = Dict.empty
+    , waypoints = WaypointDict.empty
     , myContracts = Dict.empty
     , myShips = Dict.empty
-    , surveys = Dict.empty
+    , surveys = WaypointDict.empty
     , systems =
         case opts.systems of
             Nothing ->
@@ -210,7 +211,7 @@ type Msg
     | AgentResponded (Result Http.Error SpaceTrader.Agent.Agent)
     | MyContractsResponded (Result SpaceTrader.Api.Error (List SpaceTrader.Contract.Contract))
     | MyShipsResponded (Result Http.Error (List SpaceTrader.Ship.Ship))
-    | WaypointResponded String (Result SpaceTrader.Api.Error SpaceTrader.Waypoint.Waypoint)
+    | WaypointResponded SpaceTrader.Point.Waypoint.Waypoint (Result SpaceTrader.Api.Error SpaceTrader.Waypoint.Waypoint)
     | ShipDockRequested String
     | ShipDockResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
     | ShipOrbitRequested String
@@ -264,7 +265,7 @@ update ({ model } as opts) =
                             (\( surveys, cooldown ) ->
                                 { model
                                     | surveys =
-                                        Dict.update (SpaceTrader.Point.Waypoint.toKey waypointId)
+                                        WaypointDict.update waypointId
                                             (\waypointSurveys ->
                                                 case waypointSurveys of
                                                     Nothing ->
@@ -298,7 +299,7 @@ update ({ model } as opts) =
                         |> Update.withResponse response
                             (\waypoint ->
                                 { model
-                                    | waypoints = Dict.insert id waypoint model.waypoints
+                                    | waypoints = WaypointDict.insert id waypoint model.waypoints
                                 }
                                     |> Update.succeeed
                             )

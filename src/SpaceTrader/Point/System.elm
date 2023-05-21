@@ -1,4 +1,4 @@
-module SpaceTrader.Point.System exposing (..)
+module SpaceTrader.Point.System exposing (System(..), decode, encode, parse, toKey, toLabel)
 
 import Json.Decode
 import Json.Encode

@@ -1,4 +1,4 @@
-module SpaceTrader.Point.Sector exposing (..)
+module SpaceTrader.Point.Sector exposing (Sector(..), decode, toLabel)
 
 import Json.Decode
 

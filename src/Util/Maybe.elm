@@ -1,4 +1,4 @@
-module Util.Maybe exposing (..)
+module Util.Maybe exposing (onNothing)
 
 
 onNothing : Maybe a -> Maybe a -> Maybe a
