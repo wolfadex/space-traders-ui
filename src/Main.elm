@@ -1,56 +1,22 @@
-module Main exposing (main)
+module Main exposing (Model, Msg, Page, main)
 
 import AppUrl exposing (AppUrl)
 import Browser
 import Browser.Navigation
-import Cacheable exposing (Cacheable(..))
 import Dict exposing (Dict)
-import Form
-import Form.Field
-import Form.FieldView
-import Form.Handler
-import Form.Validation
-import Html exposing (Html)
-import Html.Attributes
-import Html.Events
-import Http
+import Html
 import Json.Decode
 import Json.Encode
-import Length exposing (Meters)
 import List.NonEmpty
 import Page.Game
 import Page.Login
-import Point3d exposing (Point3d)
 import Port
-import RemoteData exposing (RemoteData(..))
 import Route exposing (Route)
-import Scene3d
 import Shared
-import SpaceTrader.Agent
-import SpaceTrader.Api
-import SpaceTrader.Contract
-import SpaceTrader.Faction
-import SpaceTrader.Ship
-import SpaceTrader.Ship.Nav
 import SpaceTrader.System
-import SpaceTrader.Waypoint
-import Task
-import Time
-import Ui
-import Ui.Button
-import Ui.Contract
-import Ui.Form
-import Ui.Form.Field
-import Ui.Galaxy3d
-import Ui.Modal
-import Ui.Notification
-import Ui.Select
-import Ui.Ship
-import Ui.System
 import Ui.Theme
 import Update
 import Url exposing (Url)
-import Util.Function
 
 
 main : Program Json.Encode.Value Model Msg
@@ -80,12 +46,15 @@ type Page
 init : Json.Encode.Value -> Url -> Browser.Navigation.Key -> ( Model, Cmd Msg )
 init flags url navKey =
     let
+        appUrl : AppUrl
         appUrl =
             AppUrl.fromUrl url
 
+        route : Route
         route =
             Route.fromAppUrl appUrl
 
+        initialState : { accessToken : Maybe String, cachedSystemd : Maybe (Dict String SpaceTrader.System.System), shared : ( Shared.Model, Cmd Shared.Msg ) }
         initialState =
             case Json.Decode.decodeValue decodeFlags flags of
                 Err _ ->
@@ -213,7 +182,7 @@ subscriptions model =
             Login pageModel ->
                 Sub.map LoginMsg (Page.Login.subscriptions pageModel)
 
-            Game pageModel ->
+            Game _ ->
                 Sub.none
         ]
 
@@ -227,11 +196,6 @@ type Msg
       -- page
     | LoginMsg Page.Login.Msg
     | GameMsg Page.Game.Msg
-
-
-updateShared : (Shared.Model -> Shared.Model) -> Model -> Model
-updateShared fn model =
-    { model | shared = fn model.shared }
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -261,9 +225,11 @@ update msg model =
 
         OnUrlChange url ->
             let
+                appUrl : AppUrl
                 appUrl =
                     AppUrl.fromUrl url
 
+                route : Route
                 route =
                     Route.fromAppUrl appUrl
             in

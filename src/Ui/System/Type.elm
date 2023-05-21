@@ -1,8 +1,6 @@
-module Ui.System.Type exposing (..)
+module Ui.System.Type exposing (view)
 
-import Html exposing (Html)
 import SpaceTrader.System.Type exposing (Type(..))
-import Ui
 
 
 view : SpaceTrader.System.Type.Type -> String

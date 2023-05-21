@@ -1,9 +1,6 @@
-module Ui.Waypoint.Type exposing (..)
+module Ui.Waypoint.Type exposing (view)
 
-import Html exposing (Html)
-import Html.Attributes
 import SpaceTrader.Waypoint.Type exposing (Type(..))
-import Ui
 
 
 view : SpaceTrader.Waypoint.Type.Type -> String

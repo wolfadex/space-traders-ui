@@ -1,15 +1,12 @@
-module Page.Login exposing (..)
+module Page.Login exposing (LoginForm, Model, Msg(..), RegisterForm, init, subscriptions, update, view, withSubmitting)
 
 import Browser.Events
-import Cacheable exposing (Cacheable(..))
 import Dict exposing (Dict)
 import Form
 import Form.Field
-import Form.FieldView
 import Form.Validation
 import Html exposing (Html)
 import Html.Attributes
-import Html.Events
 import Http
 import Port
 import Shared
@@ -355,26 +352,3 @@ loginForm =
                 |> Form.Field.required "Required"
                 |> Form.Field.password
             )
-
-
-errorsView : Form.Context String input -> Form.Validation.Field String parsed kind -> Html msg
-errorsView { submitAttempted, errors } field =
-    if submitAttempted || Form.Validation.statusAtLeast Form.Validation.Blurred field then
-        errors
-            |> Form.errorsForField field
-            |> List.map (\error -> Html.li [ Html.Attributes.style "color" "red" ] [ Html.text error ])
-            |> Html.ul []
-
-    else
-        Html.ul [] []
-
-
-viewField : Form.Context String input -> String -> Form.Validation.Field String parsed Form.FieldView.Input -> Html msg
-viewField formState label field =
-    Html.div []
-        [ Html.label []
-            [ Html.text (label ++ " ")
-            , Form.FieldView.input [] field
-            , errorsView formState field
-            ]
-        ]

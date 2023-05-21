@@ -1,4 +1,4 @@
-module SpaceTrader.Survey exposing (..)
+module SpaceTrader.Survey exposing (Size(..), Survey, decode)
 
 import Iso8601
 import Json.Decode

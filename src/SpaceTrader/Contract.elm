@@ -1,4 +1,4 @@
-module SpaceTrader.Contract exposing (..)
+module SpaceTrader.Contract exposing (Contract, Type(..), decode, prettyPrintType)
 
 import Iso8601
 import Json.Decode

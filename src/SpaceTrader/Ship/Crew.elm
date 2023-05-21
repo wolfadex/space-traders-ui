@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Crew exposing (..)
+module SpaceTrader.Ship.Crew exposing (Crew, Rotation(..), decode)
 
 import Json.Decode
 

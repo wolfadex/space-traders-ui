@@ -1,24 +1,16 @@
-module Page.Game exposing (..)
+module Page.Game exposing (Model, Msg(..), init, update, view, withTab)
 
-import Browser.Navigation
 import Cacheable exposing (Cacheable(..))
 import Color
 import Dict exposing (Dict)
-import Form
-import Form.Field
-import Form.FieldView
-import Form.Handler
-import Form.Validation
 import FormatNumber
 import FormatNumber.Locales
 import Html exposing (Html)
 import Html.Attributes
-import Html.Events
 import Http
 import Json.Decode
 import Json.Encode
 import Length exposing (Meters)
-import List.NonEmpty
 import Point3d exposing (Point3d)
 import Port
 import RemoteData exposing (RemoteData(..))
@@ -29,7 +21,6 @@ import Shared
 import SpaceTrader.Agent
 import SpaceTrader.Api
 import SpaceTrader.Contract
-import SpaceTrader.Faction
 import SpaceTrader.Ship
 import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Nav
@@ -37,22 +28,14 @@ import SpaceTrader.Survey
 import SpaceTrader.System
 import SpaceTrader.Waypoint
 import Sphere3d
-import Task
 import Time
 import Ui
 import Ui.Button
 import Ui.Contract
-import Ui.Form
-import Ui.Form.Field
 import Ui.Galaxy3d
-import Ui.Modal
-import Ui.Notification
-import Ui.Select
 import Ui.Ship
 import Ui.System
-import Ui.Theme
 import Update exposing (Update)
-import Util.Function
 
 
 type alias Model =
@@ -87,6 +70,7 @@ init :
     -> Update model msg
 init opts =
     let
+        sys : { zoom : Float, systems3d : Dict String ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint ) }
         sys =
             initSystems opts.systems
     in
@@ -192,6 +176,7 @@ initSystems maybeSystems =
                     |> Dict.map
                         (\_ system ->
                             let
+                                point : Point3d Meters Shared.LightYear
                                 point =
                                     Point3d.xyz
                                         (system.x |> toFloat |> Length.lightYears)
@@ -428,6 +413,7 @@ update ({ model } as opts) =
                     case msg_ of
                         SpaceTrader.Api.Complete systems ->
                             let
+                                updatedSystems : Dict.Dict String SpaceTrader.System.System
                                 updatedSystems =
                                     List.foldl
                                         (\system dict ->
@@ -468,6 +454,7 @@ update ({ model } as opts) =
 
                         SpaceTrader.Api.NeedsMore data ->
                             let
+                                updatedSystems : Dict String SpaceTrader.System.System
                                 updatedSystems =
                                     List.foldl
                                         (\system dict ->

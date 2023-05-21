@@ -1,4 +1,4 @@
-module SpaceTrader.Contract.Good exposing (..)
+module SpaceTrader.Contract.Good exposing (Good, decode)
 
 import Json.Decode
 

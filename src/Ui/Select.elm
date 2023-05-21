@@ -1,4 +1,4 @@
-module Ui.Select exposing (..)
+module Ui.Select exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes

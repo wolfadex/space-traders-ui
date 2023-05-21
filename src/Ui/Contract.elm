@@ -4,13 +4,10 @@ import Html exposing (Html)
 import Html.Attributes
 import Route
 import SpaceTrader.Contract
-import SpaceTrader.Contract.Good
-import SpaceTrader.Contract.Term
 import SpaceTrader.Faction
 import Time
 import Time.Distance
 import Ui
-import Ui.Button
 
 
 view : { timeZone : Time.Zone, currentTime : Time.Posix } -> SpaceTrader.Contract.Contract -> Html msg

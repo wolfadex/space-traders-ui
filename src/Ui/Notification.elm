@@ -1,4 +1,4 @@
-module Ui.Notification exposing (..)
+module Ui.Notification exposing (Notification(..), Style(..), TimedNotification(..), isUnexpired, new, toTimed, view, withAlert)
 
 import Html exposing (Html)
 import Html.Attributes

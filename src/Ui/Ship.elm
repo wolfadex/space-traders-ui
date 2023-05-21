@@ -3,14 +3,8 @@ module Ui.Ship exposing (view)
 import Html exposing (Html)
 import Html.Attributes
 import Route
-import SpaceTrader.Faction
 import SpaceTrader.Ship
-import SpaceTrader.Ship.Nav.Status
-import Time
-import Time.Distance
 import Ui
-import Ui.Button
-import Ui.Ship.Nav
 import Ui.Ship.Nav.Status
 
 
@@ -82,16 +76,11 @@ view opts ship =
             ]
         , Html.div
             [ Html.Attributes.style "grid-column" "1 / 3" ]
-            [ let
-                carl : Html msg
-                carl =
-                    Ui.Ship.Nav.Status.view
-                        { onDock = opts.onDock ship.id
-                        , onOrbit = opts.onOrbit ship.id
-                        , onMove = opts.onMove ship.id
-                        }
-                        ship.nav.status
-              in
-              carl
+            [ Ui.Ship.Nav.Status.view
+                { onDock = opts.onDock ship.id
+                , onOrbit = opts.onOrbit ship.id
+                , onMove = opts.onMove ship.id
+                }
+                ship.nav.status
             ]
         ]

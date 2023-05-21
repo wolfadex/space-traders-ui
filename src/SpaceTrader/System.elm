@@ -1,8 +1,7 @@
-module SpaceTrader.System exposing (..)
+module SpaceTrader.System exposing (System, decode, encode)
 
 import Json.Decode
 import Json.Encode
-import SpaceTrader.Faction
 import SpaceTrader.System.Type
 import SpaceTrader.System.Waypoint
 
@@ -41,7 +40,7 @@ encode system =
         , ( "waypoints", Json.Encode.list SpaceTrader.System.Waypoint.encode system.waypoints )
         , ( "factions"
           , Json.Encode.list
-                (\faction -> Json.Encode.object [( "symbol", Json.Encode.string faction )])
+                (\faction -> Json.Encode.object [ ( "symbol", Json.Encode.string faction ) ])
                 system.factions
           )
         ]

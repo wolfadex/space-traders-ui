@@ -1,4 +1,4 @@
-module SpaceTrader.Waypoint.Type exposing (..)
+module SpaceTrader.Waypoint.Type exposing (Type(..), decode, encode)
 
 import Json.Decode
 import Json.Encode

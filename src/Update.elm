@@ -1,4 +1,16 @@
-module Update exposing (..)
+module Update exposing
+    ( Effect(..)
+    , Update(..)
+    , mapModel
+    , mapMsg
+    , succeeed
+    , toTuple
+    , withCmd
+    , withEffect
+    , withMsg
+    , withRequest
+    , withResponse
+    )
 
 import Dict exposing (Dict)
 import Route exposing (Route)
@@ -128,10 +140,3 @@ toTuple opts (Update update) =
                 update.effects
         )
     )
-
-
-type Msg
-    = Auth
-        { accessToken : String
-        , agent : SpaceTrader.Agent.Agent
-        }

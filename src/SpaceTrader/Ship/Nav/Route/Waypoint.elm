@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Nav.Route.Waypoint exposing (..)
+module SpaceTrader.Ship.Nav.Route.Waypoint exposing (Waypoint, decode)
 
 import Json.Decode
 import SpaceTrader.Waypoint.Type

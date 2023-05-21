@@ -1,4 +1,4 @@
-module SpaceTrader.Contract.Payment exposing (..)
+module SpaceTrader.Contract.Payment exposing (Payment, decode)
 
 import Json.Decode
 

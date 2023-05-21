@@ -1,10 +1,7 @@
-module Ui.Modal exposing (..)
+module Ui.Modal exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
-import Html.Events
-import Json.Decode
-import Ui
 
 
 view :

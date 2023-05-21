@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Nav.Status exposing (..)
+module SpaceTrader.Ship.Nav.Status exposing (Status(..), decode, prettyPrint)
 
 import Json.Decode
 

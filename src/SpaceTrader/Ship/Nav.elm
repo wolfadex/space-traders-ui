@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Nav exposing (..)
+module SpaceTrader.Ship.Nav exposing (Nav, decode)
 
 import Json.Decode
 import SpaceTrader.Ship.Nav.FlightMode exposing (FlightMode)

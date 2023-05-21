@@ -1,4 +1,4 @@
-module SpaceTrader.Faction exposing (..)
+module SpaceTrader.Faction exposing (Faction, Group(..), decode, decodeGroup, groupToPrettyString, groupToString, groups)
 
 import Json.Decode
 import SpaceTrader.Faction.Trait exposing (Trait)

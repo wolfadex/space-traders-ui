@@ -1,8 +1,7 @@
-module Ui.System.Waypoint exposing (..)
+module Ui.System.Waypoint exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
-import Html.Events
 import SpaceTrader.Ship
 import SpaceTrader.System.Waypoint
 import Ui

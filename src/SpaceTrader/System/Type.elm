@@ -1,7 +1,8 @@
-module SpaceTrader.System.Type exposing (..)
+module SpaceTrader.System.Type exposing (Type(..), decode, encode)
 
 import Json.Decode
 import Json.Encode
+
 
 type Type
     = NeutronStar

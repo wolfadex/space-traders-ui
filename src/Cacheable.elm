@@ -1,4 +1,4 @@
-module Cacheable exposing (..)
+module Cacheable exposing (Cacheable(..), getData)
 
 import Dict exposing (Dict)
 

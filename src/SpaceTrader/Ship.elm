@@ -1,4 +1,4 @@
-module SpaceTrader.Ship exposing (..)
+module SpaceTrader.Ship exposing (Ship, decode)
 
 import Json.Decode
 import Json.Decode.Extra

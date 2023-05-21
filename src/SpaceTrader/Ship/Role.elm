@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Role exposing (..)
+module SpaceTrader.Ship.Role exposing (Role(..), decode)
 
 import Json.Decode
 

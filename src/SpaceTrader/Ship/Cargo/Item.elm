@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Cargo.Item exposing (..)
+module SpaceTrader.Ship.Cargo.Item exposing (Item, decode)
 
 import Json.Decode
 

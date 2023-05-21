@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Reactor exposing (..)
+module SpaceTrader.Ship.Reactor exposing (Reactor, Style(..), decode)
 
 import Json.Decode
 import SpaceTrader.Ship.Condition exposing (Condition)

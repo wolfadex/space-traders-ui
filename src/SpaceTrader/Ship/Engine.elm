@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Engine exposing (..)
+module SpaceTrader.Ship.Engine exposing (Engine, Style(..), decode)
 
 import Json.Decode
 import SpaceTrader.Ship.Condition exposing (Condition)

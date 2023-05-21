@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Fuel exposing (..)
+module SpaceTrader.Ship.Fuel exposing (Fuel, decode)
 
 import Iso8601
 import Json.Decode

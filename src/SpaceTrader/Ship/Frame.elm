@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Frame exposing (..)
+module SpaceTrader.Ship.Frame exposing (Frame, Style(..), decode)
 
 import Json.Decode
 import SpaceTrader.Ship.Condition exposing (Condition)

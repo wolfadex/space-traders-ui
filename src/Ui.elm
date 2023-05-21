@@ -1,11 +1,7 @@
-module Ui exposing (..)
+module Ui exposing (align, column, dateTime, gap, grid, header, justify, link, progress, row, viewLabeled)
 
 import Html exposing (Html)
 import Html.Attributes
-import Html.Events
-import Json.Decode
-import Json.Encode
-import List.NonEmpty
 import Route exposing (Route)
 import Time
 
@@ -141,17 +137,6 @@ monthToString month =
             "December"
 
 
-viewLabelGroup : Html msg -> List { label : String, value : Html msg } -> Html msg
-viewLabelGroup title children =
-    Html.div
-        [ Html.Attributes.style "display" "grid"
-        , Html.Attributes.style "grid-template-columns" "1fr 1fr"
-        ]
-        (Html.h3 [ Html.Attributes.style "column" "1 / 3" ] [ title ]
-            :: List.concatMap viewLabeled children
-        )
-
-
 viewLabeled : { label : String, value : Html msg } -> List (Html msg)
 viewLabeled options =
     [ Html.span
@@ -187,10 +172,10 @@ header :
     , four : List (Html.Attribute msg) -> List (Html msg) -> Html msg
     }
 header =
-    { one = \attr -> Html.h1 ([ Html.Attributes.style "margin" "0" ] ++ attr)
-    , two = \attr -> Html.h2 ([ Html.Attributes.style "margin" "0" ] ++ attr)
-    , three = \attr -> Html.h3 ([ Html.Attributes.style "margin" "0" ] ++ attr)
-    , four = \attr -> Html.h4 ([ Html.Attributes.style "margin" "0" ] ++ attr)
+    { one = \attr -> Html.h1 (Html.Attributes.style "margin" "0" :: attr)
+    , two = \attr -> Html.h2 (Html.Attributes.style "margin" "0" :: attr)
+    , three = \attr -> Html.h3 (Html.Attributes.style "margin" "0" :: attr)
+    , four = \attr -> Html.h4 (Html.Attributes.style "margin" "0" :: attr)
     }
 
 

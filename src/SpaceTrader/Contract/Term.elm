@@ -1,4 +1,4 @@
-module SpaceTrader.Contract.Term exposing (..)
+module SpaceTrader.Contract.Term exposing (Term, decode)
 
 import Iso8601
 import Json.Decode

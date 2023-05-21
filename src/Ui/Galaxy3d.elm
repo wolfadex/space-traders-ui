@@ -1,7 +1,6 @@
 module Ui.Galaxy3d exposing
     ( -- , viewSolarSystem
       MinRenderableWorld
-    , getGalaxyViewport
     , viewSystems
     )
 
@@ -19,51 +18,31 @@ module Ui.Galaxy3d exposing
 -- import SubCmd exposing (SubCmd)
 
 import Angle
-import Arc3d
 import Axis2d
 import Axis3d
-import Browser.Dom exposing (Viewport)
 import Camera3d
 import Circle2d
-import Circle3d
 import Color
-import Cylinder3d
-import Dict exposing (Dict)
 import Direction2d
 import Direction3d
 import Frame2d
 import Geometry.Svg
 import Html exposing (Html)
 import Html.Attributes
-import Html.Events
 import Json.Decode exposing (Value)
-import Length exposing (Length, Meters)
+import Length exposing (Meters)
 import LineSegment2d
-import LineSegment3d.Projection
-import Luminance
-import LuminousFlux
 import Pixels
 import Point2d
 import Point3d exposing (Point3d)
 import Point3d.Projection
-import Polyline2d
-import Polyline3d
-import Process
 import Quantity
 import Rectangle2d
 import Scene3d
-import Scene3d.Light
-import Scene3d.Material as Material
-import Scene3d.Mesh
-import Set exposing (Set)
 import Shared exposing (LightYear, ScaledViewPoint)
-import SpaceTrader.System
-import Sphere3d
 import Svg exposing (Svg)
 import Svg.Attributes
 import Svg.Events
-import Task
-import Temperature exposing (Temperature)
 import Ui.Button
 import Viewpoint3d
 
@@ -1058,12 +1037,3 @@ scalePointInAstroUnitsToOne point =
 --             }
 --         )
 --         (Logic.Component.get starId world.starTemperature)
-
-
-getGalaxyViewport : (Result Browser.Dom.Error Viewport -> msg) -> Cmd msg
-getGalaxyViewport gotViewport =
-    Task.attempt gotViewport
-        (Task.andThen
-            (\() -> Browser.Dom.getViewportOf "galaxy-view")
-            (Process.sleep 100)
-        )

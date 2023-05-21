@@ -1,8 +1,7 @@
-module Ui.System exposing (..)
+module Ui.System exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
-import Html.Events
 import SpaceTrader.Ship
 import SpaceTrader.System
 import Ui

@@ -1,4 +1,4 @@
-module SpaceTrader.Api exposing (..)
+module SpaceTrader.Api exposing (Error(..), Msg(..), PagedMeta, createSurvey, dockShip, getAllSystemsInit, getAllSystemsUpdate, getSystem, getWaypoint, moveToOrbit, myAgent, myContracts, myShips, register)
 
 import Http
 import Json.Decode
@@ -12,7 +12,7 @@ import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Nav
 import SpaceTrader.Survey
 import SpaceTrader.System
-import SpaceTrader.Waypoint exposing (Waypoint)
+import SpaceTrader.Waypoint
 import Task exposing (Task)
 
 
@@ -130,22 +130,6 @@ dockShip options =
 
 
 -- GENERAL
-
-
-listSystems : (Result Http.Error ( List SpaceTrader.System.System, PagedMeta ) -> msg) -> { token : String, page : Int } -> Cmd msg
-listSystems toMsg options =
-    v2Paged
-        { method = "GET"
-        , token = options.token
-        , url = [ "systems" ]
-        , body = Http.emptyBody
-        , page = options.page
-        , expect =
-            Http.expectJson toMsg <|
-                Json.Decode.map2 Tuple.pair
-                    (decodeSuccess (Json.Decode.list SpaceTrader.System.decode))
-                    decodePagedMeta
-        }
 
 
 getAllSystemsInit : (Result Http.Error (Msg SpaceTrader.System.System) -> msg) -> { token : String } -> Cmd msg
@@ -340,7 +324,7 @@ jsonResolver decode response =
         Http.BadStatus_ metadata _ ->
             Err (Http.BadStatus metadata.statusCode)
 
-        Http.GoodStatus_ metadata body ->
+        Http.GoodStatus_ _ body ->
             case Json.Decode.decodeString decode body of
                 Ok value ->
                     Ok value
@@ -373,7 +357,7 @@ jsonResolver2 decoder response =
             else
                 Err (HttpError (Http.BadStatus metadata.statusCode))
 
-        Http.GoodStatus_ metadata body ->
+        Http.GoodStatus_ _ body ->
             case Json.Decode.decodeString (decodeSuccess decoder) body of
                 Ok value ->
                     Ok value
@@ -427,10 +411,6 @@ decodeSuccess decoder =
     Json.Decode.field "data" decoder
 
 
-type alias Request a msg =
-    (Result Error a -> msg) -> Task Error msg
-
-
 v2 : { method : String, token : String, url : List String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
 v2 options =
     Http.request
@@ -444,31 +424,6 @@ v2 options =
         , timeout = Nothing
         , tracker = Nothing
         }
-
-
-v2_2 :
-    (Result Error a -> msg)
-    ->
-        { method : String
-        , token : String
-        , body : Http.Body
-        , url : List String
-        , decoder : Json.Decode.Decoder a
-        }
-    -> Cmd msg
-v2_2 toMsg opts =
-    Http.task
-        { method = opts.method
-        , headers = [ Http.header "Authorization" ("Bearer " ++ opts.token) ]
-        , url = toUrl (baseUri :: opts.url)
-        , body = opts.body
-        , resolver =
-            Http.stringResolver <|
-                jsonResolver2 <|
-                    opts.decoder
-        , timeout = Nothing
-        }
-        |> Task.attempt toMsg
 
 
 v2_3 :

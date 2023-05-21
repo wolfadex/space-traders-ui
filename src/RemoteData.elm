@@ -1,4 +1,4 @@
-module RemoteData exposing (..)
+module RemoteData exposing (RemoteData(..), fromResult)
 
 
 type RemoteData a
@@ -15,16 +15,3 @@ fromResult result =
 
         Err e ->
             Failure e
-
-
-mapToString : (a -> String) -> RemoteData a -> String
-mapToString fn remoteData =
-    case remoteData of
-        Loading ->
-            "Loading"
-
-        Failure e ->
-            e
-
-        Loaded a ->
-            fn a

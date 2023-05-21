@@ -1,9 +1,7 @@
-module Ui.Ship.Nav.Status exposing (..)
+module Ui.Ship.Nav.Status exposing (view)
 
 import Html exposing (Html)
-import Html.Attributes
 import SpaceTrader.Ship.Nav.Status exposing (Status(..))
-import Ui
 import Ui.Button
 
 

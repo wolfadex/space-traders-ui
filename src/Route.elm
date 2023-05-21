@@ -1,4 +1,4 @@
-module Route exposing (..)
+module Route exposing (GameTab(..), Route(..), fromAppUrl, toUrlString)
 
 import AppUrl exposing (AppUrl)
 

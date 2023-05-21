@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Nav.Route exposing (..)
+module SpaceTrader.Ship.Nav.Route exposing (Route, decode)
 
 import Iso8601
 import Json.Decode

@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Condition exposing (..)
+module SpaceTrader.Ship.Condition exposing (Condition(..), decode)
 
 import Json.Decode
 

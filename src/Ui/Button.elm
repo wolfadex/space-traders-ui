@@ -1,4 +1,4 @@
-module Ui.Button exposing (..)
+module Ui.Button exposing (default, link, multi, primary)
 
 import Html exposing (Html)
 import Html.Attributes
@@ -76,7 +76,7 @@ multi attr btns =
             List.length btns - 1
     in
     Ui.row
-        (attr ++ [])
+        attr
         (List.indexedMap
             (\i { label, onClick, selected } ->
                 Html.button

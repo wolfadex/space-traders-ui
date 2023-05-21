@@ -1,4 +1,4 @@
-module SpaceTrader.Waypoint.Trait exposing (..)
+module SpaceTrader.Waypoint.Trait exposing (Style(..), Trait, decode)
 
 import Json.Decode
 

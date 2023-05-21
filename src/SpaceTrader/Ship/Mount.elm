@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Mount exposing (..)
+module SpaceTrader.Ship.Mount exposing (Deposit(..), Mount, Style(..), decode)
 
 import Json.Decode
 import SpaceTrader.Ship.Requirements exposing (Requirements)

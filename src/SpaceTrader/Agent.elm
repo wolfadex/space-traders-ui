@@ -1,4 +1,4 @@
-module SpaceTrader.Agent exposing (..)
+module SpaceTrader.Agent exposing (Agent, decode)
 
 import Json.Decode
 

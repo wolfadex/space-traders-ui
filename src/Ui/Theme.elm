@@ -1,4 +1,4 @@
-module Ui.Theme exposing (..)
+module Ui.Theme exposing (Theme, decode, encode, themes)
 
 import Json.Decode
 import Json.Encode

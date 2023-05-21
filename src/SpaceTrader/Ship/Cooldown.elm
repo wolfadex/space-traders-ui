@@ -1,4 +1,4 @@
-module SpaceTrader.Ship.Cooldown exposing (..)
+module SpaceTrader.Ship.Cooldown exposing (Cooldown, decode)
 
 import Iso8601
 import Json.Decode

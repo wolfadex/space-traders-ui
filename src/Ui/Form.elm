@@ -1,8 +1,7 @@
-module Ui.Form exposing (..)
+module Ui.Form exposing (Submission, view)
 
 import Dict exposing (Dict)
 import Form
-import Form.Validation
 import Html exposing (Html)
 import Html.Attributes
 import Ui

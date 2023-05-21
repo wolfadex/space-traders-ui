@@ -6,7 +6,6 @@
     "elm-version": "0.19.1",
     "dependencies": {
         "direct": {
-            "NoRedInk/elm-json-decode-pipeline": "1.0.1",
             "avh4/elm-color": "1.0.0",
             "cuducos/elm-format-number": "9.0.1",
             "dillonkearns/elm-form": "2.0.2",

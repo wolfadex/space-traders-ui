@@ -1,4 +1,4 @@
-module SpaceTrader.Chart exposing (..)
+module SpaceTrader.Chart exposing (Chart, decode)
 
 import Iso8601
 import Json.Decode

@@ -1,12 +1,9 @@
-module Ui.Ship.Nav exposing (..)
+module Ui.Ship.Nav exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
-import Html.Events
 import SpaceTrader.Ship.Nav
-import SpaceTrader.Ship.Nav.Status
 import Ui
-import Ui.Button
 import Ui.Ship.Nav.Status
 
 

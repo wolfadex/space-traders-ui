@@ -1,4 +1,4 @@
-module SpaceTrader.Faction.Trait exposing (..)
+module SpaceTrader.Faction.Trait exposing (Style(..), Trait, decode)
 
 import Json.Decode
 
