@@ -39,7 +39,7 @@ view opts ship =
         , Html.Attributes.style "padding" "0.5rem"
         , Ui.grid
         , Ui.gap 0.5
-        , Html.Attributes.style "grid-template-columns" "6rem 1fr"
+        , Html.Attributes.style "grid-template-columns" "5.5rem 1fr"
         ]
         [ Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "ID:" ]
         , Html.span [] [ Html.text ship.id ]
