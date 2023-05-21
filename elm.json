@@ -1,7 +1,8 @@
 {
     "type": "application",
     "source-directories": [
-        "src"
+        "src",
+        "generated"
     ],
     "elm-version": "0.19.1",
     "dependencies": {
@@ -25,6 +26,7 @@
             "ianmackenzie/elm-geometry-svg": "3.0.0",
             "ianmackenzie/elm-units": "2.9.0",
             "lydell/elm-app-url": "1.0.3",
+            "miniBill/elm-fast-dict": "1.1.0",
             "rtfeldman/elm-iso8601-date-strings": "1.1.4"
         },
         "indirect": {

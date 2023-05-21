@@ -40,6 +40,7 @@ import Quantity
 import Rectangle2d
 import Scene3d
 import Shared exposing (LightYear, ScaledViewPoint)
+import SpaceTrader.Point.System
 import Svg exposing (Svg)
 import Svg.Attributes
 import Svg.Events
@@ -52,7 +53,7 @@ type alias MinRenderableWorld r =
         | galaxyViewSize : { width : Float, height : Float }
         , zoom : Float
         , viewRotation : Float
-        , systems : List ( String, ( Point3d Meters LightYear, Scene3d.Entity ScaledViewPoint ) )
+        , systems : List ( SpaceTrader.Point.System.System, ( Point3d Meters LightYear, Scene3d.Entity ScaledViewPoint ) )
 
         -- , civilizationPopulations : Logic.Component.Set (Dict EntityID Population)
         -- , planetTypes : Logic.Component.Set CelestialBodyForm
@@ -74,11 +75,11 @@ type AstronomicalUnit
 
 
 viewSystems :
-    { onSystemClick : String -> msg
+    { onSystemClick : SpaceTrader.Point.System.System -> msg
     , onZoom : Value -> msg
     , onZoomPress : Float -> msg
     , onRotationPress : Float -> msg
-    , selected : Maybe String
+    , selected : Maybe SpaceTrader.Point.System.System
     }
     -> MinRenderableWorld r
     -> Html msg
@@ -203,7 +204,7 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, selected } wo
                                 , Svg.Attributes.y (String.fromFloat 50)
                                 , Svg.Attributes.class "galactic-label-ignore"
                                 ]
-                                [ Svg.text systemId ]
+                                [ Svg.text (SpaceTrader.Point.System.toLabel systemId) ]
                             )
                         ]
                 )
@@ -250,6 +251,7 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, selected } wo
     viewSpace
         { onZoom = Just onZoom
         , onZoomPress = Just onZoomPress
+        , zoomPressMagnitude = 150
         , onRotationPress = Just onRotationPress
         , galaxyViewSize = world.galaxyViewSize
         }
@@ -675,6 +677,7 @@ viewSpace :
     { r
         | onZoom : Maybe (Value -> msg)
         , onZoomPress : Maybe (Float -> msg)
+        , zoomPressMagnitude : Float
         , onRotationPress : Maybe (Float -> msg)
         , galaxyViewSize : { width : Float, height : Float }
     }
@@ -776,9 +779,9 @@ viewSpace options labels scene =
                     Just onZoomPress ->
                         Ui.Button.default
                             [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "backgorund-color" "rgba(0, 0, 0, 0.5)"
+                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
                             ]
-                            { onClick = Just (onZoomPress -10.0)
+                            { onClick = Just (onZoomPress -options.zoomPressMagnitude)
                             , label = Html.text "+"
                             }
                 , case options.onZoomPress of
@@ -788,9 +791,9 @@ viewSpace options labels scene =
                     Just onZoomPress ->
                         Ui.Button.default
                             [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "backgorund-color" "rgba(0, 0, 0, 0.5)"
+                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
                             ]
-                            { onClick = Just (onZoomPress 10.0)
+                            { onClick = Just (onZoomPress options.zoomPressMagnitude)
                             , label = Html.text "-"
                             }
                 ]
@@ -806,7 +809,7 @@ viewSpace options labels scene =
                     Just onRotationPress ->
                         Ui.Button.default
                             [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "backgorund-color" "rgba(0, 0, 0, 0.5)"
+                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
                             ]
                             { onClick = Just (onRotationPress -5)
                             , label = Html.text "<-"
@@ -818,7 +821,7 @@ viewSpace options labels scene =
                     Just onRotationPress ->
                         Ui.Button.default
                             [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "backgorund-color" "rgba(0, 0, 0, 0.5)"
+                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
                             ]
                             { onClick = Just (onRotationPress 5)
                             , label = Html.text "->"

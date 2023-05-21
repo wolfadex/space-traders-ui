@@ -5,6 +5,8 @@ import Html.Attributes
 import Route
 import SpaceTrader.Contract
 import SpaceTrader.Faction
+import SpaceTrader.Point.System
+import SpaceTrader.Point.Waypoint
 import Time
 import Time.Distance
 import Ui
@@ -62,56 +64,26 @@ view { timeZone, currentTime } contract =
                                     , important good.tradeSymbol
                                     , Html.br [] []
                                     , Html.text "and deliver them to "
-
-                                    -- , Ui.Button.link [ Html.Attributes.style "font-weight" "bold" ]
-                                    --     { label = Html.text good.destinationSymbol
-                                    --     , onClick =
-                                    --         good.destinationSymbol
-                                    --             |> String.split "-"
-                                    --             |> List.take 2
-                                    --             |> String.join "-"
-                                    --             |> onDestinationClicked
-                                    --             |> Just
-                                    --     }
                                     , let
+                                        systemId : SpaceTrader.Point.System.System
                                         systemId =
                                             good.destinationSymbol
-                                                |> String.split "-"
-                                                |> List.take 2
-                                                |> String.join "-"
+                                                |> SpaceTrader.Point.Waypoint.toSystem
                                       in
                                       Ui.link []
                                         { label =
                                             systemId
+                                                |> SpaceTrader.Point.System.toLabel
                                                 |> Html.text
-                                        , route =
-                                            Route.Game
-                                                { tab =
-                                                    Just
-                                                        (Route.Waypoints
-                                                            { systemId = Just systemId }
-                                                        )
-                                                }
+                                        , route = Route.fromSystem systemId
                                         }
                                     , Html.text "-"
                                     , Ui.link []
                                         { label =
                                             good.destinationSymbol
-                                                |> String.split "-"
-                                                |> List.drop 2
-                                                |> String.join "-"
+                                                |> SpaceTrader.Point.Waypoint.toShortLabel
                                                 |> Html.text
-                                        , route =
-                                            Route.Game
-                                                { tab =
-                                                    Just
-                                                        (Route.Waypoints
-                                                            { systemId =
-                                                                Just
-                                                                    good.destinationSymbol
-                                                            }
-                                                        )
-                                                }
+                                        , route = Route.fromWaypoint good.destinationSymbol
                                         }
                                     ]
                             )
@@ -141,7 +113,7 @@ view { timeZone, currentTime } contract =
                                     , important good.tradeSymbol
                                     , Html.br [] []
                                     , Html.text "to "
-                                    , important good.destinationSymbol
+                                    , important (SpaceTrader.Point.Waypoint.toLabel good.destinationSymbol)
                                     ]
                             )
                             contract.terms.deliver
@@ -170,7 +142,7 @@ view { timeZone, currentTime } contract =
                                     , important good.tradeSymbol
                                     , Html.br [] []
                                     , Html.text "to "
-                                    , important good.destinationSymbol
+                                    , important (SpaceTrader.Point.Waypoint.toLabel good.destinationSymbol)
                                     ]
                             )
                             contract.terms.deliver

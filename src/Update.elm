@@ -16,6 +16,7 @@ import Dict exposing (Dict)
 import Route exposing (Route)
 import SpaceTrader.Agent
 import SpaceTrader.Api
+import SpaceTrader.Point.SystemDict as SystemDict exposing (SystemDict)
 import SpaceTrader.System
 import Task exposing (Task)
 import Ui.Notification exposing (Notification)
@@ -25,7 +26,7 @@ type Effect
     = Authenticated
         { accessToken : String
         , agent : Maybe SpaceTrader.Agent.Agent
-        , systems : Maybe (Dict String SpaceTrader.System.System)
+        , systems : Maybe (SystemDict SpaceTrader.System.System)
         }
     | RouteChangeRequested Route
     | RouteModifyRequested Route

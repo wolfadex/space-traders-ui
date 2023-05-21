@@ -8,6 +8,7 @@ import Length exposing (Meters)
 import List.NonEmpty
 import Point3d exposing (Point3d)
 import Port
+import SpaceTrader.Point.SystemDict as SystemDict exposing (SystemDict)
 import SpaceTrader.System
 import Task
 import Time
@@ -44,7 +45,7 @@ type LightYear
 
 init :
     { theme : Maybe Ui.Theme.Theme
-    , systems : Maybe (Dict String SpaceTrader.System.System)
+    , systems : Maybe (SystemDict SpaceTrader.System.System)
     }
     -> ( Model, Cmd Msg )
 init opts =

@@ -1,6 +1,18 @@
-module Route exposing (GameTab(..), Route(..), fromAppUrl, toUrlString)
+module Route exposing
+    ( GameTab(..)
+    , Route(..)
+    , WaypointDetail(..)
+    , fromAppUrl
+    , fromSystem
+    , fromWaypoint
+    , toUrlString
+    )
 
 import AppUrl exposing (AppUrl)
+import Json.Decode
+import SpaceTrader.Point.System
+import SpaceTrader.Point.Waypoint
+import Util.Maybe
 
 
 type Route
@@ -12,7 +24,22 @@ type Route
 type GameTab
     = Ships
     | Contracts
-    | Waypoints { systemId : Maybe String }
+    | Waypoints { id : Maybe WaypointDetail }
+
+
+type WaypointDetail
+    = ViewSystem SpaceTrader.Point.System.System
+    | ViewWaypoint SpaceTrader.Point.Waypoint.Waypoint
+
+
+fromSystem : SpaceTrader.Point.System.System -> Route
+fromSystem system =
+    Game { tab = Just (Waypoints { id = Just (ViewSystem system) }) }
+
+
+fromWaypoint : SpaceTrader.Point.Waypoint.Waypoint -> Route
+fromWaypoint waypoint =
+    Game { tab = Just (Waypoints { id = Just (ViewWaypoint waypoint) }) }
 
 
 fromAppUrl : AppUrl -> Route
@@ -33,10 +60,16 @@ fromAppUrl url =
 
                         "waypoints" :: rest_ ->
                             Waypoints
-                                { systemId =
+                                { id =
                                     case rest_ of
-                                        [ systemId ] ->
-                                            Just systemId
+                                        [ id ] ->
+                                            id
+                                                |> SpaceTrader.Point.Waypoint.parse
+                                                |> Maybe.map ViewWaypoint
+                                                |> Util.Maybe.onNothing
+                                                    (SpaceTrader.Point.System.parse id
+                                                        |> Maybe.map ViewSystem
+                                                    )
 
                                         _ ->
                                             Nothing
@@ -70,9 +103,17 @@ toUrlString route =
                         Just Contracts ->
                             Just [ "contracts" ]
 
-                        Just (Waypoints { systemId }) ->
+                        Just (Waypoints { id }) ->
                             [ Just "waypoints"
-                            , systemId
+                            , case id of
+                                Nothing ->
+                                    Nothing
+
+                                Just (ViewSystem systemId) ->
+                                    Just (SpaceTrader.Point.System.toKey systemId)
+
+                                Just (ViewWaypoint waypointId) ->
+                                    Just (SpaceTrader.Point.Waypoint.toKey waypointId)
                             ]
                                 |> List.filterMap identity
                                 |> Just

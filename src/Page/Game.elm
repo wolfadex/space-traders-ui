@@ -21,6 +21,9 @@ import Shared
 import SpaceTrader.Agent
 import SpaceTrader.Api
 import SpaceTrader.Contract
+import SpaceTrader.Point.System
+import SpaceTrader.Point.SystemDict as SystemDict exposing (SystemDict)
+import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
 import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Nav
@@ -48,21 +51,25 @@ type alias Model =
     , surveys : Dict String (List SpaceTrader.Survey.Survey)
 
     -- cached data
-    , systems : Cacheable (RemoteData SpaceTrader.System.System)
+    , systems : CacheableSystems
 
     -- game stuffs
     , spaceFocus : Shared.SpaceFocus
     , zoom : Float
     , viewRotation : Float
-    , systems3d : Dict String ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
+    , systems3d : SystemDict ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
     }
+
+
+type alias CacheableSystems =
+    Cacheable (SystemDict (RemoteData SpaceTrader.System.System))
 
 
 init :
     { accessToken : String
     , tab : Maybe Route.GameTab
     , agent : Maybe SpaceTrader.Agent.Agent
-    , systems : Maybe (Dict String SpaceTrader.System.System)
+    , systems : Maybe (SystemDict SpaceTrader.System.System)
     , toMsg : Msg -> msg
     , toModel : Model -> model
     }
@@ -71,7 +78,7 @@ init opts =
     let
         sys :
             { zoom : Float
-            , systems3d : Dict String ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
+            , systems3d : SystemDict ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
             }
         sys =
             initSystems opts.systems
@@ -95,7 +102,7 @@ init opts =
                 Uncached
 
             Just systems ->
-                Cached (Dict.map (\_ v -> RemoteData.Loaded v) systems)
+                Cached (SystemDict.map (\_ v -> RemoteData.Loaded v) systems)
 
     -- 3d stuffs
     , spaceFocus = Shared.FGalaxy
@@ -139,23 +146,23 @@ init opts =
 
 
 initSystems :
-    Maybe (Dict String SpaceTrader.System.System)
+    Maybe (SystemDict SpaceTrader.System.System)
     ->
         { zoom : Float
-        , systems3d : Dict String ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
+        , systems3d : SystemDict ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
         }
 initSystems maybeSystems =
     case maybeSystems of
         Nothing ->
             { -- a nice default
               zoom = 6621539845261203 * 10000
-            , systems3d = Dict.empty
+            , systems3d = SystemDict.empty
             }
 
         Just systems ->
             { zoom =
                 systems
-                    |> Dict.values
+                    |> SystemDict.values
                     |> List.map
                         (\system ->
                             Length.inMeters
@@ -174,7 +181,7 @@ initSystems maybeSystems =
                     |> Maybe.withDefault (25000 + (100 * 9460730000000000))
             , systems3d =
                 systems
-                    |> Dict.map
+                    |> SystemDict.map
                         (\_ system ->
                             let
                                 point : Point3d Meters Shared.LightYear
@@ -196,10 +203,10 @@ type Msg
     | Zoomed Json.Encode.Value
     | ZoomPressed Float
     | RotationPressed Float
-    | SystemClicked String
+    | SystemClicked SpaceTrader.Point.System.System
       -- game
-    | CreateSurveyRequested { waypointId : String, shipId : String }
-    | SurveyResponded String (Result SpaceTrader.Api.Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown ))
+    | CreateSurveyRequested { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : String }
+    | SurveyResponded SpaceTrader.Point.Waypoint.Waypoint (Result SpaceTrader.Api.Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown ))
     | AgentResponded (Result Http.Error SpaceTrader.Agent.Agent)
     | MyContractsResponded (Result SpaceTrader.Api.Error (List SpaceTrader.Contract.Contract))
     | MyShipsResponded (Result Http.Error (List SpaceTrader.Ship.Ship))
@@ -257,7 +264,7 @@ update ({ model } as opts) =
                             (\( surveys, cooldown ) ->
                                 { model
                                     | surveys =
-                                        Dict.update waypointId
+                                        Dict.update (SpaceTrader.Point.Waypoint.toKey waypointId)
                                             (\waypointSurveys ->
                                                 case waypointSurveys of
                                                     Nothing ->
@@ -391,16 +398,15 @@ update ({ model } as opts) =
                 SystemClicked systemId ->
                     model
                         |> Update.succeeed
-                        |> Update.withEffect
-                            (Update.RouteChangeRequested
-                                (Route.Game { tab = Just (Route.Waypoints { systemId = Just systemId }) })
-                            )
+                        |> Update.withEffect (Update.RouteChangeRequested (Route.fromSystem systemId))
 
                 SystemsLoadRequested ->
                     { model
                         | systems =
                             Caching
-                                { data = Cacheable.getData model.systems
+                                { data =
+                                    Cacheable.getData model.systems
+                                        |> Maybe.withDefault SystemDict.empty
                                 , current = 0
                                 , max = 1
                                 }
@@ -414,13 +420,15 @@ update ({ model } as opts) =
                     case msg_ of
                         SpaceTrader.Api.Complete systems ->
                             let
-                                updatedSystems : Dict.Dict String (RemoteData SpaceTrader.System.System)
+                                updatedSystems : SystemDict (RemoteData SpaceTrader.System.System)
                                 updatedSystems =
                                     List.foldl
                                         (\system dict ->
-                                            Dict.insert system.id (RemoteData.Loaded system) dict
+                                            SystemDict.insert system.id (RemoteData.Loaded system) dict
                                         )
-                                        (Cacheable.getData model.systems)
+                                        (Cacheable.getData model.systems
+                                            |> Maybe.withDefault SystemDict.empty
+                                        )
                                         systems
                             in
                             { model
@@ -428,7 +436,7 @@ update ({ model } as opts) =
                                 , systems3d =
                                     List.foldl
                                         (\system dict ->
-                                            Dict.insert system.id
+                                            SystemDict.insert system.id
                                                 (let
                                                     point =
                                                         Point3d.xyz
@@ -448,7 +456,7 @@ update ({ model } as opts) =
                                 |> Update.succeeed
                                 |> Update.withCmd
                                     (updatedSystems
-                                        |> Dict.values
+                                        |> SystemDict.values
                                         |> List.filterMap RemoteData.toMaybe
                                         |> Json.Encode.list SpaceTrader.System.encode
                                         |> Port.cacheSystems
@@ -456,13 +464,15 @@ update ({ model } as opts) =
 
                         SpaceTrader.Api.NeedsMore data ->
                             let
-                                updatedSystems : Dict String (RemoteData SpaceTrader.System.System)
+                                updatedSystems : SystemDict (RemoteData SpaceTrader.System.System)
                                 updatedSystems =
                                     List.foldl
                                         (\system dict ->
-                                            Dict.insert system.id (RemoteData.Loaded system) dict
+                                            SystemDict.insert system.id (RemoteData.Loaded system) dict
                                         )
-                                        (Cacheable.getData model.systems)
+                                        (Cacheable.getData model.systems
+                                            |> Maybe.withDefault SystemDict.empty
+                                        )
                                         data.data
                             in
                             { model
@@ -470,7 +480,7 @@ update ({ model } as opts) =
                                 , systems3d =
                                     List.foldl
                                         (\system dict ->
-                                            Dict.insert system.id
+                                            SystemDict.insert system.id
                                                 (let
                                                     point =
                                                         Point3d.xyz
@@ -492,7 +502,7 @@ update ({ model } as opts) =
                                     (Cmd.batch
                                         [ SpaceTrader.Api.getAllSystemsUpdate SystemsLongRequestMsg data
                                         , updatedSystems
-                                            |> Dict.values
+                                            |> SystemDict.values
                                             |> List.filterMap RemoteData.toMaybe
                                             |> Json.Encode.list SpaceTrader.System.encode
                                             |> Port.cacheSystems
@@ -504,9 +514,9 @@ update ({ model } as opts) =
 
                 SystemResponded (Ok system) ->
                     { model
-                        | systems = Cacheable.insert system.id (RemoteData.Loaded system) model.systems
+                        | systems = Cacheable.insert SystemDict.insert system.id (RemoteData.Loaded system) model.systems
                         , systems3d =
-                            Dict.insert system.id
+                            SystemDict.insert system.id
                                 (let
                                     point =
                                         Point3d.xyz
@@ -551,12 +561,15 @@ withTab ({ model } as opts) =
                     { model | tab = tab }
                         |> (case tab of
                                 Route.Waypoints details ->
-                                    case details.systemId of
+                                    case details.id of
                                         Nothing ->
                                             Update.succeeed
 
-                                        Just systemId ->
+                                        Just (Route.ViewSystem systemId) ->
                                             systemSelected systemId
+
+                                        Just (Route.ViewWaypoint waypointId) ->
+                                            Debug.todo ""
 
                                 _ ->
                                     Update.succeeed
@@ -567,11 +580,12 @@ withTab ({ model } as opts) =
                         |> Update.succeeed
 
 
-systemSelected : String -> Model -> Update Model Msg
+systemSelected : SpaceTrader.Point.System.System -> Model -> Update Model Msg
 systemSelected systemId model =
     { model
         | systems =
-            Cacheable.update systemId
+            Cacheable.update SystemDict.update
+                systemId
                 (\maybeSystem ->
                     case maybeSystem of
                         Just (Loaded system) ->
@@ -583,7 +597,7 @@ systemSelected systemId model =
                 model.systems
     }
         |> Update.succeeed
-        |> (case Cacheable.get systemId model.systems of
+        |> (case Cacheable.get SystemDict.get systemId model.systems of
                 Just (Loaded _) ->
                     identity
 
@@ -746,7 +760,7 @@ view shared model =
                 (model.tab == Route.Contracts)
             , navLink
                 { label = "Waypoints"
-                , route = Route.Game { tab = Just (Route.Waypoints { systemId = Nothing }) }
+                , route = Route.Game { tab = Just (Route.Waypoints { id = Nothing }) }
                 }
                 (case model.tab of
                     Route.Waypoints _ ->
@@ -819,18 +833,23 @@ view shared model =
                             , onZoomPress = ZoomPressed
                             , onRotationPress = RotationPressed
                             , selected =
-                                details.systemId
-                                    |> Maybe.andThen
-                                        (\systemId ->
-                                            Cacheable.get systemId model.systems
-                                        )
-                                    |> Maybe.andThen RemoteData.toMaybe
-                                    |> Maybe.map .id
+                                case details.id of
+                                    Nothing ->
+                                        Nothing
+
+                                    Just (Route.ViewSystem systemId) ->
+                                        model.systems
+                                            |> Cacheable.get SystemDict.get systemId
+                                            |> Maybe.andThen RemoteData.toMaybe
+                                            |> Maybe.map .id
+
+                                    Just _ ->
+                                        Nothing
                             }
                             { galaxyViewSize = { width = 750, height = 500 }
                             , zoom = model.zoom
                             , viewRotation = model.viewRotation
-                            , systems = Dict.toList model.systems3d
+                            , systems = SystemDict.toList model.systems3d
                             }
                         , case model.systems of
                             Uncached ->
@@ -859,12 +878,18 @@ view shared model =
                                         }
                                     ]
                         , let
+                            selectedSystem : Maybe (RemoteData.RemoteData SpaceTrader.System.System)
                             selectedSystem =
-                                details.systemId
-                                    |> Maybe.andThen
-                                        (\systemId ->
-                                            Cacheable.get systemId model.systems
-                                        )
+                                case details.id of
+                                    Nothing ->
+                                        Nothing
+
+                                    Just (Route.ViewSystem systemId) ->
+                                        model.systems
+                                            |> Cacheable.get SystemDict.get systemId
+
+                                    Just _ ->
+                                        Nothing
                           in
                           case selectedSystem of
                             Nothing ->

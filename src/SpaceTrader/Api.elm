@@ -7,6 +7,8 @@ import Process
 import SpaceTrader.Agent exposing (Agent)
 import SpaceTrader.Contract exposing (Contract)
 import SpaceTrader.Faction exposing (Faction)
+import SpaceTrader.Point.System
+import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship exposing (Ship)
 import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Nav
@@ -157,12 +159,12 @@ getAllSystemsUpdate =
     getAllUpdate
 
 
-getSystem : (Result Http.Error SpaceTrader.System.System -> msg) -> { token : String, systemId : String } -> Cmd msg
+getSystem : (Result Http.Error SpaceTrader.System.System -> msg) -> { token : String, systemId : SpaceTrader.Point.System.System } -> Cmd msg
 getSystem toMsg options =
     v2
         { method = "GET"
         , token = options.token
-        , url = [ "systems", options.systemId ]
+        , url = [ "systems", SpaceTrader.Point.System.toKey options.systemId ]
         , body = Http.emptyBody
         , expect = Http.expectJson toMsg (decodeSuccess SpaceTrader.System.decode)
         }

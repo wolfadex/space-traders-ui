@@ -2,6 +2,8 @@ module Ui.System exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
+import SpaceTrader.Point.System
+import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
 import SpaceTrader.System
 import Ui
@@ -11,19 +13,11 @@ import Ui.System.Waypoint
 
 view :
     { myShips : List SpaceTrader.Ship.Ship
-    , onCreateSurveyClicked : { waypointId : String, shipId : String } -> msg
+    , onCreateSurveyClicked : { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : String } -> msg
     }
     -> SpaceTrader.System.System
     -> Html msg
 view opts system =
-    -- { id : String
-    -- , sector : String
-    -- , type_ : SpaceTrader.System.Type.Type
-    -- , x : Int
-    -- , y : Int
-    -- , waypoints : List SpaceTrader.System.Waypoint.Waypoint
-    -- , factions : List String
-    -- }
     Html.div
         [ Ui.grid
         , Ui.gap 1
@@ -31,15 +25,15 @@ view opts system =
         , Html.Attributes.style "border-radius" "0.25rem"
         , Html.Attributes.style "padding" "0.5rem"
         ]
-        [ Ui.header.three [] [ Html.text system.id ]
+        [ Ui.header.three []
+            [ system.id
+                |> SpaceTrader.Point.System.toLabel
+                |> Html.text
+            ]
         , Html.div
             [ Ui.grid
             , Html.Attributes.style "grid-template-columns" "4rem 1fr"
             ]
-            -- Ui.viewLabeled
-            --     { label = "Type"
-            --     , value = Html.text <| Ui.System.Type.view system.type_
-            --     }
             [ Html.span [ Html.Attributes.style "font-weight" "bold" ]
                 [ Html.text "Type:" ]
             , Html.span [] [ Html.text <| Ui.System.Type.view system.type_ ]

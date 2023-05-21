@@ -6,62 +6,60 @@ module Cacheable exposing
     , update
     )
 
-import Dict exposing (Dict)
 
-
-type Cacheable a
+type Cacheable data
     = Uncached
-    | Caching { data : Dict String a, current : Int, max : Int }
-    | Cached (Dict String a)
+    | Caching { data : data, current : Int, max : Int }
+    | Cached data
 
 
-getData : Cacheable a -> Dict String a
+getData : Cacheable data -> Maybe data
 getData cacheable =
-    case cacheable of
-        Uncached ->
-            Dict.empty
-
-        Caching { data } ->
-            data
-
-        Cached data ->
-            data
-
-
-get : String -> Cacheable a -> Maybe a
-get key cacheable =
     case cacheable of
         Uncached ->
             Nothing
 
         Caching { data } ->
-            Dict.get key data
+            Just data
 
         Cached data ->
-            Dict.get key data
+            Just data
 
 
-insert : String -> a -> Cacheable a -> Cacheable a
-insert key value cacheable =
+get : (key -> data -> Maybe a) -> key -> Cacheable data -> Maybe a
+get fn key cacheable =
+    case cacheable of
+        Uncached ->
+            Nothing
+
+        Caching { data } ->
+            fn key data
+
+        Cached data ->
+            fn key data
+
+
+insert : (key -> value -> data -> data) -> key -> value -> Cacheable data -> Cacheable data
+insert fn key value cacheable =
     case cacheable of
         Uncached ->
             Uncached
 
         Caching details ->
-            Caching { details | data = Dict.insert key value details.data }
+            Caching { details | data = fn key value details.data }
 
         Cached data ->
-            Cached (Dict.insert key value data)
+            Cached (fn key value data)
 
 
-update : String -> (Maybe a -> Maybe a) -> Cacheable a -> Cacheable a
-update key fn cacheable =
+update : (key -> (Maybe value -> Maybe value) -> data -> data) -> key -> (Maybe value -> Maybe value) -> Cacheable data -> Cacheable data
+update fn_ key fn cacheable =
     case cacheable of
         Uncached ->
             Uncached
 
         Caching details ->
-            Caching { details | data = Dict.update key fn details.data }
+            Caching { details | data = fn_ key fn details.data }
 
         Cached data ->
-            Cached (Dict.update key fn data)
+            Cached (fn_ key fn data)

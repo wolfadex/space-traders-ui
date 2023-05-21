@@ -14,6 +14,7 @@ import SpaceTrader.Agent
 import SpaceTrader.Api
 import SpaceTrader.Contract
 import SpaceTrader.Faction
+import SpaceTrader.Point.SystemDict as SystemDict exposing (SystemDict)
 import SpaceTrader.Ship
 import SpaceTrader.System
 import Ui
@@ -29,13 +30,13 @@ type alias Model =
     , loginFormModel : Form.Model
     , submittingLogin : Bool
     , loginServerError : Maybe String
-    , systems : Maybe (Dict String SpaceTrader.System.System)
+    , systems : Maybe (SystemDict SpaceTrader.System.System)
     , backgroundRotation : Float
     }
 
 
 init :
-    { systems : Maybe (Dict String SpaceTrader.System.System)
+    { systems : Maybe (SystemDict SpaceTrader.System.System)
     , toMsg : Msg -> msg
     , toModel : Model -> model
     }

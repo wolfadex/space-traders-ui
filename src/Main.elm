@@ -13,6 +13,7 @@ import Page.Login
 import Port
 import Route exposing (Route)
 import Shared
+import SpaceTrader.Point.SystemDict as SystemDict exposing (SystemDict)
 import SpaceTrader.System
 import Ui.Theme
 import Update
@@ -54,7 +55,7 @@ init flags url navKey =
         route =
             Route.fromAppUrl appUrl
 
-        initialState : { accessToken : Maybe String, cachedSystemd : Maybe (Dict String SpaceTrader.System.System), shared : ( Shared.Model, Cmd Shared.Msg ) }
+        initialState : { accessToken : Maybe String, cachedSystemd : Maybe (SystemDict SpaceTrader.System.System), shared : ( Shared.Model, Cmd Shared.Msg ) }
         initialState =
             case Json.Decode.decodeValue decodeFlags flags of
                 Err _ ->
@@ -134,7 +135,7 @@ decodeFlags :
     Json.Decode.Decoder
         { accessToken : Maybe String
         , settings : { theme : Ui.Theme.Theme }
-        , cached : { systems : Maybe (Dict String SpaceTrader.System.System) }
+        , cached : { systems : Maybe (SystemDict SpaceTrader.System.System) }
         }
 decodeFlags =
     Json.Decode.map3
@@ -161,7 +162,7 @@ decodeSettings =
         )
 
 
-decodeCached : Json.Decode.Decoder { systems : Maybe (Dict String SpaceTrader.System.System) }
+decodeCached : Json.Decode.Decoder { systems : Maybe (SystemDict SpaceTrader.System.System) }
 decodeCached =
     Json.Decode.map
         (\systems ->
@@ -170,7 +171,11 @@ decodeCached =
         )
         (Json.Decode.maybe (Json.Decode.field "systems" (Json.Decode.list SpaceTrader.System.decode))
             |> Json.Decode.map
-                (Maybe.map (List.foldl (\system systems -> Dict.insert system.id system systems) Dict.empty))
+                (Maybe.map
+                    (List.foldl (\system systems -> SystemDict.insert system.id system systems)
+                        SystemDict.empty
+                    )
+                )
         )
 
 

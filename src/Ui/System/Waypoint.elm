@@ -2,6 +2,7 @@ module Ui.System.Waypoint exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
+import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
 import SpaceTrader.System.Waypoint
 import Ui
@@ -11,7 +12,7 @@ import Ui.Waypoint.Type
 
 view :
     { myShips : List SpaceTrader.Ship.Ship
-    , onCreateSurveyClicked : { waypointId : String, shipId : String } -> msg
+    , onCreateSurveyClicked : { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : String } -> msg
     }
     -> SpaceTrader.System.Waypoint.Waypoint
     -> Html msg
@@ -26,9 +27,7 @@ view opts waypoint =
         , Html.Attributes.style "grid-template-columns" "12rem 1fr"
         ]
         [ waypoint.symbol
-            |> String.split "-"
-            |> List.drop 2
-            |> String.join "-"
+            |> SpaceTrader.Point.Waypoint.toShortLabel
             |> Html.text
         , Html.text ": "
         , Html.text <| Ui.Waypoint.Type.view waypoint.type_

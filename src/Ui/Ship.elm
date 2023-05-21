@@ -3,6 +3,8 @@ module Ui.Ship exposing (view)
 import Html exposing (Html)
 import Html.Attributes
 import Route
+import SpaceTrader.Point.System
+import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
 import Ui
 import Ui.Ship.Nav.Status
@@ -46,32 +48,19 @@ view opts ship =
         , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Waypoint:" ]
         , Html.span []
             [ Ui.link []
-                { label = Html.text ship.nav.system
-                , route =
-                    Route.Game
-                        { tab =
-                            Route.Waypoints
-                                { systemId = Just ship.nav.system
-                                }
-                                |> Just
-                        }
+                { label =
+                    ship.nav.system
+                        |> SpaceTrader.Point.System.toLabel
+                        |> Html.text
+                , route = Route.fromSystem ship.nav.system
                 }
             , Html.text "-"
             , Ui.link []
                 { label =
                     ship.nav.waypoint
-                        |> String.split "-"
-                        |> List.drop 2
-                        |> String.join "-"
+                        |> SpaceTrader.Point.Waypoint.toShortLabel
                         |> Html.text
-                , route =
-                    Route.Game
-                        { tab =
-                            Route.Waypoints
-                                { systemId = Just ship.nav.waypoint
-                                }
-                                |> Just
-                        }
+                , route = Route.fromWaypoint ship.nav.waypoint
                 }
             ]
         , Html.div

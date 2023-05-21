@@ -2,12 +2,13 @@ module SpaceTrader.System exposing (System, decode, encode)
 
 import Json.Decode
 import Json.Encode
+import SpaceTrader.Point.System
 import SpaceTrader.System.Type
 import SpaceTrader.System.Waypoint
 
 
 type alias System =
-    { id : String
+    { id : SpaceTrader.Point.System.System
     , sector : String
     , type_ : SpaceTrader.System.Type.Type
     , x : Int
@@ -20,7 +21,7 @@ type alias System =
 decode : Json.Decode.Decoder System
 decode =
     Json.Decode.map7 System
-        (Json.Decode.field "symbol" Json.Decode.string)
+        (Json.Decode.field "symbol" SpaceTrader.Point.System.decode)
         (Json.Decode.field "sectorSymbol" Json.Decode.string)
         (Json.Decode.field "type" SpaceTrader.System.Type.decode)
         (Json.Decode.field "x" Json.Decode.int)
@@ -32,7 +33,7 @@ decode =
 encode : System -> Json.Encode.Value
 encode system =
     Json.Encode.object
-        [ ( "symbol", Json.Encode.string system.id )
+        [ ( "symbol", SpaceTrader.Point.System.encode system.id )
         , ( "sectorSymbol", Json.Encode.string system.sector )
         , ( "type", SpaceTrader.System.Type.encode system.type_ )
         , ( "x", Json.Encode.int system.x )

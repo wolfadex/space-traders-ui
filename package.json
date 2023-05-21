@@ -5,10 +5,13 @@
     "dev": "run-pty run-pty.json",
     "dev:elm": "elm-watch hot",
     "dev:server": "web-dev-server --root-dir public --app-index public/index.html --open",
-    "review": "elm-review --watch --fix"
+    "dev:gen": "elm-codegen run --watch",
+    "review": "elm-review --watch --fix",
+    "gen": "elm-codegen run"
   },
   "devDependencies": {
     "@web/dev-server": "^0.2.1",
+    "elm-codegen": "^0.3.0",
     "elm-review": "^2.10.1",
     "elm-test": "^0.19.1-revision12",
     "elm-watch": "^1.1.2",
