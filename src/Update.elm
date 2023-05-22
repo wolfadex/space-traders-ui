@@ -13,6 +13,7 @@ module Update exposing
     )
 
 import Dict exposing (Dict)
+import Http
 import Route exposing (Route)
 import SpaceTrader.Agent
 import SpaceTrader.Api
@@ -91,8 +92,20 @@ withResponse response onOk update =
                                     SpaceTrader.Api.ApiError err ->
                                         err.message
 
-                                    SpaceTrader.Api.HttpError _ ->
-                                        "Server error"
+                                    SpaceTrader.Api.HttpError (Http.BadUrl _) ->
+                                        "Wrong URL in API"
+
+                                    SpaceTrader.Api.HttpError Http.Timeout ->
+                                        "Request timeout"
+
+                                    SpaceTrader.Api.HttpError Http.NetworkError ->
+                                        "Network error"
+
+                                    SpaceTrader.Api.HttpError (Http.BadStatus status) ->
+                                        "Bad status: " ++ String.fromInt status
+
+                                    SpaceTrader.Api.HttpError (Http.BadBody body) ->
+                                        "Failed to parse response: " ++ body
                          in
                          Ui.Notification.new errMessage
                             |> Ui.Notification.withAlert

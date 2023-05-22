@@ -1,4 +1,9 @@
-module SpaceTrader.Waypoint.Trait exposing (Style(..), Trait, decode)
+module SpaceTrader.Waypoint.Trait exposing
+    ( Style(..)
+    , Trait
+    , decode
+    , styleToLabel
+    )
 
 import Json.Decode
 
@@ -80,6 +85,187 @@ type Style
     | Stripped
 
 
+styleToLabel : Style -> String
+styleToLabel style =
+    case style of
+        Uncharted ->
+            "Uncharted"
+
+        Marketplace ->
+            "Marketplace"
+
+        Shipyard ->
+            "Shipyard"
+
+        Outpost ->
+            "Outpost"
+
+        ScatteredSettlements ->
+            "Scattered Settlements"
+
+        SprawlingCities ->
+            "Sprawling Cities"
+
+        MegaStructures ->
+            "Mega Structures"
+
+        Overcrowded ->
+            "Overcrowded"
+
+        HighTech ->
+            "High Tech"
+
+        Corrupt ->
+            "Corrupt"
+
+        Bureaucratic ->
+            "Bureaucratic"
+
+        TradingHub ->
+            "Trading Hub"
+
+        Industrial ->
+            "Industrial"
+
+        BlackMarket ->
+            "Black Market"
+
+        ResearchFacility ->
+            "Research Facility"
+
+        MilitaryBase ->
+            "Military Base"
+
+        SurveillanceOutpost ->
+            "Surveillance Outpost"
+
+        ExplorationOutpost ->
+            "Exploration Outpost"
+
+        MineralDeposits ->
+            "Mineral Deposits"
+
+        CommonMetalDeposits ->
+            "Common Metal Deposits"
+
+        PreciousMetalDeposits ->
+            "Precious Metal Deposits"
+
+        RareMetalDeposits ->
+            "Rare Metal Deposits"
+
+        MethanePools ->
+            "Methane Pools"
+
+        IceCrystals ->
+            "Ice Crystals"
+
+        ExplosiveGases ->
+            "Explosive Gases"
+
+        StrongMagnetosphere ->
+            "Strong Magnetosphere"
+
+        VibrantAuroras ->
+            "Vibrant Auroras"
+
+        SaltFlats ->
+            "Salt Flats"
+
+        Canyons ->
+            "Canyons"
+
+        PerpetualDaylight ->
+            "Perpetual Daylight"
+
+        PerpetualOvercast ->
+            "Perpetual Overcast"
+
+        DrySeabeds ->
+            "Dry Seabeds"
+
+        MagmaSeas ->
+            "Magma Seas"
+
+        Supervolcanoes ->
+            "Supervolcanoes"
+
+        AshClouds ->
+            "Ash Clouds"
+
+        VastRuins ->
+            "Vast Ruins"
+
+        MutatedFlora ->
+            "Mutated Flora"
+
+        Terraformed ->
+            "Terraformed"
+
+        ExtremeTemperatures ->
+            "Extreme Temperatures"
+
+        ExtremePressure ->
+            "Extreme Pressure"
+
+        DiverseLife ->
+            "Diverse Life"
+
+        ScarceLife ->
+            "Scarce Life"
+
+        Fossils ->
+            "Fossils"
+
+        WeakGravity ->
+            "Weak Gravity"
+
+        StrongGravity ->
+            "Strong Gravity"
+
+        CrushingGravity ->
+            "Crushing Gravity"
+
+        ToxicAtmosphere ->
+            "Toxic Atmosphere"
+
+        CorrosiveAtmosphere ->
+            "Corrosive Atmosphere"
+
+        BreathableAtmosphere ->
+            "Breathable Atmosphere"
+
+        Jovian ->
+            "Jovian"
+
+        Rocky ->
+            "Rocky"
+
+        Volcanic ->
+            "Volcanic"
+
+        Frozen ->
+            "Frozen"
+
+        Swamp ->
+            "Swamp"
+
+        Barren ->
+            "Barren"
+
+        Temperate ->
+            "Temperate"
+
+        Jungle ->
+            "Jungle"
+
+        Ocean ->
+            "Ocean"
+
+        Stripped ->
+            "Stripped"
+
+
 decodeStyle : Json.Decode.Decoder Style
 decodeStyle =
     Json.Decode.string
@@ -98,19 +284,19 @@ decodeStyle =
                     "OUTPOST" ->
                         Json.Decode.succeed Outpost
 
-                    "SCATTEREDSETTLEMENTS" ->
+                    "SCATTERED_SETTLEMENTS" ->
                         Json.Decode.succeed ScatteredSettlements
 
-                    "SPRAWLINGCITIES" ->
+                    "SPRAWLING_CITIES" ->
                         Json.Decode.succeed SprawlingCities
 
-                    "MEGASTRUCTURES" ->
+                    "MEGA_STRUCTURES" ->
                         Json.Decode.succeed MegaStructures
 
                     "OVERCROWDED" ->
                         Json.Decode.succeed Overcrowded
 
-                    "HIGHTECH" ->
+                    "HIGH_TECH" ->
                         Json.Decode.succeed HighTech
 
                     "CORRUPT" ->
@@ -119,118 +305,118 @@ decodeStyle =
                     "BUREAUCRATIC" ->
                         Json.Decode.succeed Bureaucratic
 
-                    "TRADINGHUB" ->
+                    "TRADING_HUB" ->
                         Json.Decode.succeed TradingHub
 
                     "INDUSTRIAL" ->
                         Json.Decode.succeed Industrial
 
-                    "BLACKMARKET" ->
+                    "BLACK_MARKET" ->
                         Json.Decode.succeed BlackMarket
 
-                    "RESEARCHFACILITY" ->
+                    "RESEARCH_FACILITY" ->
                         Json.Decode.succeed ResearchFacility
 
-                    "MILITARYBASE" ->
+                    "MILITARY_BASE" ->
                         Json.Decode.succeed MilitaryBase
 
-                    "SURVEILLANCEOUTPOST" ->
+                    "SURVEILLANCE_OUTPOST" ->
                         Json.Decode.succeed SurveillanceOutpost
 
-                    "EXPLORATIONOUTPOST" ->
+                    "EXPLORATION_OUTPOST" ->
                         Json.Decode.succeed ExplorationOutpost
 
-                    "MINERALDEPOSITS" ->
+                    "MINERALDE_POSITS" ->
                         Json.Decode.succeed MineralDeposits
 
-                    "COMMONMETALDEPOSITS" ->
+                    "COMMON_METAL_DEPOSITS" ->
                         Json.Decode.succeed CommonMetalDeposits
 
-                    "PRECIOUSMETALDEPOSITS" ->
+                    "PRECIOUS_METAL_DEPOSITS" ->
                         Json.Decode.succeed PreciousMetalDeposits
 
-                    "RAREMETALDEPOSITS" ->
+                    "RARE_METAL_DEPOSITS" ->
                         Json.Decode.succeed RareMetalDeposits
 
-                    "METHANEPOOLS" ->
+                    "METHANE_POOLS" ->
                         Json.Decode.succeed MethanePools
 
-                    "ICECRYSTALS" ->
+                    "ICE_CRYSTALS" ->
                         Json.Decode.succeed IceCrystals
 
-                    "EXPLOSIVEGASES" ->
+                    "EXPLOSIVE_GASES" ->
                         Json.Decode.succeed ExplosiveGases
 
-                    "STRONGMAGNETOSPHERE" ->
+                    "STRONG_MAGNETOSPHERE" ->
                         Json.Decode.succeed StrongMagnetosphere
 
-                    "VIBRANTAURORAS" ->
+                    "VIBRANT_AURORAS" ->
                         Json.Decode.succeed VibrantAuroras
 
-                    "SALTFLATS" ->
+                    "SALTF_LATS" ->
                         Json.Decode.succeed SaltFlats
 
                     "CANYONS" ->
                         Json.Decode.succeed Canyons
 
-                    "PERPETUALDAYLIGHT" ->
+                    "PERPETUAL_DAYLIGHT" ->
                         Json.Decode.succeed PerpetualDaylight
 
-                    "PERPETUALOVERCAST" ->
+                    "PERPETUAL_OVERCAST" ->
                         Json.Decode.succeed PerpetualOvercast
 
-                    "DRYSEABEDS" ->
+                    "DRY_SEABEDS" ->
                         Json.Decode.succeed DrySeabeds
 
-                    "MAGMASEAS" ->
+                    "MAGMA_SEAS" ->
                         Json.Decode.succeed MagmaSeas
 
                     "SUPERVOLCANOES" ->
                         Json.Decode.succeed Supervolcanoes
 
-                    "ASHCLOUDS" ->
+                    "ASH_CLOUDS" ->
                         Json.Decode.succeed AshClouds
 
-                    "VASTRUINS" ->
+                    "VAST_RUINS" ->
                         Json.Decode.succeed VastRuins
 
-                    "MUTATEDFLORA" ->
+                    "MUTATED_FLORA" ->
                         Json.Decode.succeed MutatedFlora
 
                     "TERRAFORMED" ->
                         Json.Decode.succeed Terraformed
 
-                    "EXTREMETEMPERATURES" ->
+                    "EXTREME_TEMPERATURES" ->
                         Json.Decode.succeed ExtremeTemperatures
 
-                    "EXTREMEPRESSURE" ->
+                    "EXTREME_PRESSURE" ->
                         Json.Decode.succeed ExtremePressure
 
-                    "DIVERSELIFE" ->
+                    "DIVERSE_LIFE" ->
                         Json.Decode.succeed DiverseLife
 
-                    "SCARCELIFE" ->
+                    "SCARCE_LIFE" ->
                         Json.Decode.succeed ScarceLife
 
                     "FOSSILS" ->
                         Json.Decode.succeed Fossils
 
-                    "WEAKGRAVITY" ->
+                    "WEAK_GRAVITY" ->
                         Json.Decode.succeed WeakGravity
 
-                    "STRONGGRAVITY" ->
+                    "STRONG_GRAVITY" ->
                         Json.Decode.succeed StrongGravity
 
-                    "CRUSHINGGRAVITY" ->
+                    "CRUSHING_GRAVITY" ->
                         Json.Decode.succeed CrushingGravity
 
-                    "TOXICATMOSPHERE" ->
+                    "TOXIC_ATMOSPHERE" ->
                         Json.Decode.succeed ToxicAtmosphere
 
-                    "CORROSIVEATMOSPHERE" ->
+                    "CORROSIVE_ATMOSPHERE" ->
                         Json.Decode.succeed CorrosiveAtmosphere
 
-                    "BREATHABLEATMOSPHERE" ->
+                    "BREATHABLE_ATMOSPHERE" ->
                         Json.Decode.succeed BreathableAtmosphere
 
                     "JOVIAN" ->

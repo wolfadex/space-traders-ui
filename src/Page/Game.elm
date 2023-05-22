@@ -34,6 +34,8 @@ import SpaceTrader.Ship.Nav
 import SpaceTrader.Survey
 import SpaceTrader.System
 import SpaceTrader.Waypoint
+import SpaceTrader.Waypoint.Trait
+import SpaceTrader.Waypoint.Type
 import Sphere3d
 import Time
 import Ui
@@ -1053,12 +1055,63 @@ viewWaypoint model waypointId =
                 Html.text "Failed to load waypoint data"
 
             Just (Loaded waypoint) ->
-                -- Ui.System.Waypoint.view
-                --     { timeZone = shared.timeZone
-                --     , currentTime = shared.currentTime
-                --     }
-                --     waypoint
-                Debug.todo ""
+                -- { id : SpaceTrader.Point.Waypoint.Waypoint
+                -- , type_ : SpaceTrader.Waypoint.Type.Type
+                -- , system : SpaceTrader.Point.System.System
+                -- , x : Int
+                -- , y : Int
+                -- , orbitals : List String
+                -- , traits : List Trait
+                -- , faction : Maybe String
+                -- , chart : Maybe Chart
+                -- }
+                let
+                    shipsHere =
+                        model.myShips
+                            |> Dict.values
+                            |> List.filterMap
+                                (\ship ->
+                                    if ship.nav.waypoint == waypoint.id then
+                                        Just ship
+
+                                    else
+                                        Nothing
+                                )
+                in
+                Html.div
+                    [ Ui.grid ]
+                    [ Html.span []
+                        [ Html.text <| SpaceTrader.Waypoint.Type.toLabel waypoint.type_ ]
+                    , waypoint.traits
+                        |> List.map
+                            (\trait ->
+                                Html.li []
+                                    [ Html.p []
+                                        [ Html.span [ Html.Attributes.style "font-weight" "bold" ]
+                                            [ Html.text (trait.name ++ ": ") ]
+                                        , Html.text trait.description
+                                        ]
+                                    ]
+                            )
+                        |> Html.ul []
+                    , Html.span []
+                        [ Html.text "Orbitals:" ]
+                    , waypoint.orbitals
+                        |> List.map
+                            (\orbital ->
+                                Html.li
+                                    []
+                                    [ Ui.link []
+                                        { label =
+                                            orbital
+                                                |> SpaceTrader.Point.Waypoint.toLabel
+                                                |> Html.text
+                                        , route = Route.fromWaypoint orbital
+                                        }
+                                    ]
+                            )
+                        |> Html.ul []
+                    ]
         )
 
 

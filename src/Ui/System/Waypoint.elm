@@ -2,6 +2,7 @@ module Ui.System.Waypoint exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
+import Route
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
 import SpaceTrader.System.Waypoint
@@ -17,19 +18,17 @@ view :
     -> SpaceTrader.System.Waypoint.Waypoint
     -> Html msg
 view opts waypoint =
-    -- { symbol : String
-    -- , type_ : SpaceTrader.Waypoint.Type.Type
-    -- , x : Int
-    -- , y : Int
-    -- }
     Html.div
         [ Ui.grid
-        , Html.Attributes.style "grid-template-columns" "12rem 1fr"
+        , Html.Attributes.style "grid-template-columns" "4rem 6rem 1fr"
         ]
-        [ waypoint.symbol
-            |> SpaceTrader.Point.Waypoint.toShortLabel
-            |> Html.text
-        , Html.text ": "
+        [ Ui.link []
+            { label =
+                waypoint.symbol
+                    |> SpaceTrader.Point.Waypoint.toShortLabel
+                    |> Html.text
+            , route = Route.fromWaypoint waypoint.symbol
+            }
         , Html.text <| Ui.Waypoint.Type.view waypoint.type_
         , Ui.Button.default [ Html.Attributes.style "width" "fit-content" ]
             { label = Html.text "Create survey"

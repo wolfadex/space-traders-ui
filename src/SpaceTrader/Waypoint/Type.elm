@@ -1,4 +1,9 @@
-module SpaceTrader.Waypoint.Type exposing (Type(..), decode, encode)
+module SpaceTrader.Waypoint.Type exposing
+    ( Type(..)
+    , decode
+    , encode
+    , toLabel
+    )
 
 import Json.Decode
 import Json.Encode
@@ -14,6 +19,37 @@ type Type
     | Nebula
     | DebrisField
     | GravityWell
+
+
+toLabel : Type -> String
+toLabel waypointType =
+    case waypointType of
+        Planet ->
+            "Planet"
+
+        GasGiant ->
+            "Gas Giant"
+
+        Moon ->
+            "Moon"
+
+        OrbitalStation ->
+            "Orbital Station"
+
+        JumpGate ->
+            "Jump Gate"
+
+        AsteroidField ->
+            "Asteroid Field"
+
+        Nebula ->
+            "Nebula"
+
+        DebrisField ->
+            "Debris Field"
+
+        GravityWell ->
+            "Gravity Well"
 
 
 decode : Json.Decode.Decoder Type

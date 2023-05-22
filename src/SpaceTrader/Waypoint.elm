@@ -15,7 +15,7 @@ type alias Waypoint =
     , system : SpaceTrader.Point.System.System
     , x : Int
     , y : Int
-    , orbitals : List String
+    , orbitals : List SpaceTrader.Point.Waypoint.Waypoint
     , traits : List Trait
     , faction : Maybe String
     , chart : Maybe Chart
@@ -38,7 +38,7 @@ decode =
         |> Json.Decode.Extra.andMap
             (Json.Decode.field "orbitals"
                 (Json.Decode.list
-                    (Json.Decode.field "symbol" Json.Decode.string)
+                    (Json.Decode.field "symbol" SpaceTrader.Point.Waypoint.decode)
                 )
             )
         |> Json.Decode.Extra.andMap

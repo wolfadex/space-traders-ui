@@ -3,6 +3,7 @@ module Main exposing (Model, Msg, Page, main)
 import AppUrl exposing (AppUrl)
 import Browser
 import Browser.Navigation
+import Cacheable
 import Dict exposing (Dict)
 import Html
 import Json.Decode
@@ -11,6 +12,7 @@ import List.NonEmpty
 import Page.Game
 import Page.Login
 import Port
+import RemoteData exposing (RemoteData(..))
 import Route exposing (Route)
 import Shared
 import SpaceTrader.Point.SystemDict as SystemDict exposing (SystemDict)
@@ -240,8 +242,32 @@ update msg model =
             in
             case route of
                 Route.Login ->
-                    -- TODO: Should we redirect here?
-                    ( model, Cmd.none )
+                    case model.page of
+                        Login loginModel ->
+                            ( model, Cmd.none )
+
+                        Game gameModel ->
+                            Page.Login.init
+                                { systems =
+                                    gameModel.systems
+                                        |> Cacheable.getData
+                                        |> Maybe.map
+                                            (SystemDict.toList
+                                                >> List.filterMap
+                                                    (\( id, val ) ->
+                                                        case val of
+                                                            Loaded system ->
+                                                                Just ( id, system )
+
+                                                            _ ->
+                                                                Nothing
+                                                    )
+                                                >> SystemDict.fromList
+                                            )
+                                , toMsg = LoginMsg
+                                , toModel = \m -> { model | page = Login m }
+                                }
+                                |> Update.toTuple { fromEffect = FromEffect }
 
                 Route.Game { tab } ->
                     case model.page of

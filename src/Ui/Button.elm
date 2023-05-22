@@ -79,6 +79,7 @@ primary attr { label, onClick } =
                         Html.Events.onClick msg
                , Html.Attributes.style "background-color" "var(--blue-light)"
                , Html.Attributes.style "border-color" "var(--blur-dark)"
+               , Html.Attributes.style "color" "var(--blur-dark)"
                ]
         )
         [ label ]
