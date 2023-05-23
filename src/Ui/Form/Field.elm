@@ -5,6 +5,7 @@ import Form.FieldView
 import Form.Validation
 import Html exposing (Html)
 import Html.Attributes
+import Ui
 
 
 errorsView : Form.Context String input -> Form.Validation.Field String parsed kind -> Html msg
@@ -21,10 +22,10 @@ errorsView { submitAttempted, errors } field =
                         ]
                         [ Html.text error ]
                 )
-            |> Maybe.withDefault (Html.text "")
+            |> Maybe.withDefault Ui.none
 
     else
-        Html.text ""
+        Ui.none
 
 
 text : Form.Context String input -> String -> Form.Validation.Field String parsed Form.FieldView.Input -> List (Html msg)

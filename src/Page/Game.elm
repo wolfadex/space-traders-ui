@@ -810,7 +810,7 @@ view shared model =
             "sidebar content"
         """
         ]
-        [ Html.div
+        [ Html.nav
             [ Html.Attributes.class "sidebar"
             , Html.Attributes.style "height" "100vh"
             , Html.Attributes.style "display" "flex"
@@ -904,7 +904,7 @@ view shared model =
                 , onClick = Just LogoutClicked
                 }
             ]
-        , Html.div
+        , Html.main_
             [ Html.Attributes.class "content"
             , Html.Attributes.style "padding" "1rem"
             , Html.Attributes.style "background-color" "var(--blue)"
@@ -927,7 +927,7 @@ view shared model =
                             , Html.Attributes.style "grid-template-columns" "1fr 1fr"
                             , Ui.gap 1
                             ]
-                        |> viewContent "My Ships"
+                        |> viewContent Nothing "My Ships"
 
                 Route.Contracts ->
                     model.myContracts
@@ -943,7 +943,7 @@ view shared model =
                             , Html.Attributes.style "grid-template-columns" "1fr 1fr 1fr"
                             , Ui.gap 1
                             ]
-                        |> viewContent "My Contracts"
+                        |> viewContent Nothing "My Contracts"
 
                 Route.Waypoints details ->
                     case details.id of
@@ -1043,7 +1043,23 @@ viewSystem model maybeSystemId =
 
 viewWaypoint : Model -> SpaceTrader.Point.Waypoint.Waypoint -> Html Msg
 viewWaypoint model waypointId =
-    viewContent ("Waypoint: " ++ SpaceTrader.Point.Waypoint.toShortLabel waypointId)
+    viewContent
+        (Just
+            (Route.Game
+                { tab =
+                    Just
+                        (Route.Waypoints
+                            { id =
+                                waypointId
+                                    |> SpaceTrader.Point.Waypoint.toSystem
+                                    |> Route.ViewSystem
+                                    |> Just
+                            }
+                        )
+                }
+            )
+        )
+        ("Waypoint: " ++ SpaceTrader.Point.Waypoint.toShortLabel waypointId)
         (case WaypointDict.get waypointId model.waypoints of
             Nothing ->
                 Html.text "Waypoint not found"
@@ -1066,6 +1082,7 @@ viewWaypoint model waypointId =
                 -- , chart : Maybe Chart
                 -- }
                 let
+                    shipsHere : List SpaceTrader.Ship.Ship
                     shipsHere =
                         model.myShips
                             |> Dict.values
@@ -1079,21 +1096,50 @@ viewWaypoint model waypointId =
                                 )
                 in
                 Html.div
-                    [ Ui.grid ]
+                    [ Ui.grid
+                    , Ui.gap 1
+                    ]
                     [ Html.span []
                         [ Html.text <| SpaceTrader.Waypoint.Type.toLabel waypoint.type_ ]
                     , waypoint.traits
                         |> List.map
                             (\trait ->
-                                Html.li []
-                                    [ Html.p []
-                                        [ Html.span [ Html.Attributes.style "font-weight" "bold" ]
+                                Html.li [ Html.Attributes.style "max-width" "35rem" ]
+                                    [ Html.dl []
+                                        [ Html.dt [ Html.Attributes.style "font-weight" "bold" ]
                                             [ Html.text (trait.name ++ ": ") ]
-                                        , Html.text trait.description
+                                        , Html.dd [] [ Html.text trait.description ]
                                         ]
                                     ]
                             )
                         |> Html.ul []
+                    , Html.div []
+                        [ Html.span [] [ Html.text "My ships here:" ]
+                        , case shipsHere of
+                            [] ->
+                                Html.text " None"
+
+                            _ ->
+                                shipsHere
+                                    |> List.map
+                                        (\ship ->
+                                            Html.li []
+                                                [ Html.text ship.id ]
+                                        )
+                                    |> Html.ul []
+                        ]
+                    , Html.span []
+                        [ Html.text
+                            ("Faction: "
+                                ++ (case waypoint.faction of
+                                        Nothing ->
+                                            "None"
+
+                                        Just faction ->
+                                            faction
+                                   )
+                            )
+                        ]
                     , Html.span []
                         [ Html.text "Orbitals:" ]
                     , waypoint.orbitals
@@ -1115,9 +1161,22 @@ viewWaypoint model waypointId =
         )
 
 
-viewContent : String -> Html msg -> Html msg
-viewContent title content =
+viewContent : Maybe Route -> String -> Html msg -> Html msg
+viewContent backRoute title content =
     Html.div []
-        [ Ui.header.two [ Html.Attributes.style "margin-bottom" "1rem" ] [ Html.text title ]
+        [ Ui.header.two
+            [ Html.Attributes.style "margin-bottom" "1rem"
+            ]
+            [ backRoute
+                |> Maybe.map
+                    (\route ->
+                        Ui.link [ Html.Attributes.style "margin-right" "1rem" ]
+                            { label = Html.text "<"
+                            , route = route
+                            }
+                    )
+                |> Maybe.withDefault Ui.none
+            , Html.text title
+            ]
         , content
         ]

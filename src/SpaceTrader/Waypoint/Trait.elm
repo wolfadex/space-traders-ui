@@ -326,7 +326,7 @@ decodeStyle =
                     "EXPLORATION_OUTPOST" ->
                         Json.Decode.succeed ExplorationOutpost
 
-                    "MINERALDE_POSITS" ->
+                    "MINERAL_DEPOSITS" ->
                         Json.Decode.succeed MineralDeposits
 
                     "COMMON_METAL_DEPOSITS" ->

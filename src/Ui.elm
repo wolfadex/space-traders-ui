@@ -1,4 +1,16 @@
-module Ui exposing (align, column, dateTime, gap, grid, header, justify, link, progress, row)
+module Ui exposing
+    ( align
+    , column
+    , dateTime
+    , gap
+    , grid
+    , header
+    , justify
+    , link
+    , none
+    , progress
+    , row
+    )
 
 import Html exposing (Html)
 import Html.Attributes
@@ -176,3 +188,8 @@ link attr opts =
             ++ attr
         )
         [ opts.label ]
+
+
+none : Html msg
+none =
+    Html.text ""
