@@ -1,4 +1,15 @@
-module Page.Login exposing (LoginForm, Model, Msg(..), RegisterForm, init, subscriptions, update, view, withSubmitting)
+module Page.Login exposing
+    ( LoginForm
+    , Model
+    , Msg(..)
+    , RegisterForm
+    , init
+    , subscriptions
+    , update
+    , view
+    , viewModals
+    , withSubmitting
+    )
 
 import Browser.Events
 import Dict exposing (Dict)
@@ -9,6 +20,7 @@ import Html exposing (Html)
 import Html.Attributes
 import Http
 import Port
+import Route
 import Shared
 import SpaceTrader.Agent
 import SpaceTrader.Api
@@ -18,15 +30,17 @@ import SpaceTrader.Point.SystemDict as SystemDict exposing (SystemDict)
 import SpaceTrader.Ship
 import SpaceTrader.System
 import Ui
+import Ui.Button
 import Ui.Form
 import Ui.Form.Field
+import Ui.Modal
 import Update exposing (Update)
 
 
 type alias Model =
     { registerFormModel : Form.Model
     , submittingRegistration : Bool
-    , registrationServerError : Maybe String
+    , registrationToken : Maybe String
     , loginFormModel : Form.Model
     , submittingLogin : Bool
     , loginServerError : Maybe String
@@ -44,7 +58,7 @@ init :
 init opts =
     { registerFormModel = Form.init
     , submittingRegistration = False
-    , registrationServerError = Nothing
+    , registrationToken = Nothing
     , loginFormModel = Form.init
     , submittingLogin = False
     , loginServerError = Nothing
@@ -72,7 +86,7 @@ type Msg
     | RegistrationFormSubmitted (Ui.Form.Submission String RegisterForm)
     | RegistrationResponded
         (Result
-            Http.Error
+            SpaceTrader.Api.Error
             { agent : SpaceTrader.Agent.Agent
             , contract : SpaceTrader.Contract.Contract
             , faction : SpaceTrader.Faction.Faction
@@ -80,6 +94,7 @@ type Msg
             , token : String
             }
         )
+    | TokenCopyAcknowledged
     | LoginFormMsg (Form.Msg Msg)
     | LoginFormSubmitted (Ui.Form.Submission String LoginForm)
     | LoginResponded String (Result Http.Error SpaceTrader.Agent.Agent)
@@ -120,35 +135,30 @@ update ({ model } as opts) =
                                 | submittingRegistration = True
                             }
                                 |> Update.succeeed
-                                |> Update.withCmd
-                                    (SpaceTrader.Api.register RegistrationResponded
-                                        registerData
-                                    )
+                                |> Update.withRequest RegistrationResponded
+                                    (SpaceTrader.Api.register registerData)
 
                         Form.Invalid _ _ ->
                             model
                                 |> Update.succeeed
 
-                RegistrationResponded (Err err) ->
-                    { model
-                        | submittingRegistration = False
+                RegistrationResponded response ->
+                    model
+                        |> Update.withResponse response
+                            (\data ->
+                                { model
+                                    | submittingRegistration = False
+                                    , registrationToken = Just data.token
+                                }
+                                    |> Update.succeeed
+                                    |> Update.withCmd (Port.setToken data.token)
+                                    |> Update.withCmd (Port.openModal modalIds.registrationSuccess)
+                            )
 
-                        -- , registrationServerError = Just (Debug.toString err)
-                        , registrationServerError = Just "There was an error"
-                    }
-                        |> Update.succeeed
-
-                RegistrationResponded (Ok data) ->
+                TokenCopyAcknowledged ->
                     model
                         |> Update.succeeed
-                        |> Update.withCmd (Port.setToken data.token)
-                        |> Update.withEffect
-                            (Update.Authenticated
-                                { accessToken = data.token
-                                , agent = Just data.agent
-                                , systems = Nothing
-                                }
-                            )
+                        |> Update.withEffect (Update.RouteChangeRequested (Route.Game { tab = Just Route.Ships }))
 
                 -- login
                 LoginFormMsg msg_ ->
@@ -244,12 +254,7 @@ view model =
                 , toMsg = RegistrationFormMsg
                 , id = "registration-form"
                 , onSubmit = RegistrationFormSubmitted
-                , serverSideErrors =
-                    Maybe.map
-                        (\registrationServerError ->
-                            Dict.singleton "callsign" [ registrationServerError ]
-                        )
-                        model.registrationServerError
+                , serverSideErrors = Nothing
                 }
                 registrationForm
             , Ui.Form.view
@@ -357,3 +362,42 @@ loginForm =
                 |> Form.Field.required "Required"
                 |> Form.Field.password
             )
+
+
+
+-- MODALS
+
+
+modalIds : { registrationSuccess : String }
+modalIds =
+    { registrationSuccess = "registrationSuccess" }
+
+
+viewModals : Shared.Model -> Model -> List (Html Msg)
+viewModals shared model =
+    [ Ui.Modal.view modalIds.registrationSuccess
+        [ Html.Attributes.class shared.theme.class
+        ]
+        [ Ui.column
+            [ Ui.gap 1 ]
+            [ Ui.header.one [] [ Html.text "IMPORTANT!" ]
+            , Html.p [] [ Html.text "This access token is your password and is the only way to access your account. If you lose it, you will lose your account. Make sure you copy it somewhere safe." ]
+            , Ui.header.three
+                [ Html.Attributes.style "max-width" "90vw"
+                , Html.Attributes.style "overflow-wrap" "break-word"
+                ]
+                [ Html.text "Access Token: "
+                , Html.span []
+                    [ Html.text (Maybe.withDefault "" model.registrationToken)
+                    ]
+                ]
+            , Ui.Button.default
+                [ Ui.justify.end
+                , Ui.align.end
+                ]
+                { label = Html.text "I've copied my token"
+                , onClick = Just TokenCopyAcknowledged
+                }
+            ]
+        ]
+    ]

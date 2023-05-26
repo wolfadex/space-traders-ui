@@ -102,7 +102,7 @@ decode =
             , traits = traits
             }
         )
-        (Json.Decode.field "group" decodeGroup)
+        (Json.Decode.field "symbol" decodeGroup)
         (Json.Decode.field "name" Json.Decode.string)
         (Json.Decode.field "description" Json.Decode.string)
         (Json.Decode.field "headquarters" Json.Decode.string)

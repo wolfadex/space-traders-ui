@@ -305,7 +305,27 @@ update msg model =
                                             )
 
                                 _ ->
-                                    ( model, Cmd.none )
+                                    case loginModel.registrationToken of
+                                        Nothing ->
+                                            ( model, Cmd.none )
+
+                                        Just accessToken ->
+                                            Page.Game.init
+                                                { accessToken = accessToken
+                                                , agent = Nothing
+                                                , systems = loginModel.systems
+                                                , tab = tab
+                                                , toMsg = GameMsg
+                                                , toModel = \m -> { model | page = Game m }
+                                                }
+                                                |> Update.toTuple { fromEffect = FromEffect }
+                                                |> Tuple.mapSecond
+                                                    (\cmd ->
+                                                        Cmd.batch
+                                                            [ cmd
+                                                            , Port.setToken accessToken
+                                                            ]
+                                                    )
 
                 Route.NotFound ->
                     ( model
@@ -442,5 +462,15 @@ view model =
         ]
             ++ (Shared.viewModals model.shared
                     |> List.map (Html.map SharedMsg)
+               )
+            ++ (case model.page of
+                    Login m ->
+                        Page.Login.viewModals model.shared m
+                            |> List.map (Html.map LoginMsg)
+
+                    Game m ->
+                        -- Page.Game.viewModals m
+                        --     |> List.map (Html.map GameMsg)
+                        []
                )
     }

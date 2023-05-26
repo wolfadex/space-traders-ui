@@ -20,36 +20,36 @@ import Task exposing (Task)
 
 
 -- AUTH
+-- myContracts : { token : String } -> Task Error (List SpaceTrader.Contract.Contract)
 
 
 register :
-    (Result
-        Http.Error
-        { agent : Agent
-        , contract : Contract
-        , faction : Faction
-        , ship : Ship
-        , token : String
-        }
-     -> msg
-    )
-    -> { callsign : String, faction : SpaceTrader.Faction.Group }
-    -> Cmd msg
-register toMsg { callsign, faction } =
-    Http.post
-        { url = toUrl [ baseUri, "register" ]
+    { callsign : String, faction : SpaceTrader.Faction.Group }
+    ->
+        Task
+            Error
+            { agent : Agent
+            , contract : Contract
+            , faction : Faction
+            , ship : Ship
+            , token : String
+            }
+register opts =
+    v2_3_noauth
+        { method = "POST"
+        , url = [ "register" ]
         , body =
             Http.jsonBody
                 (Json.Encode.object
-                    [ ( "symbol", Json.Encode.string callsign )
+                    [ ( "symbol", Json.Encode.string opts.callsign )
                     , ( "faction"
-                      , faction
+                      , opts.faction
                             |> SpaceTrader.Faction.groupToString
                             |> Json.Encode.string
                       )
                     ]
                 )
-        , expect = Http.expectJson toMsg (decodeSuccess decodeRegister)
+        , decoder = decodeRegister
         }
 
 
@@ -447,6 +447,27 @@ v2_3 opts =
     Http.task
         { method = opts.method
         , headers = [ Http.header "Authorization" ("Bearer " ++ opts.token) ]
+        , url = toUrl (baseUri :: opts.url)
+        , body = opts.body
+        , resolver =
+            Http.stringResolver <|
+                jsonResolver2 <|
+                    opts.decoder
+        , timeout = Nothing
+        }
+
+
+v2_3_noauth :
+    { method : String
+    , body : Http.Body
+    , url : List String
+    , decoder : Json.Decode.Decoder a
+    }
+    -> Task Error a
+v2_3_noauth opts =
+    Http.task
+        { method = opts.method
+        , headers = []
         , url = toUrl (baseUri :: opts.url)
         , body = opts.body
         , resolver =
