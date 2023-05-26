@@ -43,7 +43,7 @@ main =
                 |> GenericDict.useElmFastDict
                 |> GenericDict.generateDeclarations
       in
-      Elm.file [ "SpaceTrader", "Point", "WaypointDict" ] decls
+      Elm.file [ "SpaceTrader", "Point", "SystemDict" ] decls
     , let
         keyType : Elm.Annotation.Annotation
         keyType =

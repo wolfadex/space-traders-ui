@@ -2,6 +2,10 @@
 
 A UI for [SpaceTraders](https://spacetraders.io/), built with [Elm](https://elm-lang.org/)
 
+## ⚠️ WIP ⚠️
+
+[![Netlify Status](https://api.netlify.com/api/v1/badges/d156e8fd-a09c-4628-b345-1b574e2471c4/deploy-status)](https://app.netlify.com/sites/space-trader-elm-wip/deploys)
+
 ## Current Features
 
 - auth
