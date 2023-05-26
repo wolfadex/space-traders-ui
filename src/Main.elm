@@ -69,8 +69,7 @@ init flags url navKey =
                     , cachedSystemd = Nothing
                     , shared =
                         Shared.init
-                            { theme = Nothing
-                            , systems = Nothing
+                            { systems = Nothing
                             }
                     }
 
@@ -79,8 +78,7 @@ init flags url navKey =
                     , cachedSystemd = cached.systems
                     , shared =
                         Shared.init
-                            { theme = Just settings.theme
-                            , systems = cached.systems
+                            { systems = cached.systems
                             }
                     }
 
@@ -140,7 +138,7 @@ init flags url navKey =
 decodeFlags :
     Json.Decode.Decoder
         { accessToken : Maybe String
-        , settings : { theme : Ui.Theme.Theme }
+        , settings : { systemLimit : Int }
         , cached : { systems : Maybe (SystemDict SpaceTrader.System.System) }
         }
 decodeFlags =
@@ -156,15 +154,15 @@ decodeFlags =
         (Json.Decode.field "cached" decodeCached)
 
 
-decodeSettings : Json.Decode.Decoder { theme : Ui.Theme.Theme }
+decodeSettings : Json.Decode.Decoder { systemLimit : Int }
 decodeSettings =
     Json.Decode.map
-        (\theme ->
-            { theme = theme
+        (\systemLimit ->
+            { systemLimit = systemLimit
             }
         )
-        (Json.Decode.maybe (Json.Decode.field "theme" Ui.Theme.decode)
-            |> Json.Decode.map (Maybe.withDefault (List.NonEmpty.head Ui.Theme.themes))
+        (Json.Decode.maybe (Json.Decode.field "systemLimit" Json.Decode.int)
+            |> Json.Decode.map (Maybe.withDefault 1000)
         )
 
 
