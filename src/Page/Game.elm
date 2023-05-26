@@ -978,10 +978,10 @@ view shared model =
                 Route.Waypoints details ->
                     case details.id of
                         Nothing ->
-                            viewSystem model Nothing
+                            viewSystem model shared.settings.systemLimit Nothing
 
                         Just (Route.ViewSystem systemId) ->
-                            viewSystem model <| Just systemId
+                            viewSystem model shared.settings.systemLimit <| Just systemId
 
                         Just (Route.ViewWaypoint waypointId) ->
                             viewWaypoint model waypointId
@@ -989,8 +989,8 @@ view shared model =
         ]
 
 
-viewSystem : Model -> Maybe SpaceTrader.Point.System.System -> Html Msg
-viewSystem model maybeSystemId =
+viewSystem : Model -> Int -> Maybe SpaceTrader.Point.System.System -> Html Msg
+viewSystem model systemLimit maybeSystemId =
     Html.div [ Ui.grid, Ui.gap 0.5 ]
         [ Ui.Galaxy3d.viewSystems
             { onSystemClick = SystemClicked
@@ -1013,7 +1013,7 @@ viewSystem model maybeSystemId =
             { galaxyViewSize = { width = 750, height = 500 }
             , zoom = model.zoom
             , viewRotation = model.viewRotation
-            , systems = List.take model.maxSystemsToRender <| SystemDict.toList model.systems3d
+            , systems = List.take systemLimit <| SystemDict.toList model.systems3d
             , eyeHeight = model.eyeHeight
             }
         , case model.systems of
