@@ -21,7 +21,6 @@ import SpaceTrader.System
 import Svg
 import Svg.Attributes
 import Ui
-import Ui.Theme
 import Update
 import Url exposing (Url)
 

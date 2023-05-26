@@ -38,7 +38,6 @@ import Ui.Form.Field
 import Ui.Modal
 import Ui.Notification
 import Ui.Select
-import Ui.Theme
 import Update exposing (Update)
 
 
