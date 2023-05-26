@@ -8,7 +8,8 @@
     "dev:gen": "elm-codegen run --watch",
     "dev:review": "elm-review --watch --fix",
     "review": "elm-review --fix--all",
-    "gen": "elm-codegen run"
+    "gen": "elm-codegen run",
+    "build": "elm-codegen run && elm-review && elm-watch make --optimize"
   },
   "devDependencies": {
     "@web/dev-server": "^0.2.1",

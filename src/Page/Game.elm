@@ -393,10 +393,14 @@ update ({ model } as opts) =
                             )
 
                 ShipMoveRequested id ->
-                    Debug.todo ""
+                    -- Debug.todo ""
+                    model
+                        |> Update.succeeed
 
                 MyShipsResponded (Err err) ->
-                    Debug.todo (Debug.toString err)
+                    -- Debug.todo (Debug.toString err)
+                    model
+                        |> Update.succeeed
 
                 MyShipsResponded (Ok ships) ->
                     { model
@@ -429,7 +433,9 @@ update ({ model } as opts) =
                         |> Update.succeeed
 
                 SystemsLongRequestMsg (Err err) ->
-                    Debug.todo (Debug.toString err)
+                    -- Debug.todo (Debug.toString err)
+                    model
+                        |> Update.succeeed
 
                 SystemsLongRequestMsg (Ok msg_) ->
                     case msg_ of
@@ -523,7 +529,9 @@ update ({ model } as opts) =
                                     )
 
                 SystemResponded (Err err) ->
-                    Debug.todo (Debug.toString err)
+                    -- Debug.todo (Debug.toString err)
+                    model
+                        |> Update.succeeed
 
                 SystemResponded (Ok system) ->
                     let

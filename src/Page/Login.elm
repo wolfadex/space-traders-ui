@@ -132,7 +132,9 @@ update ({ model } as opts) =
                 RegistrationResponded (Err err) ->
                     { model
                         | submittingRegistration = False
-                        , registrationServerError = Just (Debug.toString err)
+
+                        -- , registrationServerError = Just (Debug.toString err)
+                        , registrationServerError = Just "There was an error"
                     }
                         |> Update.succeeed
 
@@ -179,7 +181,9 @@ update ({ model } as opts) =
                 LoginResponded _ (Err err) ->
                     { model
                         | submittingLogin = False
-                        , loginServerError = Just (Debug.toString err)
+
+                        -- , loginServerError = Just (Debug.toString err)
+                        , loginServerError = Just "There was an error"
                     }
                         |> Update.succeeed
 

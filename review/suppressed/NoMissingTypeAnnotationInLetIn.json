@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "automatically created by": "elm-review suppress",
+  "learn more": "elm-review suppress --help",
+  "suppressions": [
+    { "count": 9, "filePath": "src/Page/Game.elm" },
+    { "count": 6, "filePath": "src/Ui.elm" },
+    { "count": 1, "filePath": "src/Ui/Button.elm" },
+    { "count": 1, "filePath": "src/Ui/System/Waypoint.elm" },
+    { "count": 1, "filePath": "src/Update.elm" }
+  ]
+}

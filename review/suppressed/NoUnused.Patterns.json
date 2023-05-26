@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "automatically created by": "elm-review suppress",
+  "learn more": "elm-review suppress --help",
+  "suppressions": [
+    { "count": 4, "filePath": "src/Page/Game.elm" },
+    { "count": 4, "filePath": "src/Ui/Galaxy3d.elm" },
+    { "count": 2, "filePath": "src/Page/Login.elm" },
+    { "count": 1, "filePath": "src/Main.elm" }
+  ]
+}
