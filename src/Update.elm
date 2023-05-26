@@ -3,7 +3,7 @@ module Update exposing
     , Update(..)
     , mapModel
     , mapMsg
-    , succeeed
+    , succeed
     , toTuple
     , withCmd
     , withEffect
@@ -42,8 +42,8 @@ type Update model msg
         }
 
 
-succeeed : model -> Update model msg
-succeeed model =
+succeed : model -> Update model msg
+succeed model =
     Update { model = model, cmd = Cmd.none, effects = [] }
 
 
@@ -80,7 +80,7 @@ withResponse response onOk update =
 
         Err error ->
             update
-                |> succeeed
+                |> succeed
                 |> withEffect
                     (PushNotification
                         (let
