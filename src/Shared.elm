@@ -1,8 +1,27 @@
-module Shared exposing (LightYear(..), Model, Msg(..), ScaledViewPoint(..), SpaceFocus(..), init, pushNotification, scalePointInLightYearsToOne, subscriptions, update, viewModals, viewNotifications)
+module Shared exposing
+    ( LightYear(..)
+    , Model
+    , Msg(..)
+    , ScaledViewPoint(..)
+    , SpaceFocus(..)
+    , decodeSettings
+    , init
+    , modalIds
+    , pushNotification
+    , scalePointInLightYearsToOne
+    , subscriptions
+    , update
+    , viewModals
+    , viewNotifications
+    )
 
 import Dict exposing (Dict)
+import Form
+import Form.Field
+import Form.Validation
 import Html exposing (Html)
 import Html.Attributes
+import Json.Decode
 import Json.Encode
 import Length exposing (Meters)
 import List.NonEmpty
@@ -14,18 +33,20 @@ import Task
 import Time
 import Ui
 import Ui.Button
+import Ui.Form
+import Ui.Form.Field
 import Ui.Modal
 import Ui.Notification
 import Ui.Select
-import Ui.Theme
 import Update exposing (Update)
 
 
 type alias Model =
     { timeZone : Time.Zone
     , currentTime : Time.Posix
-    , theme : Ui.Theme.Theme
     , notifications : List Ui.Notification.TimedNotification
+    , settings : Settings
+    , settingsFormModel : Form.Model
     }
 
 
@@ -43,22 +64,48 @@ type LightYear
     = LightYear Never
 
 
+type alias Settings =
+    { systemLimit : Int }
+
+
+defaultSettings : Settings
+defaultSettings =
+    { systemLimit = 1000
+    }
+
+
+decodeSettings : Json.Decode.Decoder Settings
+decodeSettings =
+    Json.Decode.map
+        (\systemLimit ->
+            { systemLimit = systemLimit
+            }
+        )
+        (Json.Decode.maybe (Json.Decode.field "systemLimit" Json.Decode.int)
+            |> Json.Decode.map (Maybe.withDefault 1000)
+        )
+
+
+saveSettings : Settings -> Cmd msg
+saveSettings settings =
+    Port.storeSettings
+        (Json.Encode.object
+            [ ( "systemLimit", Json.Encode.int settings.systemLimit )
+            ]
+        )
+
+
 init :
-    { theme : Maybe Ui.Theme.Theme
-    , systems : Maybe (SystemDict SpaceTrader.System.System)
+    { systems : Maybe (SystemDict SpaceTrader.System.System)
+    , settings : Maybe Settings
     }
     -> ( Model, Cmd Msg )
 init opts =
     ( { timeZone = Time.utc
       , currentTime = Time.millisToPosix 0
-      , theme =
-            case opts.theme of
-                Nothing ->
-                    List.NonEmpty.head Ui.Theme.themes
-
-                Just theme ->
-                    theme
       , notifications = []
+      , settings = Maybe.withDefault defaultSettings opts.settings
+      , settingsFormModel = Form.init
       }
     , Task.map2 CurrentTimeAndZoneReceived
         Time.now
@@ -91,7 +138,8 @@ type
       -- settings
     | OpenSettingsClicked
     | CloseSettingsClicked
-    | ThemeSelected Ui.Theme.Theme
+    | SettingsFormMsg (Form.Msg Msg)
+    | SettingsFormSubmitted (Ui.Form.Submission String Settings)
 
 
 update :
@@ -111,48 +159,71 @@ update ({ model } as opts) =
                         | currentTime = currentTime
                         , notifications = List.filter (Ui.Notification.isUnexpired currentTime) model.notifications
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 CurrentTimeAndZoneReceived time zone ->
                     { model
                         | currentTime = time
                         , timeZone = zone
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 TimedNotificationCreated ( currentTime, notification ) ->
                     { model
                         | notifications = notification :: List.filter (Ui.Notification.isUnexpired currentTime) model.notifications
                         , currentTime = currentTime
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 -- settings
                 OpenSettingsClicked ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withCmd
                             (Port.openModal modalIds.settings)
 
                 CloseSettingsClicked ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withCmd
                             (Cmd.batch
                                 [ Port.closeModal modalIds.settings
-                                , saveSettings model
+                                , saveSettings model.settings
                                 ]
                             )
 
-                ThemeSelected theme ->
-                    { model | theme = theme }
-                        |> Update.succeeed
+                SettingsFormMsg msg_ ->
+                    let
+                        ( settingsFormModel, formCmd ) =
+                            Form.update msg_ model.settingsFormModel
+                    in
+                    { model
+                        | settingsFormModel = settingsFormModel
+                    }
+                        |> Update.succeed
+                        |> Update.withCmd formCmd
+
+                SettingsFormSubmitted { parsed } ->
+                    case parsed of
+                        Form.Valid newSettings ->
+                            { model | settings = newSettings }
+                                |> Update.succeed
+                                |> Update.withCmd
+                                    (Cmd.batch
+                                        [ Port.closeModal modalIds.settings
+                                        , saveSettings model.settings
+                                        ]
+                                    )
+
+                        Form.Invalid _ _ ->
+                            model
+                                |> Update.succeed
 
 
 pushNotification : { model : Model, notification : Ui.Notification.Notification, toMsg : Msg -> msg, toModel : Model -> model } -> Update model msg
 pushNotification opts =
     opts.model
-        |> Update.succeeed
+        |> Update.succeed
         |> Update.withCmd
             (Time.now
                 |> Task.map (\now -> ( now, Ui.Notification.toTimed opts.notification now ))
@@ -160,15 +231,6 @@ pushNotification opts =
             )
         |> Update.mapMsg opts.toMsg
         |> Update.mapModel opts.toModel
-
-
-saveSettings : Model -> Cmd msg
-saveSettings model =
-    Port.storeSettings
-        (Json.Encode.object
-            [ ( "theme", Ui.Theme.encode model.theme )
-            ]
-        )
 
 
 scalePointInLightYearsToOne : Point3d Meters LightYear -> Point3d Meters ScaledViewPoint
@@ -188,31 +250,67 @@ modalIds =
 viewModals : Model -> List (Html Msg)
 viewModals model =
     [ Ui.Modal.view modalIds.settings
-        [ Html.Attributes.class model.theme.class
-        ]
+        []
         [ Ui.column
             [ Ui.gap 1 ]
-            [ Html.label
-                []
-                [ Html.text "Theme: "
-                , Ui.Select.view
-                    []
-                    { options = List.NonEmpty.toList Ui.Theme.themes
-                    , toString = .label
-                    , value = model.theme
-                    , onChange = ThemeSelected
+            [ Ui.column
+                [ Html.Attributes.style "border" "0.125rem solid "
+                , Html.Attributes.style "border-radius" "0.5rem"
+                , Html.Attributes.style "max-width" "50rem"
+                , Html.Attributes.style "padding" "1rem"
+                , Html.Attributes.style "background-color" "var(--blue)"
+                , Ui.gap 1
+                ]
+                [ Ui.header.three
+                    [ Html.Attributes.style "border-bottom" "0.125rem solid "
+                    ]
+                    [ Html.text "Settings" ]
+                , Form.renderHtml
+                    { submitting = False
+                    , state = model.settingsFormModel
+                    , toMsg = SettingsFormMsg
                     }
+                    (Form.options "settings-form"
+                        |> Form.withInput model.settings
+                        |> Form.withOnSubmit SettingsFormSubmitted
+                    )
+                    [ Html.Attributes.style "display" "grid"
+                    , Html.Attributes.style "gap" "1rem"
+                    ]
+                    settingsForm
                 ]
-            , Ui.Button.default
-                [ Ui.justify.end
-                , Ui.align.end
-                ]
-                { label = Html.text "Save Settings"
-                , onClick = Just CloseSettingsClicked
-                }
             ]
         ]
     ]
+
+
+settingsForm : Form.HtmlForm String Settings Settings Msg
+settingsForm =
+    (\systemLimit ->
+        { combine =
+            Form.Validation.succeed Settings
+                |> Form.Validation.andMap systemLimit
+        , view =
+            \formState ->
+                List.concat
+                    [ Ui.Form.Field.text formState "System limit" systemLimit
+                    , Ui.Form.Field.submit
+                        { label =
+                            -- if formState.submitting then
+                            --     "Saving..."
+                            -- else
+                            "Save settings"
+                        , disabled = formState.submitting
+                        }
+                    ]
+        }
+    )
+        |> Form.form
+        |> Form.field "systemLimit"
+            (Form.Field.int { invalid = \value -> "Must be a positive integter" }
+                |> Form.Field.required "Required"
+                |> Form.Field.withInitialValue .systemLimit
+            )
 
 
 viewNotifications : Model -> Html Msg

@@ -123,7 +123,7 @@ init opts =
     , maxSystemsToRender = 1000
     , seed = sys.seed
     }
-        |> Update.succeeed
+        |> Update.succeed
         |> Update.withRequest MyContractsResponded
             (SpaceTrader.Api.myContracts { token = opts.accessToken })
         |> Update.withCmd
@@ -216,6 +216,7 @@ initSystems seed maybeSystems =
 
 type Msg
     = LogoutClicked
+    | SettingsClicked
     | Zoomed Json.Encode.Value
     | ZoomPressed Float
     | RotationPressed Float
@@ -253,9 +254,14 @@ update ({ model } as opts) =
             case opts.msg of
                 LogoutClicked ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withCmd Port.clearToken
                         |> Update.withEffect (Update.RouteChangeRequested Route.Login)
+
+                SettingsClicked ->
+                    model
+                        |> Update.succeed
+                        |> Update.withCmd (Port.openModal Shared.modalIds.settings)
 
                 AgentResponded result ->
                     { model
@@ -264,11 +270,11 @@ update ({ model } as opts) =
                                 |> Result.mapError (\_ -> "Failed to load agent")
                                 |> RemoteData.fromResult
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 CreateSurveyRequested { waypointId, shipId } ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withRequest (SurveyResponded waypointId)
                             (SpaceTrader.Api.createSurvey
                                 { token = model.accessToken
@@ -308,7 +314,7 @@ update ({ model } as opts) =
                                             )
                                             model.myShips
                                 }
-                                    |> Update.succeeed
+                                    |> Update.succeed
                             )
 
                 WaypointResponded id response ->
@@ -318,7 +324,7 @@ update ({ model } as opts) =
                                 { model
                                     | waypoints = WaypointDict.insert id (Loaded waypoint) model.waypoints
                                 }
-                                    |> Update.succeeed
+                                    |> Update.succeed
                             )
 
                 MyContractsResponded response ->
@@ -334,12 +340,12 @@ update ({ model } as opts) =
                                             Dict.empty
                                             contracts
                                 }
-                                    |> Update.succeeed
+                                    |> Update.succeed
                             )
 
                 ShipDockRequested id ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withRequest (ShipDockResponded id)
                             (SpaceTrader.Api.dockShip
                                 { token = model.accessToken
@@ -363,12 +369,12 @@ update ({ model } as opts) =
                                             )
                                             model.myShips
                                 }
-                                    |> Update.succeeed
+                                    |> Update.succeed
                             )
 
                 ShipOrbitRequested id ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withRequest (ShipOrbitResponded id)
                             (SpaceTrader.Api.moveToOrbit
                                 { token = model.accessToken
@@ -392,18 +398,18 @@ update ({ model } as opts) =
                                             )
                                             model.myShips
                                 }
-                                    |> Update.succeeed
+                                    |> Update.succeed
                             )
 
                 ShipMoveRequested id ->
                     -- Debug.todo ""
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 MyShipsResponded (Err err) ->
                     -- Debug.todo (Debug.toString err)
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 MyShipsResponded (Ok ships) ->
                     { model
@@ -415,11 +421,11 @@ update ({ model } as opts) =
                                 Dict.empty
                                 ships
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 SystemClicked systemId ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withEffect (Update.RouteChangeRequested (Route.fromSystem systemId))
 
                 SystemsLoadRequested ->
@@ -433,12 +439,12 @@ update ({ model } as opts) =
                                 , max = 1
                                 }
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 SystemsLongRequestMsg (Err err) ->
                     -- Debug.todo (Debug.toString err)
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 SystemsLongRequestMsg (Ok msg_) ->
                     case msg_ of
@@ -476,7 +482,7 @@ update ({ model } as opts) =
                                 , systems3d = systems3d
                                 , seed = finalSeed
                             }
-                                |> Update.succeeed
+                                |> Update.succeed
                                 |> Update.withCmd
                                     (updatedSystems
                                         |> SystemDict.values
@@ -519,7 +525,7 @@ update ({ model } as opts) =
                                 , systems3d = systems3d
                                 , seed = finalSeed
                             }
-                                |> Update.succeeed
+                                |> Update.succeed
                                 |> Update.withCmd
                                     (Cmd.batch
                                         [ SpaceTrader.Api.getAllSystemsUpdate SystemsLongRequestMsg data
@@ -534,7 +540,7 @@ update ({ model } as opts) =
                 SystemResponded (Err err) ->
                     -- Debug.todo (Debug.toString err)
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 SystemResponded (Ok system) ->
                     let
@@ -546,7 +552,7 @@ update ({ model } as opts) =
                         , systems3d = SystemDict.insert system.id sys model.systems3d
                         , seed = seed
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 -- 3d stuff
                 Zoomed value ->
@@ -555,7 +561,7 @@ update ({ model } as opts) =
                             setZoom model (delta * zoomMultiplier model.spaceFocus)
 
                         Err _ ->
-                            model |> Update.succeeed
+                            model |> Update.succeed
 
                 ZoomPressed change ->
                     setZoom model (change * zoomMultiplier model.spaceFocus)
@@ -565,19 +571,19 @@ update ({ model } as opts) =
                         | viewRotation =
                             toFloat (remainderBy 360 (floor (model.viewRotation + change)))
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 PitchPressed change ->
                     { model
                         | eyeHeight = model.eyeHeight + change
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 MaxSystemsToRenderPressed change ->
                     { model
                         | maxSystemsToRender = max 10 (model.maxSystemsToRender + change)
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
 
 withTab : { tab : Maybe Route.GameTab, model : Model, toMsg : Msg -> msg, toModel : Model -> model } -> Update model msg
@@ -591,7 +597,7 @@ withTab ({ model } as opts) =
                                 Route.Waypoints details ->
                                     case details.id of
                                         Nothing ->
-                                            Update.succeeed
+                                            Update.succeed
 
                                         Just (Route.ViewSystem systemId) ->
                                             systemSelected systemId
@@ -600,12 +606,12 @@ withTab ({ model } as opts) =
                                             waytpointSelected waypointId
 
                                 _ ->
-                                    Update.succeeed
+                                    Update.succeed
                            )
 
                 Nothing ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
 
 
 systemSelected : SpaceTrader.Point.System.System -> Model -> Update Model Msg
@@ -624,7 +630,7 @@ systemSelected systemId model =
                 )
                 model.systems
     }
-        |> Update.succeeed
+        |> Update.succeed
         |> (case Cacheable.get SystemDict.get systemId model.systems of
                 Just (Loaded _) ->
                     identity
@@ -657,7 +663,7 @@ waytpointSelected waypointId model =
                 )
                 model.waypoints
     }
-        |> Update.succeeed
+        |> Update.succeed
         |> (case WaypointDict.get waypointId model.waypoints of
                 Just (Loaded _) ->
                     identity
@@ -678,7 +684,7 @@ waytpointSelected waypointId model =
 setZoom : Model -> Float -> Update Model Msg
 setZoom model delta =
     { model | zoom = max 5000000 (model.zoom + delta) }
-        |> Update.succeeed
+        |> Update.succeed
 
 
 decodeZoomEvent : Json.Decode.Decoder Float
@@ -818,8 +824,7 @@ navLink opts focused =
 view : Shared.Model -> Model -> Html Msg
 view shared model =
     Html.div
-        [ Html.Attributes.class shared.theme.class
-        , Html.Attributes.style "display" "grid"
+        [ Html.Attributes.style "display" "grid"
         , Html.Attributes.style "height" "100vh"
         , Html.Attributes.style "width" "100vw"
         , Html.Attributes.style "grid-template-columns" "15rem 1fr"
@@ -906,20 +911,28 @@ view shared model =
                     _ ->
                         False
                 )
-
-            -- , Ui.Button.default []
-            --     { label = Html.text "⚙️"
-            --     , onClick = Nothing -- Just OpenSettingsClicked
-            --     }
             , Html.div [ Html.Attributes.style "height" "100%" ] []
-            , Ui.Button.default
-                [ Html.Attributes.style "float" "right"
-                , Html.Attributes.style "color" "var(--blue-light)"
+            , Html.div
+                [ Ui.grid
+                , Ui.gap 0.5
+                , Html.Attributes.style "grid-template-columns" "1fr 1fr"
                 , Html.Attributes.style "margin" "0 1rem 1rem 1rem"
                 ]
-                { label = Html.text "Logout"
-                , onClick = Just LogoutClicked
-                }
+                [ Ui.Button.default
+                    [ Html.Attributes.style "float" "right"
+                    , Html.Attributes.style "color" "var(--blue-light)"
+                    ]
+                    { label = Html.text "Settings"
+                    , onClick = Just SettingsClicked
+                    }
+                , Ui.Button.default
+                    [ Html.Attributes.style "float" "right"
+                    , Html.Attributes.style "color" "var(--blue-light)"
+                    ]
+                    { label = Html.text "Logout"
+                    , onClick = Just LogoutClicked
+                    }
+                ]
             ]
         , Html.main_
             [ Html.Attributes.class "content"

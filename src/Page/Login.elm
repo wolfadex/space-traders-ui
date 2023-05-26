@@ -65,7 +65,7 @@ init opts =
     , systems = opts.systems
     , backgroundRotation = 0
     }
-        |> Update.succeeed
+        |> Update.succeed
         |> Update.mapMsg opts.toMsg
         |> Update.mapModel opts.toModel
 
@@ -114,7 +114,7 @@ update ({ model } as opts) =
             case opts.msg of
                 Tick detlaMs ->
                     { model | backgroundRotation = model.backgroundRotation + detlaMs }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 -- registration
                 RegistrationFormMsg msg_ ->
@@ -125,7 +125,7 @@ update ({ model } as opts) =
                     { model
                         | registerFormModel = registerFormModel
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withCmd formCmd
 
                 RegistrationFormSubmitted { parsed } ->
@@ -134,13 +134,13 @@ update ({ model } as opts) =
                             { model
                                 | submittingRegistration = True
                             }
-                                |> Update.succeeed
+                                |> Update.succeed
                                 |> Update.withRequest RegistrationResponded
                                     (SpaceTrader.Api.register registerData)
 
                         Form.Invalid _ _ ->
                             model
-                                |> Update.succeeed
+                                |> Update.succeed
 
                 RegistrationResponded response ->
                     model
@@ -150,14 +150,14 @@ update ({ model } as opts) =
                                     | submittingRegistration = False
                                     , registrationToken = Just data.token
                                 }
-                                    |> Update.succeeed
+                                    |> Update.succeed
                                     |> Update.withCmd (Port.setToken data.token)
                                     |> Update.withCmd (Port.openModal modalIds.registrationSuccess)
                             )
 
                 TokenCopyAcknowledged ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withEffect (Update.RouteChangeRequested (Route.Game { tab = Just Route.Ships }))
 
                 -- login
@@ -169,15 +169,14 @@ update ({ model } as opts) =
                     { model
                         | loginFormModel = loginFormModel
                     }
-                        |> Update.succeeed
-                        |> Update.withCmd
-                            formCmd
+                        |> Update.succeed
+                        |> Update.withCmd formCmd
 
                 LoginFormSubmitted { parsed } ->
                     case parsed of
                         Form.Valid loginData ->
                             { model | submittingLogin = True }
-                                |> Update.succeeed
+                                |> Update.succeed
                                 |> Update.withCmd
                                     (SpaceTrader.Api.myAgent (LoginResponded loginData.accessToken)
                                         { token = loginData.accessToken
@@ -186,7 +185,7 @@ update ({ model } as opts) =
 
                         Form.Invalid _ _ ->
                             model
-                                |> Update.succeeed
+                                |> Update.succeed
 
                 LoginResponded _ (Err err) ->
                     { model
@@ -195,11 +194,11 @@ update ({ model } as opts) =
                         -- , loginServerError = Just (Debug.toString err)
                         , loginServerError = Just "There was an error"
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 LoginResponded accessToken (Ok agent) ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withCmd (Port.setToken accessToken)
                         |> Update.withEffect
                             (Update.Authenticated
@@ -376,8 +375,7 @@ modalIds =
 viewModals : Shared.Model -> Model -> List (Html Msg)
 viewModals shared model =
     [ Ui.Modal.view modalIds.registrationSuccess
-        [ Html.Attributes.class shared.theme.class
-        ]
+        []
         [ Ui.column
             [ Ui.gap 1 ]
             [ Ui.header.one [] [ Html.text "IMPORTANT!" ]
