@@ -111,32 +111,32 @@ update ({ model } as opts) =
                         | currentTime = currentTime
                         , notifications = List.filter (Ui.Notification.isUnexpired currentTime) model.notifications
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 CurrentTimeAndZoneReceived time zone ->
                     { model
                         | currentTime = time
                         , timeZone = zone
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 TimedNotificationCreated ( currentTime, notification ) ->
                     { model
                         | notifications = notification :: List.filter (Ui.Notification.isUnexpired currentTime) model.notifications
                         , currentTime = currentTime
                     }
-                        |> Update.succeeed
+                        |> Update.succeed
 
                 -- settings
                 OpenSettingsClicked ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withCmd
                             (Port.openModal modalIds.settings)
 
                 CloseSettingsClicked ->
                     model
-                        |> Update.succeeed
+                        |> Update.succeed
                         |> Update.withCmd
                             (Cmd.batch
                                 [ Port.closeModal modalIds.settings
@@ -146,13 +146,13 @@ update ({ model } as opts) =
 
                 ThemeSelected theme ->
                     { model | theme = theme }
-                        |> Update.succeeed
+                        |> Update.succeed
 
 
 pushNotification : { model : Model, notification : Ui.Notification.Notification, toMsg : Msg -> msg, toModel : Model -> model } -> Update model msg
 pushNotification opts =
     opts.model
-        |> Update.succeeed
+        |> Update.succeed
         |> Update.withCmd
             (Time.now
                 |> Task.map (\now -> ( now, Ui.Notification.toTimed opts.notification now ))
