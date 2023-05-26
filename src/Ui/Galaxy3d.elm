@@ -782,64 +782,34 @@ viewSpace options labels scene =
                 , Html.Attributes.style "grid-template-columns" "3rem 3rem 1fr"
                 , Html.Attributes.style "grid-template-rows" "1fr 1fr 1fr"
                 ]
-                [ case options.onZoomPress of
-                    Nothing ->
-                        Html.text ""
-
-                    Just onZoomPress ->
-                        Ui.Button.small
-                            [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "1"
-                            , Html.Attributes.style "grid-row" "1"
-                            , Html.Attributes.title "Pitch up"
-                            ]
-                            { onClick = Just (options.onPitchPress options.pitchPressMagnitude)
-                            , label = Html.text "+P"
-                            }
-                , case options.onZoomPress of
-                    Nothing ->
-                        Html.text ""
-
-                    Just onZoomPress ->
-                        Ui.Button.small
-                            [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "1"
-                            , Html.Attributes.style "grid-row" "2"
-                            , Html.Attributes.title "Pitch down"
-                            ]
-                            { onClick = Just (options.onPitchPress -options.pitchPressMagnitude)
-                            , label = Html.text "-P"
-                            }
-                , case options.onRotationPress of
-                    Nothing ->
-                        Html.text ""
-
-                    Just onRotationPress ->
-                        Ui.Button.small
-                            [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "1"
-                            , Html.Attributes.style "grid-row" "3"
-                            ]
-                            { onClick = Nothing
-                            , label = Html.text "TBD"
-                            }
-                , case options.onRotationPress of
-                    Nothing ->
-                        Html.text ""
-
-                    Just onRotationPress ->
-                        Ui.Button.small
-                            [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "2"
-                            , Html.Attributes.style "grid-row" "3"
-                            ]
-                            { onClick = Nothing
-                            , label = Html.text "TBD"
-                            }
+                [ navButton
+                    { label = "^"
+                    , hint = "Forward"
+                    , onClick = Just (options.onPitchPress options.pitchPressMagnitude)
+                    , row = 1
+                    , column = 1
+                    }
+                , navButton
+                    { label = "v"
+                    , hint = "Backward"
+                    , onClick = Just (options.onPitchPress options.pitchPressMagnitude)
+                    , row = 2
+                    , column = 1
+                    }
+                , navButton
+                    { label = "<"
+                    , hint = "Left"
+                    , onClick = Just (options.onPitchPress options.pitchPressMagnitude)
+                    , row = 3
+                    , column = 1
+                    }
+                , navButton
+                    { label = ">"
+                    , hint = "Right"
+                    , onClick = Just (options.onPitchPress options.pitchPressMagnitude)
+                    , row = 3
+                    , column = 2
+                    }
                 ]
 
             -- right
@@ -851,69 +821,77 @@ viewSpace options labels scene =
                 , Html.Attributes.style "grid-template-columns" "1fr 3rem 3rem"
                 , Html.Attributes.style "grid-template-rows" "1fr 1fr 1fr"
                 ]
-                [ case options.onZoomPress of
-                    Nothing ->
-                        Html.text ""
-
-                    Just onZoomPress ->
-                        Ui.Button.small
-                            [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "3"
-                            , Html.Attributes.style "grid-row" "1"
-                            , Html.Attributes.title "Zoom in"
-                            ]
-                            { onClick = Just (onZoomPress -options.zoomPressMagnitude)
-                            , label = Html.text "+"
-                            }
-                , case options.onZoomPress of
-                    Nothing ->
-                        Html.text ""
-
-                    Just onZoomPress ->
-                        Ui.Button.small
-                            [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "3"
-                            , Html.Attributes.style "grid-row" "2"
-                            , Html.Attributes.title "Zoom out"
-                            ]
-                            { onClick = Just (onZoomPress options.zoomPressMagnitude)
-                            , label = Html.text "-"
-                            }
-                , case options.onRotationPress of
-                    Nothing ->
-                        Html.text ""
-
-                    Just onRotationPress ->
-                        Ui.Button.small
-                            [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "2"
-                            , Html.Attributes.style "grid-row" "3"
-                            , Html.Attributes.title "Rotate left"
-                            ]
-                            { onClick = Just (onRotationPress -5)
-                            , label = Html.text "-R"
-                            }
-                , case options.onRotationPress of
-                    Nothing ->
-                        Html.text ""
-
-                    Just onRotationPress ->
-                        Ui.Button.small
-                            [ Html.Attributes.style "pointer-events" "all"
-                            , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "3"
-                            , Html.Attributes.style "grid-row" "3"
-                            , Html.Attributes.title "Rotate right"
-                            ]
-                            { onClick = Just (onRotationPress 5)
-                            , label = Html.text "+R"
-                            }
+                [ navButton
+                    { label = "+P"
+                    , hint = "Pitch up"
+                    , onClick = Just (options.onPitchPress options.pitchPressMagnitude)
+                    , row = 1
+                    , column = 2
+                    }
+                , navButton
+                    { label = "-P"
+                    , hint = "Pitch down"
+                    , onClick = Just (options.onPitchPress -options.pitchPressMagnitude)
+                    , row = 2
+                    , column = 2
+                    }
+                , navButton
+                    { label = "+"
+                    , hint = "Zoom in"
+                    , onClick = options.onZoomPress |> Maybe.map (\b -> b -options.zoomPressMagnitude)
+                    , row = 1
+                    , column = 3
+                    }
+                , navButton
+                    { label = "-"
+                    , hint = "Zoom out"
+                    , onClick = options.onZoomPress |> Maybe.map (\b -> b options.zoomPressMagnitude)
+                    , row = 2
+                    , column = 3
+                    }
+                , navButton
+                    { label = "-R"
+                    , hint = "Rotate left"
+                    , onClick = options.onRotationPress |> Maybe.map (\b -> b -5)
+                    , row = 3
+                    , column = 2
+                    }
+                , navButton
+                    { label = "+R"
+                    , hint = "Rotate right"
+                    , onClick = options.onRotationPress |> Maybe.map (\b -> b 5)
+                    , row = 3
+                    , column = 3
+                    }
                 ]
             ]
         ]
+
+
+navButton :
+    { onClick : Maybe msg
+    , label : String
+    , column : Int
+    , row : Int
+    , hint : String
+    }
+    -> Html msg
+navButton opts =
+    case opts.onClick of
+        Nothing ->
+            Html.text ""
+
+        Just onClick ->
+            Ui.Button.small
+                [ Html.Attributes.style "pointer-events" "all"
+                , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
+                , Html.Attributes.style "grid-column" (String.fromInt opts.column)
+                , Html.Attributes.style "grid-row" (String.fromInt opts.row)
+                , Html.Attributes.title opts.hint
+                ]
+                { onClick = Just onClick
+                , label = Html.text opts.label
+                }
 
 
 spaceCss : Html msg
