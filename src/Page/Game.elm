@@ -850,7 +850,7 @@ view shared model =
                 , Html.Attributes.style "text-align" "center"
                 , Html.Attributes.style "-webkit-text-stroke" "0.1rem var(--yellow)"
                 ]
-                [ Html.text "Space Trader" ]
+                [ Html.text "SpaceTraders" ]
             , Html.div
                 [ Ui.align.center
                 , Html.Attributes.style "padding" "1rem"
