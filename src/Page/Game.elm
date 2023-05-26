@@ -220,6 +220,7 @@ type Msg
     | ZoomPressed Float
     | RotationPressed Float
     | PitchPressed Float
+    | MaxSystemsToRenderPressed Int
     | SystemClicked SpaceTrader.Point.System.System
       -- game
     | CreateSurveyRequested { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : String }
@@ -569,6 +570,12 @@ update ({ model } as opts) =
                 PitchPressed change ->
                     { model
                         | eyeHeight = model.eyeHeight + change
+                    }
+                        |> Update.succeeed
+
+                MaxSystemsToRenderPressed change ->
+                    { model
+                        | maxSystemsToRender = max 10 (model.maxSystemsToRender + change)
                     }
                         |> Update.succeeed
 
@@ -978,6 +985,7 @@ viewSystem model maybeSystemId =
             , onZoomPress = ZoomPressed
             , onRotationPress = RotationPressed
             , onPitchPress = PitchPressed
+            , onMaxSystemsToRenderPress = MaxSystemsToRenderPressed
             , selected =
                 case maybeSystemId of
                     Nothing ->

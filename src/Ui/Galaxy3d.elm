@@ -81,11 +81,12 @@ viewSystems :
     , onZoomPress : Float -> msg
     , onRotationPress : Float -> msg
     , onPitchPress : Float -> msg
+    , onMaxSystemsToRenderPress : Int -> msg
     , selected : Maybe SpaceTrader.Point.System.System
     }
     -> MinRenderableWorld r
     -> Html msg
-viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, onPitchPress, selected } world =
+viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, onPitchPress, onMaxSystemsToRenderPress, selected } world =
     let
         eyePoint : Point3d Meters coordinates
         eyePoint =
@@ -259,6 +260,7 @@ viewSystems { onSystemClick, onZoom, onZoomPress, onRotationPress, onPitchPress,
         , onPitchPress = onPitchPress
         , pitchPressMagnitude = 0.2
         , galaxyViewSize = world.galaxyViewSize
+        , onMaxSystemsToRenderPress = onMaxSystemsToRenderPress
         }
         galaxyLabels
         galaxyScene
@@ -685,6 +687,7 @@ viewSpace :
         , zoomPressMagnitude : Float
         , onRotationPress : Maybe (Float -> msg)
         , onPitchPress : Float -> msg
+        , onMaxSystemsToRenderPress : Int -> msg
         , pitchPressMagnitude : Float
         , galaxyViewSize : { width : Float, height : Float }
     }
@@ -918,7 +921,7 @@ viewSpace options labels scene =
                     , Html.Attributes.style "grid-row" "3"
                     , Html.Attributes.title "View fewer systems"
                     ]
-                    { onClick = Nothing
+                    { onClick = Just (options.onMaxSystemsToRenderPress -1000)
                     , label = Html.text "-SYS"
                     }
                 , Ui.Button.small
@@ -928,7 +931,7 @@ viewSpace options labels scene =
                     , Html.Attributes.style "grid-row" "3"
                     , Html.Attributes.title "View more systems"
                     ]
-                    { onClick = Nothing
+                    { onClick = Just (options.onMaxSystemsToRenderPress 1000)
                     , label = Html.text "+SYS"
                     }
                 ]
