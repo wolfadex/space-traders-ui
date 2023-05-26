@@ -21,7 +21,6 @@ import SpaceTrader.System
 import Svg
 import Svg.Attributes
 import Ui
-import Ui.Theme
 import Update
 import Url exposing (Url)
 
@@ -69,8 +68,8 @@ init flags url navKey =
                     , cachedSystemd = Nothing
                     , shared =
                         Shared.init
-                            { theme = Nothing
-                            , systems = Nothing
+                            { systems = Nothing
+                            , settings = Nothing
                             }
                     }
 
@@ -79,8 +78,8 @@ init flags url navKey =
                     , cachedSystemd = cached.systems
                     , shared =
                         Shared.init
-                            { theme = Just settings.theme
-                            , systems = cached.systems
+                            { systems = cached.systems
+                            , settings = Just settings
                             }
                     }
 
@@ -140,7 +139,7 @@ init flags url navKey =
 decodeFlags :
     Json.Decode.Decoder
         { accessToken : Maybe String
-        , settings : { theme : Ui.Theme.Theme }
+        , settings : { systemLimit : Int }
         , cached : { systems : Maybe (SystemDict SpaceTrader.System.System) }
         }
 decodeFlags =
@@ -152,20 +151,8 @@ decodeFlags =
             }
         )
         (Json.Decode.maybe (Json.Decode.field "accessToken" Json.Decode.string))
-        (Json.Decode.field "settings" decodeSettings)
+        (Json.Decode.field "settings" Shared.decodeSettings)
         (Json.Decode.field "cached" decodeCached)
-
-
-decodeSettings : Json.Decode.Decoder { theme : Ui.Theme.Theme }
-decodeSettings =
-    Json.Decode.map
-        (\theme ->
-            { theme = theme
-            }
-        )
-        (Json.Decode.maybe (Json.Decode.field "theme" Ui.Theme.decode)
-            |> Json.Decode.map (Maybe.withDefault (List.NonEmpty.head Ui.Theme.themes))
-        )
 
 
 decodeCached : Json.Decode.Decoder { systems : Maybe (SystemDict SpaceTrader.System.System) }
