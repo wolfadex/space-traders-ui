@@ -2,6 +2,7 @@ module Ui exposing
     ( align
     , column
     , dateTime
+    , externalLink
     , gap
     , grid
     , header
@@ -184,6 +185,19 @@ link attr opts =
     Html.a
         ([ Html.Attributes.href (Route.toUrlString opts.route)
          , Html.Attributes.style "color" "var(--blue-light)"
+         ]
+            ++ attr
+        )
+        [ opts.label ]
+
+
+externalLink : List (Html.Attribute msg) -> { label : Html msg, link : String } -> Html msg
+externalLink attr opts =
+    Html.a
+        ([ Html.Attributes.href opts.link
+         , Html.Attributes.style "color" "var(--blue-light)"
+         , Html.Attributes.target "_blank"
+         , Html.Attributes.rel "noopener noreferrer"
          ]
             ++ attr
         )
