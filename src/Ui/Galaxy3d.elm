@@ -848,7 +848,7 @@ viewSpace options labels scene =
                 , Html.Attributes.style "display" "grid"
                 , Html.Attributes.style "gap" "1rem"
                 , Html.Attributes.style "padding" "0 0.5rem 0.5rem 0"
-                , Html.Attributes.style "grid-template-columns" "1fr 3rem 3rem"
+                , Html.Attributes.style "grid-template-columns" "1fr 3rem 3rem 3rem 3rem"
                 , Html.Attributes.style "grid-template-rows" "1fr 1fr 1fr"
                 ]
                 [ case options.onZoomPress of
@@ -859,7 +859,7 @@ viewSpace options labels scene =
                         Ui.Button.small
                             [ Html.Attributes.style "pointer-events" "all"
                             , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "3"
+                            , Html.Attributes.style "grid-column" "5"
                             , Html.Attributes.style "grid-row" "1"
                             , Html.Attributes.title "Zoom in"
                             ]
@@ -874,7 +874,7 @@ viewSpace options labels scene =
                         Ui.Button.small
                             [ Html.Attributes.style "pointer-events" "all"
                             , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "3"
+                            , Html.Attributes.style "grid-column" "5"
                             , Html.Attributes.style "grid-row" "2"
                             , Html.Attributes.title "Zoom out"
                             ]
@@ -889,7 +889,7 @@ viewSpace options labels scene =
                         Ui.Button.small
                             [ Html.Attributes.style "pointer-events" "all"
                             , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "2"
+                            , Html.Attributes.style "grid-column" "4"
                             , Html.Attributes.style "grid-row" "3"
                             , Html.Attributes.title "Rotate left"
                             ]
@@ -904,13 +904,33 @@ viewSpace options labels scene =
                         Ui.Button.small
                             [ Html.Attributes.style "pointer-events" "all"
                             , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
-                            , Html.Attributes.style "grid-column" "3"
+                            , Html.Attributes.style "grid-column" "5"
                             , Html.Attributes.style "grid-row" "3"
                             , Html.Attributes.title "Rotate right"
                             ]
                             { onClick = Just (onRotationPress 5)
                             , label = Html.text "+R"
                             }
+                , Ui.Button.small
+                    [ Html.Attributes.style "pointer-events" "all"
+                    , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
+                    , Html.Attributes.style "grid-column" "2"
+                    , Html.Attributes.style "grid-row" "3"
+                    , Html.Attributes.title "View fewer systems"
+                    ]
+                    { onClick = Nothing
+                    , label = Html.text "-SYS"
+                    }
+                , Ui.Button.small
+                    [ Html.Attributes.style "pointer-events" "all"
+                    , Html.Attributes.style "background-color" "rgba(0, 0, 0, 0.75)"
+                    , Html.Attributes.style "grid-column" "3"
+                    , Html.Attributes.style "grid-row" "3"
+                    , Html.Attributes.title "View more systems"
+                    ]
+                    { onClick = Nothing
+                    , label = Html.text "+SYS"
+                    }
                 ]
             ]
         ]
