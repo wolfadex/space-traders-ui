@@ -120,7 +120,7 @@ init opts =
     , zoom = sys.zoom
     , eyeHeight = 3
     , systems3d = sys.systems3d
-    , maxSystemsToRender = 10
+    , maxSystemsToRender = 1000
     , seed = sys.seed
     }
         |> Update.succeeed
