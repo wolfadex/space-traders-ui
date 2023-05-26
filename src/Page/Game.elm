@@ -809,8 +809,7 @@ navLink opts focused =
 view : Shared.Model -> Model -> Html Msg
 view shared model =
     Html.div
-        [ Html.Attributes.class shared.theme.class
-        , Html.Attributes.style "display" "grid"
+        [ Html.Attributes.style "display" "grid"
         , Html.Attributes.style "height" "100vh"
         , Html.Attributes.style "width" "100vw"
         , Html.Attributes.style "grid-template-columns" "15rem 1fr"

@@ -376,8 +376,7 @@ modalIds =
 viewModals : Shared.Model -> Model -> List (Html Msg)
 viewModals shared model =
     [ Ui.Modal.view modalIds.registrationSuccess
-        [ Html.Attributes.class shared.theme.class
-        ]
+        []
         [ Ui.column
             [ Ui.gap 1 ]
             [ Ui.header.one [] [ Html.text "IMPORTANT!" ]

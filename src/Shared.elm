@@ -24,7 +24,6 @@ import Update exposing (Update)
 type alias Model =
     { timeZone : Time.Zone
     , currentTime : Time.Posix
-    , theme : Ui.Theme.Theme
     , notifications : List Ui.Notification.TimedNotification
     }
 
@@ -44,20 +43,12 @@ type LightYear
 
 
 init :
-    { theme : Maybe Ui.Theme.Theme
-    , systems : Maybe (SystemDict SpaceTrader.System.System)
+    { systems : Maybe (SystemDict SpaceTrader.System.System)
     }
     -> ( Model, Cmd Msg )
 init opts =
     ( { timeZone = Time.utc
       , currentTime = Time.millisToPosix 0
-      , theme =
-            case opts.theme of
-                Nothing ->
-                    List.NonEmpty.head Ui.Theme.themes
-
-                Just theme ->
-                    theme
       , notifications = []
       }
     , Task.map2 CurrentTimeAndZoneReceived
@@ -91,7 +82,6 @@ type
       -- settings
     | OpenSettingsClicked
     | CloseSettingsClicked
-    | ThemeSelected Ui.Theme.Theme
 
 
 update :
@@ -144,10 +134,6 @@ update ({ model } as opts) =
                                 ]
                             )
 
-                ThemeSelected theme ->
-                    { model | theme = theme }
-                        |> Update.succeed
-
 
 pushNotification : { model : Model, notification : Ui.Notification.Notification, toMsg : Msg -> msg, toModel : Model -> model } -> Update model msg
 pushNotification opts =
@@ -166,7 +152,7 @@ saveSettings : Model -> Cmd msg
 saveSettings model =
     Port.storeSettings
         (Json.Encode.object
-            [ ( "theme", Ui.Theme.encode model.theme )
+            [--( "theme", Ui.Theme.encode model.theme )
             ]
         )
 
@@ -188,20 +174,12 @@ modalIds =
 viewModals : Model -> List (Html Msg)
 viewModals model =
     [ Ui.Modal.view modalIds.settings
-        [ Html.Attributes.class model.theme.class
-        ]
+        []
         [ Ui.column
             [ Ui.gap 1 ]
             [ Html.label
                 []
                 [ Html.text "Theme: "
-                , Ui.Select.view
-                    []
-                    { options = List.NonEmpty.toList Ui.Theme.themes
-                    , toString = .label
-                    , value = model.theme
-                    , onChange = ThemeSelected
-                    }
                 ]
             , Ui.Button.default
                 [ Ui.justify.end
