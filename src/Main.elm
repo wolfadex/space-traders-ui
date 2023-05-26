@@ -247,7 +247,7 @@ update msg model =
             case route of
                 Route.Login ->
                     case model.page of
-                        Login loginModel ->
+                        Login _ ->
                             ( model, Cmd.none )
 
                         Game gameModel ->
@@ -468,7 +468,7 @@ view model =
                         Page.Login.viewModals model.shared m
                             |> List.map (Html.map LoginMsg)
 
-                    Game m ->
+                    Game _ ->
                         -- Page.Game.viewModals m
                         --     |> List.map (Html.map GameMsg)
                         []
