@@ -66,6 +66,7 @@ type alias Model =
     , eyeHeight : Float
     , seed : Random.Seed
     , systems3d : SystemDict ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
+    , maxSystemsToRender : Int
     }
 
 
@@ -119,6 +120,7 @@ init opts =
     , zoom = sys.zoom
     , eyeHeight = 3
     , systems3d = sys.systems3d
+    , maxSystemsToRender = 10
     , seed = sys.seed
     }
         |> Update.succeeed
@@ -990,7 +992,7 @@ viewSystem model maybeSystemId =
             { galaxyViewSize = { width = 750, height = 500 }
             , zoom = model.zoom
             , viewRotation = model.viewRotation
-            , systems = SystemDict.toList model.systems3d
+            , systems = List.take model.maxSystemsToRender <| SystemDict.toList model.systems3d
             , eyeHeight = model.eyeHeight
             }
         , case model.systems of
