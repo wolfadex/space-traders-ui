@@ -214,6 +214,7 @@ initSystems seed maybeSystems =
 
 type Msg
     = LogoutClicked
+    | SettingsClicked
     | Zoomed Json.Encode.Value
     | ZoomPressed Float
     | RotationPressed Float
@@ -253,6 +254,11 @@ update ({ model } as opts) =
                         |> Update.succeed
                         |> Update.withCmd Port.clearToken
                         |> Update.withEffect (Update.RouteChangeRequested Route.Login)
+
+                SettingsClicked ->
+                    model
+                        |> Update.succeed
+                        |> Update.withCmd (Port.openModal Shared.modalIds.settings)
 
                 AgentResponded result ->
                     { model
@@ -896,20 +902,28 @@ view shared model =
                     _ ->
                         False
                 )
-
-            -- , Ui.Button.default []
-            --     { label = Html.text "⚙️"
-            --     , onClick = Nothing -- Just OpenSettingsClicked
-            --     }
             , Html.div [ Html.Attributes.style "height" "100%" ] []
-            , Ui.Button.default
-                [ Html.Attributes.style "float" "right"
-                , Html.Attributes.style "color" "var(--blue-light)"
+            , Html.div
+                [ Ui.grid
+                , Ui.gap 0.5
+                , Html.Attributes.style "grid-template-columns" "1fr 1fr"
                 , Html.Attributes.style "margin" "0 1rem 1rem 1rem"
                 ]
-                { label = Html.text "Logout"
-                , onClick = Just LogoutClicked
-                }
+                [ Ui.Button.default
+                    [ Html.Attributes.style "float" "right"
+                    , Html.Attributes.style "color" "var(--blue-light)"
+                    ]
+                    { label = Html.text "Settings"
+                    , onClick = Just SettingsClicked
+                    }
+                , Ui.Button.default
+                    [ Html.Attributes.style "float" "right"
+                    , Html.Attributes.style "color" "var(--blue-light)"
+                    ]
+                    { label = Html.text "Logout"
+                    , onClick = Just LogoutClicked
+                    }
+                ]
             ]
         , Html.main_
             [ Html.Attributes.class "content"

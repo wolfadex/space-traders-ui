@@ -170,8 +170,7 @@ update ({ model } as opts) =
                         | loginFormModel = loginFormModel
                     }
                         |> Update.succeed
-                        |> Update.withCmd
-                            formCmd
+                        |> Update.withCmd formCmd
 
                 LoginFormSubmitted { parsed } ->
                     case parsed of
