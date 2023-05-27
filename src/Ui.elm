@@ -175,6 +175,7 @@ progress attr opt =
             [ Html.Attributes.style "width" (String.fromFloat (opt.current / opt.max * 100) ++ "%")
             , Html.Attributes.style "height" "100%"
             , Html.Attributes.style "background-color" "var(--blue-dark)"
+            , Html.Attributes.style "transition" "width 0.5s ease-in-out"
             ]
             []
         ]
