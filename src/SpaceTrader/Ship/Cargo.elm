@@ -5,7 +5,7 @@ import SpaceTrader.Ship.Cargo.Item exposing (Item)
 
 
 type alias Cargo =
-    { capcity : Int
+    { capacity : Int
     , units : Int
     , inventory : List Item
     }
