@@ -80,12 +80,12 @@ view opts ship =
             Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Action:" ]
 
           else
-            Html.text ""
+            Ui.none
         , if ship.nav.status == SpaceTrader.Ship.Nav.Status.InOrbit then
             Ui.Button.default [] { label = Html.text "Extract", onClick = Just <| opts.onExtract ship.id }
 
           else
-            Html.text ""
+            Ui.none
         , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Cargo:" ]
         , Html.span [] [ Ui.Ship.Cargo.view ship.cargo ]
         ]
