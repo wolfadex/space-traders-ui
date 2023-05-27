@@ -6,7 +6,9 @@ import Route
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
+import SpaceTrader.Ship.Nav.Status
 import Ui
+import Ui.Button
 import Ui.Ship.Cargo
 import Ui.Ship.Nav.Status
 
@@ -73,6 +75,16 @@ view opts ship =
                 }
                 ship.nav.status
             ]
+        , if ship.nav.status == SpaceTrader.Ship.Nav.Status.InOrbit then
+            Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Action:" ]
+
+          else
+            Html.text ""
+        , if ship.nav.status == SpaceTrader.Ship.Nav.Status.InOrbit then
+            Ui.Button.default [] { label = Html.text "Extract", onClick = Nothing }
+
+          else
+            Html.text ""
         , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Cargo:" ]
         , Html.span [] [ Ui.Ship.Cargo.view ship.cargo ]
         ]
