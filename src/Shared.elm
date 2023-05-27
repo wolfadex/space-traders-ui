@@ -138,7 +138,6 @@ type
     | TimedNotificationCreated ( Time.Posix, Ui.Notification.TimedNotification )
       -- settings
     | OpenSettingsClicked
-    | CloseSettingsClicked
     | SettingsFormMsg (Form.Msg Msg)
     | SettingsFormSubmitted (Ui.Form.Submission String Settings)
 
@@ -183,16 +182,6 @@ update ({ model } as opts) =
                         |> Update.withCmd
                             (Port.openModal modalIds.settings)
 
-                CloseSettingsClicked ->
-                    model
-                        |> Update.succeed
-                        |> Update.withCmd
-                            (Cmd.batch
-                                [ Port.closeModal modalIds.settings
-                                , saveSettings model.settings
-                                ]
-                            )
-
                 SettingsFormMsg msg_ ->
                     let
                         ( settingsFormModel, formCmd ) =
@@ -212,7 +201,7 @@ update ({ model } as opts) =
                                 |> Update.withCmd
                                     (Cmd.batch
                                         [ Port.closeModal modalIds.settings
-                                        , saveSettings model.settings
+                                        , saveSettings newSettings
                                         ]
                                     )
 
