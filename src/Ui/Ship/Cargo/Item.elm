@@ -3,14 +3,12 @@ module Ui.Ship.Cargo.Item exposing (view)
 import Html exposing (Html)
 import Html.Attributes
 import SpaceTrader.Ship.Cargo.Item
-import Ui
 
 
 view :
-    {}
-    -> SpaceTrader.Ship.Cargo.Item.Item
+    SpaceTrader.Ship.Cargo.Item.Item
     -> Html msg
-view opts item =
+view item =
     -- type alias Item =
     --     { symbol : String
     --     , name : String

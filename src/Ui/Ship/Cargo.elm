@@ -3,16 +3,14 @@ module Ui.Ship.Cargo exposing (view)
 import Html exposing (Html)
 import Html.Attributes
 import SpaceTrader.Ship.Cargo
-import SpaceTrader.Ship.Cargo.Item
 import Ui
 import Ui.Ship.Cargo.Item
 
 
 view :
-    {}
-    -> SpaceTrader.Ship.Cargo.Cargo
+    SpaceTrader.Ship.Cargo.Cargo
     -> Html msg
-view opts cargo =
+view cargo =
     -- type alias Cargo =
     --     { capcity : Int
     --     , units : Int

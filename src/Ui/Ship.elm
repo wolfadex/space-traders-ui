@@ -74,5 +74,5 @@ view opts ship =
                 ship.nav.status
             ]
         , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Cargo:" ]
-        , Html.span [] [ Ui.Ship.Cargo.view {} ship.cargo ]
+        , Html.span [] [ Ui.Ship.Cargo.view ship.cargo ]
         ]
