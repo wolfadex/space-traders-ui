@@ -975,6 +975,7 @@ view shared model =
                                 { onDock = ShipDockRequested
                                 , onOrbit = ShipOrbitRequested
                                 , onMove = ShipMoveRequested
+                                , onExtract = ShipExtractRequested
                                 }
                             )
                         |> Html.div

@@ -17,6 +17,7 @@ view :
     { onDock : String -> msg
     , onOrbit : String -> msg
     , onMove : String -> msg
+    , onExtract : String -> msg
     }
     -> SpaceTrader.Ship.Ship
     -> Html msg
@@ -81,7 +82,7 @@ view opts ship =
           else
             Html.text ""
         , if ship.nav.status == SpaceTrader.Ship.Nav.Status.InOrbit then
-            Ui.Button.default [] { label = Html.text "Extract", onClick = Nothing }
+            Ui.Button.default [] { label = Html.text "Extract", onClick = Just <| opts.onExtract ship.id }
 
           else
             Html.text ""
