@@ -240,7 +240,7 @@ view model =
             , Html.Attributes.style "text-align" "center"
             , Html.Attributes.style "-webkit-text-stroke" "0.3rem var(--yellow)"
             ]
-            [ Html.text "Space Trader" ]
+            [ Html.text "SpaceTraders" ]
         , Html.div
             [ Ui.grid
             , Ui.gap 1
@@ -295,7 +295,12 @@ registrationForm =
         , view =
             \formState ->
                 List.concat
-                    [ Ui.Form.Field.text formState "Callsign" callsign
+                    [ Ui.Form.Field.text
+                        { formState = formState
+                        , label = "Callsign"
+                        , hint = Nothing
+                        , field = callsign
+                        }
                     , Ui.Form.Field.select
                         { toString = SpaceTrader.Faction.groupToPrettyString }
                         formState
@@ -342,7 +347,12 @@ loginForm =
         , view =
             \formState ->
                 List.concat
-                    [ Ui.Form.Field.text formState "Access Token" accessToken
+                    [ Ui.Form.Field.text
+                        { formState = formState
+                        , label = "Access Token"
+                        , hint = Nothing
+                        , field = accessToken
+                        }
                     , Ui.Form.Field.submit
                         { label =
                             if formState.submitting then

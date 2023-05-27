@@ -841,7 +841,7 @@ view shared model =
                 , Html.Attributes.style "text-align" "center"
                 , Html.Attributes.style "-webkit-text-stroke" "0.1rem var(--yellow)"
                 ]
-                [ Html.text "Space Trader" ]
+                [ Html.text "SpaceTraders" ]
             , Html.div
                 [ Ui.align.center
                 , Html.Attributes.style "padding" "1rem"
@@ -969,10 +969,10 @@ view shared model =
                 Route.Waypoints details ->
                     case details.id of
                         Nothing ->
-                            viewSystem model Nothing
+                            viewSystem shared.settings model Nothing
 
                         Just (Route.ViewSystem systemId) ->
-                            viewSystem model <| Just systemId
+                            viewSystem shared.settings model <| Just systemId
 
                         Just (Route.ViewWaypoint waypointId) ->
                             viewWaypoint model waypointId
@@ -980,8 +980,8 @@ view shared model =
         ]
 
 
-viewSystem : Model -> Maybe SpaceTrader.Point.System.System -> Html Msg
-viewSystem model maybeSystemId =
+viewSystem : Shared.Settings -> Model -> Maybe SpaceTrader.Point.System.System -> Html Msg
+viewSystem settings model maybeSystemId =
     Html.div [ Ui.grid, Ui.gap 0.5 ]
         [ Ui.Galaxy3d.viewSystems
             { onSystemClick = SystemClicked
@@ -1003,7 +1003,10 @@ viewSystem model maybeSystemId =
             { galaxyViewSize = { width = 750, height = 500 }
             , zoom = model.zoom
             , viewRotation = model.viewRotation
-            , systems = SystemDict.toList model.systems3d
+            , systems =
+                model.systems3d
+                    |> SystemDict.toList
+                    |> List.take settings.systemLimit
             , eyeHeight = model.eyeHeight
             }
         , case model.systems of

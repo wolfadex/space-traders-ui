@@ -28,19 +28,43 @@ errorsView { submitAttempted, errors } field =
         Ui.none
 
 
-text : Form.Context String input -> String -> Form.Validation.Field String parsed Form.FieldView.Input -> List (Html msg)
-text formState label field =
+text :
+    { formState : Form.Context String input
+    , hint : Maybe String
+    , label : String
+    , field : Form.Validation.Field String parsed Form.FieldView.Input
+    }
+    -> List (Html msg)
+text opts =
     [ Html.label
-        [ Html.Attributes.style "grid-column" "1" ]
-        [ Html.text label ]
+        [ Html.Attributes.style "grid-column" "1"
+        , case opts.hint of
+            Nothing ->
+                Html.Attributes.style "" ""
+
+            Just hint ->
+                Html.Attributes.title hint
+        ]
+        [ Html.span []
+            [ Html.text opts.label
+            , case opts.hint of
+                Nothing ->
+                    Ui.none
+
+                Just _ ->
+                    Html.span []
+                        [ Html.text " ℹ"
+                        ]
+            ]
+        ]
     , Form.FieldView.input
         [ Html.Attributes.style "grid-column" "2"
         , Html.Attributes.style "border-radius" "0.1rem"
         , Html.Attributes.style "border-style" "solid"
         , Html.Attributes.style "padding" "0.25rem 1rem"
         ]
-        field
-    , errorsView formState field
+        opts.field
+    , errorsView opts.formState opts.field
     ]
 
 

@@ -782,34 +782,35 @@ viewSpace options labels scene =
                 , Html.Attributes.style "grid-template-columns" "3rem 3rem 1fr"
                 , Html.Attributes.style "grid-template-rows" "1fr 1fr 1fr"
                 ]
-                [ navButton
-                    { label = "^"
-                    , hint = "Forward"
-                    , onClick = Just (options.onPitchPress options.pitchPressMagnitude)
-                    , row = 1
-                    , column = 1
-                    }
-                , navButton
-                    { label = "v"
-                    , hint = "Backward"
-                    , onClick = Just (options.onPitchPress options.pitchPressMagnitude)
-                    , row = 2
-                    , column = 1
-                    }
-                , navButton
-                    { label = "<"
-                    , hint = "Left"
-                    , onClick = Just (options.onPitchPress options.pitchPressMagnitude)
-                    , row = 3
-                    , column = 1
-                    }
-                , navButton
-                    { label = ">"
-                    , hint = "Right"
-                    , onClick = Just (options.onPitchPress options.pitchPressMagnitude)
-                    , row = 3
-                    , column = 2
-                    }
+                [-- TODO: implement
+                 --     navButton
+                 --     { label = "^"
+                 --     , hint = "Forward"
+                 --     , onClick = Just (options.onMoveForward 5)
+                 --     , row = 1
+                 --     , column = 1
+                 --     }
+                 -- , navButton
+                 --     { label = "v"
+                 --     , hint = "Backward"
+                 --     , onClick = Just (options.onMoveForward 5)
+                 --     , row = 2
+                 --     , column = 1
+                 --     }
+                 -- , navButton
+                 --     { label = "<"
+                 --     , hint = "Left"
+                 --     , onClick = Just (options.onMoveRight 5)
+                 --     , row = 3
+                 --     , column = 1
+                 --     }
+                 -- , navButton
+                 --     { label = ">"
+                 --     , hint = "Right"
+                 --     , onClick = Just (options.onMoveRight 5)
+                 --     , row = 3
+                 --     , column = 2
+                 --     }
                 ]
 
             -- right

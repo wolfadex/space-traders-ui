@@ -19,7 +19,7 @@ view cargo =
     Html.div []
         [ Html.div []
             [ Ui.progress []
-                { max = toFloat cargo.capcity
+                { max = toFloat cargo.capacity
                 , current = toFloat cargo.units
                 }
             ]

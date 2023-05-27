@@ -3,6 +3,7 @@ module Shared exposing
     , Model
     , Msg(..)
     , ScaledViewPoint(..)
+    , Settings
     , SpaceFocus(..)
     , decodeSettings
     , init
@@ -261,7 +262,7 @@ viewModals model =
                 , Html.Attributes.style "background-color" "var(--blue)"
                 , Ui.gap 1
                 ]
-                [ Ui.header.three
+                [ Ui.header.two
                     [ Html.Attributes.style "border-bottom" "0.125rem solid "
                     ]
                     [ Html.text "Settings" ]
@@ -293,7 +294,13 @@ settingsForm =
         , view =
             \formState ->
                 List.concat
-                    [ Ui.Form.Field.text formState "System limit" systemLimit
+                    [ [ Ui.header.three [] [ Html.text "Performance" ] ]
+                    , Ui.Form.Field.text
+                        { formState = formState
+                        , hint = Just "The maximum number of systems to render in 3D."
+                        , label = "System limit"
+                        , field = systemLimit
+                        }
                     , Ui.Form.Field.submit
                         { label =
                             -- if formState.submitting then
