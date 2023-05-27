@@ -7,8 +7,8 @@ import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
 import Ui
-import Ui.Ship.Nav.Status
 import Ui.Ship.Cargo
+import Ui.Ship.Nav.Status
 
 
 view :
@@ -74,5 +74,5 @@ view opts ship =
                 ship.nav.status
             ]
         , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Cargo:" ]
-        , Html.span [] [ Ui.Ship.Cargo.view {} ship.cargo]
+        , Html.span [] [ Ui.Ship.Cargo.view {} ship.cargo ]
         ]
