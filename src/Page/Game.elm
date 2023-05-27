@@ -29,7 +29,9 @@ import SpaceTrader.Point.SystemDict as SystemDict exposing (SystemDict)
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Point.WaypointDict as WaypointDict exposing (WaypointDict)
 import SpaceTrader.Ship
+import SpaceTrader.Ship.Cargo
 import SpaceTrader.Ship.Cooldown
+import SpaceTrader.Ship.Extraction
 import SpaceTrader.Ship.Nav
 import SpaceTrader.Survey
 import SpaceTrader.System
@@ -231,6 +233,8 @@ type Msg
     | ShipDockResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
     | ShipOrbitRequested String
     | ShipOrbitResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
+    | ShipExtractRequested String
+    | ShipExtractResponded String (Result SpaceTrader.Api.Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo })
     | ShipMoveRequested String
     | SystemsLoadRequested
     | SystemsLongRequestMsg (Result Http.Error (SpaceTrader.Api.Msg SpaceTrader.System.System))
@@ -390,6 +394,36 @@ update ({ model } as opts) =
                                                 (\ship ->
                                                     { ship
                                                         | nav = nav
+                                                    }
+                                                )
+                                            )
+                                            model.myShips
+                                }
+                                    |> Update.succeed
+                            )
+
+                ShipExtractRequested id ->
+                    model
+                        |> Update.succeed
+                        |> Update.withRequest (ShipExtractResponded id)
+                            (SpaceTrader.Api.extractShip
+                                { token = model.accessToken
+                                , shipId = id
+                                }
+                            )
+
+                ShipExtractResponded id response ->
+                    model
+                        |> Update.withResponse response
+                            (\{ extraction, cargo, cooldown } ->
+                                { model
+                                    | myShips =
+                                        Dict.update id
+                                            (Maybe.map
+                                                (\ship ->
+                                                    { ship
+                                                        | cooldown = Just cooldown
+                                                        , cargo = cargo
                                                     }
                                                 )
                                             )

@@ -1,4 +1,4 @@
-module SpaceTrader.Api exposing (Error(..), Msg(..), PagedMeta, createSurvey, dockShip, getAllSystemsInit, getAllSystemsUpdate, getSystem, getWaypoint, moveToOrbit, myAgent, myContracts, myShips, register)
+module SpaceTrader.Api exposing (Error(..), Msg(..), PagedMeta, createSurvey, dockShip, extractShip, getAllSystemsInit, getAllSystemsUpdate, getSystem, getWaypoint, moveToOrbit, myAgent, myContracts, myShips, register)
 
 import Http
 import Json.Decode
@@ -10,7 +10,9 @@ import SpaceTrader.Faction exposing (Faction)
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship exposing (Ship)
+import SpaceTrader.Ship.Cargo
 import SpaceTrader.Ship.Cooldown
+import SpaceTrader.Ship.Extraction
 import SpaceTrader.Ship.Nav
 import SpaceTrader.Survey
 import SpaceTrader.System
@@ -127,6 +129,27 @@ dockShip options =
         , url = [ "my", "ships", options.shipId, "dock" ]
         , body = Http.emptyBody
         , decoder = Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode
+        }
+
+
+extractShip : { token : String, shipId : String } -> Task Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo }
+extractShip options =
+    v2_3
+        { method = "POST"
+        , token = options.token
+        , url = [ "my", "ships", options.shipId, "extract" ]
+        , body = Http.emptyBody
+        , decoder =
+            Json.Decode.map3
+                (\extraction cooldown cargo ->
+                    { extraction = extraction
+                    , cooldown = cooldown
+                    , cargo = cargo
+                    }
+                )
+                (Json.Decode.field "extraction" SpaceTrader.Ship.Extraction.decode)
+                (Json.Decode.field "cooldown" SpaceTrader.Ship.Cooldown.decode)
+                (Json.Decode.field "cargo" SpaceTrader.Ship.Cargo.decode)
         }
 
 
