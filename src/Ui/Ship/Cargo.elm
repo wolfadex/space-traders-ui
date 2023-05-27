@@ -24,7 +24,7 @@ view cargo =
                 }
             ]
         , cargo.inventory
-            |> List.map (Ui.Ship.Cargo.Item.view {})
+            |> List.map Ui.Ship.Cargo.Item.view
             |> Html.div
                 [ Ui.grid
                 , Html.Attributes.style "grid-template-columns" "1fr 1fr"
