@@ -6,7 +6,6 @@ import Route
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
-import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Nav.Status
 import Ui
 import Ui.Button

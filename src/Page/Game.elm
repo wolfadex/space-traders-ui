@@ -417,7 +417,7 @@ update ({ model } as opts) =
                 ShipExtractResponded id response ->
                     model
                         |> Update.withResponse response
-                            (\{ extraction, cargo, cooldown } ->
+                            (\{ cargo, cooldown } ->
                                 { model
                                     | myShips =
                                         Dict.update id
