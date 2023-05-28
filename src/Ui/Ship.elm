@@ -93,54 +93,61 @@ view opts ship =
             [ Html.Attributes.style "font-weight" "bold" ]
             [ Html.text "Actions:" ]
         , Html.div [ Ui.grid, Ui.gap 0.5 ]
-            [ case ship.nav.status of
-                SpaceTrader.Ship.Nav.Status.InOrbit ->
-                    Ui.Button.default []
-                        { label =
-                            Html.text <|
+            (List.concat
+                [ case ship.nav.status of
+                    SpaceTrader.Ship.Nav.Status.InOrbit ->
+                        [ Ui.Button.default []
+                            { label =
+                                Html.text <|
+                                    case ship.cooldown of
+                                        Just cooldown ->
+                                            if cooldown.expiration |> Util.Time.isAfter opts.currentTime then
+                                                "Cooldown complete " ++ Time.Distance.inWords cooldown.expiration opts.currentTime ++ "..."
+
+                                            else
+                                                "Extract"
+
+                                        Nothing ->
+                                            "Extract"
+                            , onClick =
                                 case ship.cooldown of
                                     Just cooldown ->
                                         if cooldown.expiration |> Util.Time.isAfter opts.currentTime then
-                                            "Cooldown complete " ++ Time.Distance.inWords cooldown.expiration opts.currentTime ++ "..."
+                                            Nothing
 
                                         else
-                                            "Extract"
+                                            Just <| opts.onExtract ship.id
 
                                     Nothing ->
-                                        "Extract"
-                        , onClick =
-                            case ship.cooldown of
-                                Just cooldown ->
-                                    if cooldown.expiration |> Util.Time.isAfter opts.currentTime then
-                                        Nothing
-
-                                    else
                                         Just <| opts.onExtract ship.id
-
-                                Nothing ->
-                                    Just <| opts.onExtract ship.id
-                        }
-
-                _ ->
-                    Ui.none
-            , case ship.nav.status of
-                SpaceTrader.Ship.Nav.Status.InOrbit ->
-                    Form.renderHtml
-                        { submitting = False
-                        , state = opts.transitForm
-                        , toMsg = opts.onTransitFormMsg ship.id
-                        }
-                        (Form.options ("ship-transit-form-" ++ ship.id)
-                            |> Form.withOnSubmit (opts.onMove ship.id)
-                        )
-                        [ Ui.grid
-                        , Ui.gap 1
+                            }
+                        , Form.renderHtml
+                            { submitting = False
+                            , state = opts.transitForm
+                            , toMsg = opts.onTransitFormMsg ship.id
+                            }
+                            (Form.options ("ship-transit-form-" ++ ship.id)
+                                |> Form.withOnSubmit (opts.onMove ship.id)
+                            )
+                            [ Ui.grid
+                            , Ui.gap 1
+                            ]
+                            (transitForm opts.transitableWaypoints)
                         ]
-                        (transitForm opts.transitableWaypoints)
 
-                _ ->
-                    Ui.none
-            ]
+                    SpaceTrader.Ship.Nav.Status.InTransit ->
+                        [ Html.text
+                            ("Arriving at "
+                                ++ SpaceTrader.Point.Waypoint.toShortLabel ship.nav.route.destination.symbol
+                                ++ " in "
+                                ++ Time.Distance.inWords ship.nav.route.arrival opts.currentTime
+                            )
+                        ]
+
+                    SpaceTrader.Ship.Nav.Status.Docked ->
+                        []
+                ]
+            )
         , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Cargo:" ]
         , Html.span [] [ Ui.Ship.Cargo.view ship.cargo ]
         ]

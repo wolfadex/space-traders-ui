@@ -2,6 +2,7 @@ module Ui.Ship.Nav.Status exposing (view)
 
 import Html exposing (Html)
 import SpaceTrader.Ship.Nav.Status exposing (Status(..))
+import Ui
 import Ui.Button
 
 
@@ -33,4 +34,4 @@ view otps status =
                 ]
 
         InTransit ->
-            Html.span [] [ Html.text "In transit..." ]
+            Ui.none
