@@ -11,11 +11,11 @@ view otps status =
     case status of
         Docked ->
             Ui.Button.multi []
-                [ { label = Html.text "Docked"
+                [ { label = Ui.text "Docked"
                   , onClick = otps.onDock
                   , selected = True
                   }
-                , { label = Html.text "Orbit"
+                , { label = Ui.text "Orbit"
                   , onClick = otps.onOrbit
                   , selected = False
                   }
@@ -23,11 +23,11 @@ view otps status =
 
         InOrbit ->
             Ui.Button.multi []
-                [ { label = Html.text "Dock"
+                [ { label = Ui.text "Dock"
                   , onClick = otps.onDock
                   , selected = False
                   }
-                , { label = Html.text "Orbiting"
+                , { label = Ui.text "Orbiting"
                   , onClick = otps.onOrbit
                   , selected = True
                   }

@@ -3,6 +3,7 @@ module Ui.Select exposing (view)
 import Html exposing (Html)
 import Html.Attributes
 import Html.Events
+import Ui
 
 
 view :
@@ -34,7 +35,7 @@ view attr opts =
             (\option ->
                 Html.option
                     [ Html.Attributes.value (opts.toString option) ]
-                    [ Html.text (opts.toString option) ]
+                    [ Ui.text (opts.toString option) ]
             )
             opts.options
         )

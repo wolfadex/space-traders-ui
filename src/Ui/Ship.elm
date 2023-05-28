@@ -44,38 +44,38 @@ view opts ship =
         , Ui.gap 0.5
         , Html.Attributes.style "grid-template-columns" "5.5rem 1fr"
         ]
-        [ Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "ID:" ]
+        [ Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text "ID:" ]
         , Html.div
             [ Ui.grid
             , Ui.gap 0.5
             , Html.Attributes.style "grid-template-columns" "3fr 1fr"
             ]
-            [ Html.span [] [ Html.text ship.id ]
+            [ Html.span [] [ Ui.text ship.id ]
             , Ui.Button.small [ Html.Attributes.style "padding" "0 0.5rem" ]
-                { label = Html.text "Refresh"
+                { label = Ui.text "Refresh"
                 , onClick = Just (opts.onRefresh ship.id)
                 }
             ]
-        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Fuel:" ]
+        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text "Fuel:" ]
         , Ui.progress []
             { max = toFloat ship.fuel.capacity
             , current = toFloat ship.fuel.current
             }
-        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Waypoint:" ]
+        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text "Waypoint:" ]
         , Html.span []
             [ Ui.link []
                 { label =
                     ship.nav.system
                         |> SpaceTrader.Point.System.toLabel
-                        |> Html.text
+                        |> Ui.text
                 , route = Route.fromSystem ship.nav.system
                 }
-            , Html.text "-"
+            , Ui.text "-"
             , Ui.link []
                 { label =
                     ship.nav.waypoint
                         |> SpaceTrader.Point.Waypoint.toShortLabel
-                        |> Html.text
+                        |> Ui.text
                 , route = Route.fromWaypoint ship.nav.waypoint
                 }
             ]
@@ -91,13 +91,13 @@ view opts ship =
             ]
         , Html.span
             [ Html.Attributes.style "font-weight" "bold" ]
-            [ Html.text "Actions:" ]
+            [ Ui.text "Actions:" ]
         , Html.div [ Ui.grid, Ui.gap 0.5 ]
             (case ship.nav.status of
                 SpaceTrader.Ship.Nav.Status.InOrbit ->
                     [ Ui.Button.default []
                         { label =
-                            Html.text <|
+                            Ui.text <|
                                 case ship.cooldown of
                                     Just cooldown ->
                                         if cooldown.expiration |> Util.Time.isAfter opts.currentTime then
@@ -135,7 +135,7 @@ view opts ship =
                     ]
 
                 SpaceTrader.Ship.Nav.Status.InTransit ->
-                    [ Html.text
+                    [ Ui.text
                         ("Arriving at "
                             ++ SpaceTrader.Point.Waypoint.toShortLabel ship.nav.route.destination.symbol
                             ++ " in "
@@ -146,7 +146,7 @@ view opts ship =
                 SpaceTrader.Ship.Nav.Status.Docked ->
                     []
             )
-        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Cargo:" ]
+        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text "Cargo:" ]
         , Html.span [] [ Ui.Ship.Cargo.view ship.cargo ]
         ]
 

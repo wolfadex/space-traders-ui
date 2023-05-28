@@ -20,7 +20,7 @@ errorsView { submitAttempted, errors } field =
                         [ Html.Attributes.style "color" "red"
                         , Html.Attributes.style "grid-column" "2"
                         ]
-                        [ Html.text error ]
+                        [ Ui.text error ]
                 )
             |> Maybe.withDefault Ui.none
 
@@ -46,14 +46,14 @@ text opts =
                 Html.Attributes.title hint
         ]
         [ Html.span []
-            [ Html.text opts.label
+            [ Ui.text opts.label
             , case opts.hint of
                 Nothing ->
                     Ui.none
 
                 Just _ ->
                     Html.span []
-                        [ Html.text " ℹ"
+                        [ Ui.text " ℹ"
                         ]
             ]
         ]
@@ -77,7 +77,7 @@ select :
 select options formState label field =
     [ Html.label
         [ Html.Attributes.style "grid-column" "1" ]
-        [ Html.text label ]
+        [ Ui.text label ]
     , Form.FieldView.select
         [ Html.Attributes.style "grid-column" "2"
         , Html.Attributes.style "border-radius" "0.1rem"
@@ -99,5 +99,5 @@ submit { label, disabled } =
         , Html.Attributes.style "background-color" "var(--blue-light)"
         , Html.Attributes.disabled disabled
         ]
-        [ Html.text label ]
+        [ Ui.text label ]
     ]

@@ -254,7 +254,7 @@ viewModals model =
                 [ Ui.header.two
                     [ Html.Attributes.style "border-bottom" "0.125rem solid "
                     ]
-                    [ Html.text "Settings" ]
+                    [ Ui.text "Settings" ]
                 , Form.renderHtml
                     { submitting = False
                     , state = model.settingsFormModel
@@ -283,7 +283,7 @@ settingsForm =
         , view =
             \formState ->
                 List.concat
-                    [ [ Ui.header.three [] [ Html.text "Performance" ] ]
+                    [ [ Ui.header.three [] [ Ui.text "Performance" ] ]
                     , Ui.Form.Field.text
                         { formState = formState
                         , hint = Just "The maximum number of systems to render in 3D."

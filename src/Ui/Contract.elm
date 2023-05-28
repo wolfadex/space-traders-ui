@@ -37,7 +37,7 @@ view { timeZone, currentTime } contract =
                             else
                                 "red"
                         ]
-                        [ Html.text <|
+                        [ Ui.text <|
                             (if isInFuture then
                                 "Expires "
 
@@ -46,24 +46,24 @@ view { timeZone, currentTime } contract =
                             )
                                 ++ Time.Distance.inWords contract.terms.deadline currentTime
                         ]
-                    , Html.text "For "
+                    , Ui.text "For "
                     , important (SpaceTrader.Faction.groupToPrettyString contract.factionGroup)
                     , Html.br [] []
-                    , Html.text " by "
+                    , Ui.text " by "
                     , important (Ui.dateTime timeZone contract.terms.deadline)
                     , Html.br [] []
-                    , Html.text "you must "
+                    , Ui.text "you must "
                     , important "procure"
-                    , Html.text " the following goods:"
+                    , Ui.text " the following goods:"
                     , Html.ul []
                         (List.map
                             (\good ->
                                 Html.li []
                                     [ important (String.fromInt good.unitsRequired)
-                                    , Html.text " units of "
+                                    , Ui.text " units of "
                                     , important good.tradeSymbol
                                     , Html.br [] []
-                                    , Html.text "and deliver them to "
+                                    , Ui.text "and deliver them to "
                                     , let
                                         systemId : SpaceTrader.Point.System.System
                                         systemId =
@@ -74,15 +74,15 @@ view { timeZone, currentTime } contract =
                                         { label =
                                             systemId
                                                 |> SpaceTrader.Point.System.toLabel
-                                                |> Html.text
+                                                |> Ui.text
                                         , route = Route.fromSystem systemId
                                         }
-                                    , Html.text "-"
+                                    , Ui.text "-"
                                     , Ui.link []
                                         { label =
                                             good.destinationSymbol
                                                 |> SpaceTrader.Point.Waypoint.toShortLabel
-                                                |> Html.text
+                                                |> Ui.text
                                         , route = Route.fromWaypoint good.destinationSymbol
                                         }
                                     ]
@@ -93,26 +93,26 @@ view { timeZone, currentTime } contract =
 
             SpaceTrader.Contract.Transport ->
                 Html.p []
-                    [ Html.text "For "
+                    [ Ui.text "For "
                     , important (SpaceTrader.Faction.groupToPrettyString contract.factionGroup)
                     , Html.br [] []
-                    , Html.text " by "
+                    , Ui.text " by "
                     , important (Ui.dateTime timeZone contract.terms.deadline)
 
                     -- , important (Time.Distance.inWords contract.terms.deadline currentTime)
                     , Html.br [] []
-                    , Html.text "you must "
+                    , Ui.text "you must "
                     , important "transport"
-                    , Html.text " the following:"
+                    , Ui.text " the following:"
                     , Html.ul []
                         (List.map
                             (\good ->
                                 Html.li []
                                     [ important (String.fromInt good.unitsRequired)
-                                    , Html.text " units of "
+                                    , Ui.text " units of "
                                     , important good.tradeSymbol
                                     , Html.br [] []
-                                    , Html.text "to "
+                                    , Ui.text "to "
                                     , important (SpaceTrader.Point.Waypoint.toLabel good.destinationSymbol)
                                     ]
                             )
@@ -122,26 +122,26 @@ view { timeZone, currentTime } contract =
 
             SpaceTrader.Contract.Shuttle ->
                 Html.p []
-                    [ Html.text "For "
+                    [ Ui.text "For "
                     , important (SpaceTrader.Faction.groupToPrettyString contract.factionGroup)
                     , Html.br [] []
-                    , Html.text " by "
+                    , Ui.text " by "
                     , important (Ui.dateTime timeZone contract.terms.deadline)
 
                     -- , important (Time.Distance.inWords contract.terms.deadline currentTime)
                     , Html.br [] []
-                    , Html.text "you must "
+                    , Ui.text "you must "
                     , important "shuttle"
-                    , Html.text " the following:"
+                    , Ui.text " the following:"
                     , Html.ul []
                         (List.map
                             (\good ->
                                 Html.li []
                                     [ important (String.fromInt good.unitsRequired)
-                                    , Html.text " units of "
+                                    , Ui.text " units of "
                                     , important good.tradeSymbol
                                     , Html.br [] []
-                                    , Html.text "to "
+                                    , Ui.text "to "
                                     , important (SpaceTrader.Point.Waypoint.toLabel good.destinationSymbol)
                                     ]
                             )
@@ -154,4 +154,4 @@ view { timeZone, currentTime } contract =
 important : String -> Html msg
 important text =
     Html.span [ Html.Attributes.style "font-weight" "bold" ]
-        [ Html.text text ]
+        [ Ui.text text ]

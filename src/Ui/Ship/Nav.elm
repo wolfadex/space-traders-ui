@@ -2,6 +2,8 @@ module Ui.Ship.Nav exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
+import SpaceTrader.Point.System
+import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship.Nav
 import Ui
 import Ui.Ship.Nav.Status
@@ -24,7 +26,7 @@ view opts nav =
         --     { label = "System"
         --     , value =
         --         Ui.Button.link [ Html.Attributes.style "font-weight" "bold" ]
-        --             { label = Html.text nav.system
+        --             { label = Ui.text nav.system
         --             , onClick =
         --                 nav.system
         --                     |> opts.onSystemClicked
@@ -33,24 +35,24 @@ view opts nav =
         --     }
         --     ++ Ui.viewLabeled
         --         { label = "Waypoint"
-        --         , value = Html.text <| nav.waypoint
+        --         , value = Ui.text <| nav.waypoint
         --         }
         --     ++ [ Ui.Ship.Nav.Status.view opts
         --             nav.status
         --        ]
         -- )
-        [ Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "System:" ]
+        [ Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text "System:" ]
 
         -- , Ui.Button.link [ Html.Attributes.style "width" "fit-content" ]
-        --     { label = Html.text nav.system
+        --     { label = Ui.text nav.system
         --     , onClick =
         --         nav.system
         --             |> opts.onSystemClicked
         --             |> Just
         --     }
-        , Html.span [] [ Html.text nav.system ]
-        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Waypoint:" ]
-        , Html.span [] [ Html.text nav.waypoint ]
+        , Html.span [] [ Ui.text (SpaceTrader.Point.System.toLabel nav.system) ]
+        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text "Waypoint:" ]
+        , Html.span [] [ Ui.text (SpaceTrader.Point.Waypoint.toShortLabel nav.waypoint) ]
         , Html.div [ Html.Attributes.style "grid-column" "1 / 3" ]
             [ Ui.Ship.Nav.Status.view opts
                 nav.status

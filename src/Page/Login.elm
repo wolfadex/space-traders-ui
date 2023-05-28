@@ -240,7 +240,7 @@ view model =
             , Html.Attributes.style "text-align" "center"
             , Html.Attributes.style "-webkit-text-stroke" "0.3rem var(--yellow)"
             ]
-            [ Html.text "SpaceTraders" ]
+            [ Ui.text "SpaceTraders" ]
         , Html.div
             [ Ui.grid
             , Ui.gap 1
@@ -388,22 +388,22 @@ viewModals shared model =
         []
         [ Ui.column
             [ Ui.gap 1 ]
-            [ Ui.header.one [] [ Html.text "IMPORTANT!" ]
-            , Html.p [] [ Html.text "This access token is your password and is the only way to access your account. If you lose it, you will lose your account. Make sure you copy it somewhere safe." ]
+            [ Ui.header.one [] [ Ui.text "IMPORTANT!" ]
+            , Html.p [] [ Ui.text "This access token is your password and is the only way to access your account. If you lose it, you will lose your account. Make sure you copy it somewhere safe." ]
             , Ui.header.three
                 [ Html.Attributes.style "max-width" "90vw"
                 , Html.Attributes.style "overflow-wrap" "break-word"
                 ]
-                [ Html.text "Access Token: "
+                [ Ui.text "Access Token: "
                 , Html.span []
-                    [ Html.text (Maybe.withDefault "" model.registrationToken)
+                    [ Ui.text (Maybe.withDefault "" model.registrationToken)
                     ]
                 ]
             , Ui.Button.default
                 [ Ui.justify.end
                 , Ui.align.end
                 ]
-                { label = Html.text "I've copied my token"
+                { label = Ui.text "I've copied my token"
                 , onClick = Just TokenCopyAcknowledged
                 }
             ]

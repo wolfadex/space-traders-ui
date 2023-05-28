@@ -28,17 +28,17 @@ view opts system =
         [ Ui.header.three []
             [ system.id
                 |> SpaceTrader.Point.System.toLabel
-                |> Html.text
+                |> Ui.text
             ]
         , Html.div
             [ Ui.grid
             , Html.Attributes.style "grid-template-columns" "4rem 1fr"
             ]
             [ Html.span [ Html.Attributes.style "font-weight" "bold" ]
-                [ Html.text "Type:" ]
-            , Html.span [] [ Html.text <| Ui.System.Type.view system.type_ ]
+                [ Ui.text "Type:" ]
+            , Html.span [] [ Ui.text <| Ui.System.Type.view system.type_ ]
             ]
-        , Ui.header.four [] [ Html.text "Waypoints:" ]
+        , Ui.header.four [] [ Ui.text "Waypoints:" ]
         , Ui.column [ Ui.gap 0.5 ]
             (List.map
                 (Ui.System.Waypoint.view opts)
