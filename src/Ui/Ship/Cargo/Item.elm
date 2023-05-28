@@ -3,6 +3,7 @@ module Ui.Ship.Cargo.Item exposing (view)
 import Html exposing (Html)
 import Html.Attributes
 import SpaceTrader.Ship.Cargo.Item
+import String.Extra
 import Ui
 
 
@@ -18,7 +19,11 @@ view item =
     --     }
     Html.div [ Html.Attributes.title item.description ]
         [ Html.span []
-            [ Ui.text item.symbol
+            [ item.symbol
+                |> String.replace "_" " "
+                |> String.toLower
+                |> String.Extra.toSentenceCase
+                |> Ui.text
             , Ui.text " "
             , Ui.text "x"
             , Ui.text <| String.fromInt item.units
