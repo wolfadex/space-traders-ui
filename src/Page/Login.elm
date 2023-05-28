@@ -12,13 +12,12 @@ module Page.Login exposing
     )
 
 import Browser.Events
-import Dict exposing (Dict)
+import Dict
 import Form
 import Form.Field
 import Form.Validation
 import Html exposing (Html)
 import Html.Attributes
-import Http
 import Port
 import Route
 import Shared
@@ -97,7 +96,7 @@ type Msg
     | TokenCopyAcknowledged
     | LoginFormMsg (Form.Msg Msg)
     | LoginFormSubmitted (Ui.Form.Submission String LoginForm)
-    | LoginResponded String (Result Http.Error SpaceTrader.Agent.Agent)
+    | LoginResponded String (Result SpaceTrader.Api.Error SpaceTrader.Agent.Agent)
 
 
 update :
@@ -143,7 +142,9 @@ update ({ model } as opts) =
                                 |> Update.succeed
 
                 RegistrationResponded response ->
-                    model
+                    { model
+                        | submittingRegistration = False
+                    }
                         |> Update.withResponse response
                             (\data ->
                                 { model
@@ -177,8 +178,8 @@ update ({ model } as opts) =
                         Form.Valid loginData ->
                             { model | submittingLogin = True }
                                 |> Update.succeed
-                                |> Update.withCmd
-                                    (SpaceTrader.Api.myAgent (LoginResponded loginData.accessToken)
+                                |> Update.withRequest (LoginResponded loginData.accessToken)
+                                    (SpaceTrader.Api.myAgent
                                         { token = loginData.accessToken
                                         }
                                     )
@@ -187,25 +188,24 @@ update ({ model } as opts) =
                             model
                                 |> Update.succeed
 
-                LoginResponded _ (Err err) ->
+                LoginResponded accessToken response ->
                     { model
                         | submittingLogin = False
-
-                        -- , loginServerError = Just (Debug.toString err)
-                        , loginServerError = Just "There was an error"
                     }
-                        |> Update.succeed
-
-                LoginResponded accessToken (Ok agent) ->
-                    model
-                        |> Update.succeed
-                        |> Update.withCmd (Port.setToken accessToken)
-                        |> Update.withEffect
-                            (Update.Authenticated
-                                { accessToken = accessToken
-                                , agent = Just agent
-                                , systems = model.systems
+                        |> Update.withResponse response
+                            (\agent ->
+                                { model
+                                    | submittingLogin = False
                                 }
+                                    |> Update.succeed
+                                    |> Update.withCmd (Port.setToken accessToken)
+                                    |> Update.withEffect
+                                        (Update.Authenticated
+                                            { accessToken = accessToken
+                                            , agent = Just agent
+                                            , systems = model.systems
+                                            }
+                                        )
                             )
 
 
