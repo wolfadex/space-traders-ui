@@ -126,24 +126,24 @@ init opts =
         |> Update.succeed
         |> Update.withRequest MyContractsResponded
             (SpaceTrader.Api.myContracts { token = opts.accessToken })
+        |> (case opts.agent of
+                Nothing ->
+                    Update.withRequest AgentResponded
+                        (SpaceTrader.Api.myAgent { token = opts.accessToken })
+
+                Just _ ->
+                    identity
+           )
+        |> Update.withRequest MyShipsResponded (SpaceTrader.Api.myShips { token = opts.accessToken })
         |> Update.withCmd
             (Cmd.batch
-                [ SpaceTrader.Api.myShips MyShipsResponded
-                    { token = opts.accessToken }
-                , case opts.systems of
+                [ case opts.systems of
                     Nothing ->
                         SpaceTrader.Api.getAllSystemsInit SystemsLongRequestMsg { token = opts.accessToken }
 
                     Just _ ->
                         Cmd.none
                 , Port.setToken opts.accessToken
-                , case opts.agent of
-                    Nothing ->
-                        SpaceTrader.Api.myAgent AgentResponded
-                            { token = opts.accessToken }
-
-                    Just _ ->
-                        Cmd.none
                 ]
             )
         |> (\updatedModel ->
@@ -225,9 +225,9 @@ type Msg
       -- game
     | CreateSurveyRequested { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : String }
     | SurveyResponded SpaceTrader.Point.Waypoint.Waypoint (Result SpaceTrader.Api.Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown ))
-    | AgentResponded (Result Http.Error SpaceTrader.Agent.Agent)
+    | AgentResponded (Result SpaceTrader.Api.Error SpaceTrader.Agent.Agent)
     | MyContractsResponded (Result SpaceTrader.Api.Error (List SpaceTrader.Contract.Contract))
-    | MyShipsResponded (Result Http.Error (List SpaceTrader.Ship.Ship))
+    | MyShipsResponded (Result SpaceTrader.Api.Error (List SpaceTrader.Ship.Ship))
     | WaypointResponded SpaceTrader.Point.Waypoint.Waypoint (Result SpaceTrader.Api.Error SpaceTrader.Waypoint.Waypoint)
     | ShipDockRequested String
     | ShipDockResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
@@ -240,7 +240,7 @@ type Msg
     | ShipMoveRequested String
     | SystemsLoadRequested
     | SystemsLongRequestMsg (Result Http.Error (SpaceTrader.Api.Msg SpaceTrader.System.System))
-    | SystemResponded (Result Http.Error SpaceTrader.System.System)
+    | SystemResponded (Result SpaceTrader.Api.Error SpaceTrader.System.System)
 
 
 update :
@@ -266,14 +266,16 @@ update ({ model } as opts) =
                         |> Update.succeed
                         |> Update.withCmd (Port.openModal Shared.modalIds.settings)
 
-                AgentResponded result ->
-                    { model
-                        | agent =
-                            result
-                                |> Result.mapError (\_ -> "Failed to load agent")
-                                |> RemoteData.fromResult
-                    }
-                        |> Update.succeed
+                AgentResponded response ->
+                    model
+                        |> Update.withResponseAndError response
+                            (\agent ->
+                                { model | agent = Loaded agent }
+                                    |> Update.succeed
+                            )
+                            ({ model | agent = Failure "Failed to load agent" }
+                                |> Update.succeed
+                            )
 
                 CreateSurveyRequested { waypointId, shipId } ->
                     model
@@ -468,22 +470,21 @@ update ({ model } as opts) =
                     model
                         |> Update.succeed
 
-                MyShipsResponded (Err err) ->
-                    -- Debug.todo (Debug.toString err)
+                MyShipsResponded response ->
                     model
-                        |> Update.succeed
-
-                MyShipsResponded (Ok ships) ->
-                    { model
-                        | myShips =
-                            List.foldl
-                                (\ship dict ->
-                                    Dict.insert ship.id ship dict
-                                )
-                                Dict.empty
-                                ships
-                    }
-                        |> Update.succeed
+                        |> Update.withResponse response
+                            (\ships ->
+                                { model
+                                    | myShips =
+                                        List.foldl
+                                            (\ship dict ->
+                                                Dict.insert ship.id ship dict
+                                            )
+                                            Dict.empty
+                                            ships
+                                }
+                                    |> Update.succeed
+                            )
 
                 SystemClicked systemId ->
                     model
@@ -599,22 +600,21 @@ update ({ model } as opts) =
                                         ]
                                     )
 
-                SystemResponded (Err err) ->
-                    -- Debug.todo (Debug.toString err)
+                SystemResponded response ->
                     model
-                        |> Update.succeed
-
-                SystemResponded (Ok system) ->
-                    let
-                        ( sys, seed ) =
-                            buildSystem3d model.seed system
-                    in
-                    { model
-                        | systems = Cacheable.insert SystemDict.insert system.id (RemoteData.Loaded system) model.systems
-                        , systems3d = SystemDict.insert system.id sys model.systems3d
-                        , seed = seed
-                    }
-                        |> Update.succeed
+                        |> Update.withResponse response
+                            (\system ->
+                                let
+                                    ( sys, seed ) =
+                                        buildSystem3d model.seed system
+                                in
+                                { model
+                                    | systems = Cacheable.insert SystemDict.insert system.id (RemoteData.Loaded system) model.systems
+                                    , systems3d = SystemDict.insert system.id sys model.systems3d
+                                    , seed = seed
+                                }
+                                    |> Update.succeed
+                            )
 
                 -- 3d stuff
                 Zoomed value ->
@@ -695,8 +695,8 @@ systemSelected systemId model =
                     identity
 
                 _ ->
-                    Update.withCmd
-                        (SpaceTrader.Api.getSystem SystemResponded
+                    Update.withRequest SystemResponded
+                        (SpaceTrader.Api.getSystem
                             { token = model.accessToken
                             , systemId = systemId
                             }

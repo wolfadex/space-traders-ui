@@ -1,4 +1,21 @@
-module SpaceTrader.Api exposing (Error(..), Msg(..), PagedMeta, createSurvey, dockShip, extractShip, getAllSystemsInit, getAllSystemsUpdate, getShipCooldown, getSystem, getWaypoint, moveToOrbit, myAgent, myContracts, myShips, register)
+module SpaceTrader.Api exposing
+    ( Error(..)
+    , Msg(..)
+    , PagedMeta
+    , createSurvey
+    , dockShip
+    , extractShip
+    , getAllSystemsInit
+    , getAllSystemsUpdate
+    , getShipCooldown
+    , getSystem
+    , getWaypoint
+    , moveToOrbit
+    , myAgent
+    , myContracts
+    , myShips
+    , register
+    )
 
 import Http
 import Json.Decode
@@ -22,7 +39,6 @@ import Task exposing (Task)
 
 
 -- AUTH
--- myContracts : { token : String } -> Task Error (List SpaceTrader.Contract.Contract)
 
 
 register :
@@ -37,22 +53,22 @@ register :
             , token : String
             }
 register opts =
-    v2_3_noauth
-        { method = "POST"
-        , url = [ "register" ]
-        , body =
-            Http.jsonBody
-                (Json.Encode.object
-                    [ ( "symbol", Json.Encode.string opts.callsign )
-                    , ( "faction"
-                      , opts.faction
-                            |> SpaceTrader.Faction.groupToString
-                            |> Json.Encode.string
-                      )
-                    ]
-                )
+    newV2
+        { url = [ "register" ]
         , decoder = decodeRegister
         }
+        |> withMethodPost
+        |> withBody
+            (Json.Encode.object
+                [ ( "symbol", Json.Encode.string opts.callsign )
+                , ( "faction"
+                  , opts.faction
+                        |> SpaceTrader.Faction.groupToString
+                        |> Json.Encode.string
+                  )
+                ]
+            )
+        |> sendRequest
 
 
 decodeRegister : Json.Decode.Decoder { agent : Agent, contract : Contract, faction : Faction, ship : Ship, token : String }
@@ -77,68 +93,62 @@ decodeRegister =
 -- MY THINGS
 
 
-myAgent : (Result Http.Error SpaceTrader.Agent.Agent -> msg) -> { token : String } -> Cmd msg
-myAgent toMsg options =
-    v2
-        { method = "GET"
-        , token = options.token
-        , url = [ "my", "agent" ]
-        , body = Http.emptyBody
-        , expect = Http.expectJson toMsg (decodeSuccess SpaceTrader.Agent.decode)
+myAgent : { token : String } -> Task Error SpaceTrader.Agent.Agent
+myAgent options =
+    newV2
+        { url = [ "my", "agent" ]
+        , decoder = SpaceTrader.Agent.decode
         }
+        |> withToken options.token
+        |> sendRequest
 
 
 myContracts : { token : String } -> Task Error (List SpaceTrader.Contract.Contract)
 myContracts options =
-    v2_3
-        { method = "GET"
-        , token = options.token
-        , url = [ "my", "contracts" ]
-        , body = Http.emptyBody
+    newV2
+        { url = [ "my", "contracts" ]
         , decoder = Json.Decode.list SpaceTrader.Contract.decode
         }
+        |> withToken options.token
+        |> sendRequest
 
 
-myShips : (Result Http.Error (List SpaceTrader.Ship.Ship) -> msg) -> { token : String } -> Cmd msg
-myShips toMsg options =
-    v2
-        { method = "GET"
-        , token = options.token
-        , url = [ "my", "ships" ]
-        , body = Http.emptyBody
-        , expect = Http.expectJson toMsg (decodeSuccess (Json.Decode.list SpaceTrader.Ship.decode))
+myShips : { token : String } -> Task Error (List SpaceTrader.Ship.Ship)
+myShips options =
+    newV2
+        { url = [ "my", "ships" ]
+        , decoder = Json.Decode.list SpaceTrader.Ship.decode
         }
+        |> withToken options.token
+        |> sendRequest
 
 
 moveToOrbit : { token : String, shipId : String } -> Task Error SpaceTrader.Ship.Nav.Nav
 moveToOrbit options =
-    v2_3
-        { method = "POST"
-        , token = options.token
-        , url = [ "my", "ships", options.shipId, "orbit" ]
-        , body = Http.emptyBody
+    newV2
+        { url = [ "my", "ships", options.shipId, "orbit" ]
         , decoder = Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode
         }
+        |> withMethodPost
+        |> withToken options.token
+        |> sendRequest
 
 
 dockShip : { token : String, shipId : String } -> Task Error SpaceTrader.Ship.Nav.Nav
 dockShip options =
-    v2_3
-        { method = "POST"
-        , token = options.token
-        , url = [ "my", "ships", options.shipId, "dock" ]
-        , body = Http.emptyBody
+    newV2
+        { url = [ "my", "ships", options.shipId, "dock" ]
         , decoder = Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode
         }
+        |> withMethodPost
+        |> withToken options.token
+        |> sendRequest
 
 
 extractShip : { token : String, shipId : String } -> Task Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo }
 extractShip options =
-    v2_3
-        { method = "POST"
-        , token = options.token
-        , url = [ "my", "ships", options.shipId, "extract" ]
-        , body = Http.emptyBody
+    newV2
+        { url = [ "my", "ships", options.shipId, "extract" ]
         , decoder =
             Json.Decode.map3
                 (\extraction cooldown cargo ->
@@ -151,6 +161,9 @@ extractShip options =
                 (Json.Decode.field "cooldown" SpaceTrader.Ship.Cooldown.decode)
                 (Json.Decode.field "cargo" SpaceTrader.Ship.Cargo.decode)
         }
+        |> withMethodPost
+        |> withToken options.token
+        |> sendRequest
 
 
 getShipCooldown : { token : String, shipId : String } -> Task Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown)
@@ -198,23 +211,20 @@ getAllSystemsUpdate =
     getAllUpdate
 
 
-getSystem : (Result Http.Error SpaceTrader.System.System -> msg) -> { token : String, systemId : SpaceTrader.Point.System.System } -> Cmd msg
-getSystem toMsg options =
-    v2
-        { method = "GET"
-        , token = options.token
-        , url = [ "systems", SpaceTrader.Point.System.toKey options.systemId ]
-        , body = Http.emptyBody
-        , expect = Http.expectJson toMsg (decodeSuccess SpaceTrader.System.decode)
+getSystem : { token : String, systemId : SpaceTrader.Point.System.System } -> Task Error SpaceTrader.System.System
+getSystem options =
+    newV2
+        { url = [ "systems", SpaceTrader.Point.System.toKey options.systemId ]
+        , decoder = SpaceTrader.System.decode
         }
+        |> withToken options.token
+        |> sendRequest
 
 
 getWaypoint : { token : String, waypointId : SpaceTrader.Point.Waypoint.Waypoint } -> Task Error SpaceTrader.Waypoint.Waypoint
 getWaypoint options =
-    v2_3
-        { method = "GET"
-        , token = options.token
-        , url =
+    newV2
+        { url =
             [ "systems"
             , options.waypointId
                 |> SpaceTrader.Point.Waypoint.toSystem
@@ -222,26 +232,24 @@ getWaypoint options =
             , "waypoints"
             , SpaceTrader.Point.Waypoint.toKey options.waypointId
             ]
-        , body = Http.emptyBody
         , decoder = SpaceTrader.Waypoint.decode
         }
+        |> withToken options.token
+        |> sendRequest
 
 
-createSurvey :
-    { token : String, shipId : String }
-    -- -> (Result Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown ) -> msg)
-    -> Task Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown )
+createSurvey : { token : String, shipId : String } -> Task Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown )
 createSurvey options =
-    v2_3
-        { method = "POST"
-        , token = options.token
-        , url = [ "my", "ships", options.shipId, "survey" ]
-        , body = Http.emptyBody
+    newV2
+        { url = [ "my", "ships", options.shipId, "survey" ]
         , decoder =
             Json.Decode.map2 Tuple.pair
                 (Json.Decode.field "surveys" (Json.Decode.list SpaceTrader.Survey.decode))
                 (Json.Decode.field "cooldown" SpaceTrader.Ship.Cooldown.decode)
         }
+        |> withMethodPost
+        |> withToken options.token
+        |> sendRequest
 
 
 
@@ -459,43 +467,6 @@ decodeSuccess decoder =
     Json.Decode.field "data" decoder
 
 
-v2 : { method : String, token : String, url : List String, body : Http.Body, expect : Http.Expect msg } -> Cmd msg
-v2 options =
-    Http.request
-        { method = options.method
-        , headers =
-            [ Http.header "Authorization" ("Bearer " ++ options.token)
-            ]
-        , url = toUrl (baseUri :: options.url)
-        , body = options.body
-        , expect = options.expect
-        , timeout = Nothing
-        , tracker = Nothing
-        }
-
-
-v2_3 :
-    { method : String
-    , token : String
-    , body : Http.Body
-    , url : List String
-    , decoder : Json.Decode.Decoder a
-    }
-    -> Task Error a
-v2_3 opts =
-    Http.task
-        { method = opts.method
-        , headers = [ Http.header "Authorization" ("Bearer " ++ opts.token) ]
-        , url = toUrl (baseUri :: opts.url)
-        , body = opts.body
-        , resolver =
-            Http.stringResolver <|
-                jsonResolver2 <|
-                    opts.decoder
-        , timeout = Nothing
-        }
-
-
 v2_3_nobody :
     { method : String
     , token : String
@@ -524,37 +495,81 @@ v2_3_nobody opts =
         }
 
 
-v2_3_noauth :
-    { method : String
-    , body : Http.Body
-    , url : List String
-    , decoder : Json.Decode.Decoder a
-    }
-    -> Task Error a
-v2_3_noauth opts =
-    Http.task
-        { method = opts.method
-        , headers = []
-        , url = toUrl (baseUri :: opts.url)
-        , body = opts.body
-        , resolver =
-            Http.stringResolver <|
-                jsonResolver2 <|
-                    opts.decoder
-        , timeout = Nothing
+
+-- NOTE: Keeping for future reference
+-- v2Paged : { method : String, token : String, url : List String, body : Http.Body, expect : Http.Expect msg, page : Int } -> Cmd msg
+-- v2Paged options =
+--     Http.request
+--         { method = options.method
+--         , headers =
+--             [ Http.header "Authorization" ("Bearer " ++ options.token)
+--             ]
+--         , url = toUrl (baseUri :: options.url) ++ "?limit=20&page=" ++ String.fromInt options.page
+--         , body = options.body
+--         , expect = options.expect
+--         , timeout = Nothing
+--         , tracker = Nothing
+--         }
+
+
+type Config a
+    = Config
+        { method : String
+        , token : Maybe String
+        , body : Maybe Json.Encode.Value
+        , url : List String
+        , decoder : Json.Decode.Decoder a
         }
 
 
-v2Paged : { method : String, token : String, url : List String, body : Http.Body, expect : Http.Expect msg, page : Int } -> Cmd msg
-v2Paged options =
-    Http.request
-        { method = options.method
+newV2 : { url : List String, decoder : Json.Decode.Decoder a } -> Config a
+newV2 options =
+    Config
+        { method = "GET"
+        , token = Nothing
+        , body = Nothing
+        , url = options.url
+        , decoder = options.decoder
+        }
+
+
+withMethodPost : Config a -> Config a
+withMethodPost (Config config) =
+    Config { config | method = "POST" }
+
+
+withBody : Json.Encode.Value -> Config a -> Config a
+withBody body (Config config) =
+    Config { config | body = Just body }
+
+
+withToken : String -> Config a -> Config a
+withToken token (Config config) =
+    Config { config | token = Just token }
+
+
+sendRequest : Config a -> Task Error a
+sendRequest (Config config) =
+    Http.task
+        { method = config.method
         , headers =
-            [ Http.header "Authorization" ("Bearer " ++ options.token)
-            ]
-        , url = toUrl (baseUri :: options.url) ++ "?limit=20&page=" ++ String.fromInt options.page
-        , body = options.body
-        , expect = options.expect
+            case config.token of
+                Nothing ->
+                    []
+
+                Just token ->
+                    [ Http.header "Authorization" ("Bearer " ++ token) ]
+        , url = toUrl (baseUri :: config.url)
+        , body =
+            case config.body of
+                Nothing ->
+                    Http.emptyBody
+
+                Just body ->
+                    Http.jsonBody body
+        , resolver =
+            config.decoder
+                |> jsonResolver2
+                |> Http.stringResolver
         , timeout = Nothing
-        , tracker = Nothing
         }

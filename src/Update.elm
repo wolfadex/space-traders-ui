@@ -10,9 +10,10 @@ module Update exposing
     , withMsg
     , withRequest
     , withResponse
+    , withResponseAndError
     )
 
-import Dict exposing (Dict)
+import Dict
 import Http
 import Route exposing (Route)
 import SpaceTrader.Agent
@@ -84,6 +85,47 @@ withResponse response onOk update =
                 |> withEffect
                     (PushNotification
                         (let
+                            errMessage =
+                                case error of
+                                    SpaceTrader.Api.ApiErrorDecodeError err ->
+                                        "API JSON mismatch: " ++ err
+
+                                    SpaceTrader.Api.ApiError err ->
+                                        err.message
+
+                                    SpaceTrader.Api.HttpError (Http.BadUrl _) ->
+                                        "Wrong URL in API"
+
+                                    SpaceTrader.Api.HttpError Http.Timeout ->
+                                        "Request timeout"
+
+                                    SpaceTrader.Api.HttpError Http.NetworkError ->
+                                        "Network error"
+
+                                    SpaceTrader.Api.HttpError (Http.BadStatus status) ->
+                                        "Bad status: " ++ String.fromInt status
+
+                                    SpaceTrader.Api.HttpError (Http.BadBody body) ->
+                                        "Failed to parse response: " ++ body
+                         in
+                         Ui.Notification.new errMessage
+                            |> Ui.Notification.withAlert
+                        )
+                    )
+
+
+withResponseAndError : Result SpaceTrader.Api.Error a -> (a -> Update model msg) -> Update model msg -> model -> Update model msg
+withResponseAndError response onOk onErr _ =
+    case response of
+        Ok a ->
+            onOk a
+
+        Err error ->
+            onErr
+                |> withEffect
+                    (PushNotification
+                        (let
+                            errMessage : String
                             errMessage =
                                 case error of
                                     SpaceTrader.Api.ApiErrorDecodeError err ->
