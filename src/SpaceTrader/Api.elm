@@ -1,4 +1,4 @@
-module SpaceTrader.Api exposing (Error(..), Msg(..), PagedMeta, createSurvey, dockShip, getAllSystemsInit, getAllSystemsUpdate, getSystem, getWaypoint, moveToOrbit, myAgent, myContracts, myShips, register)
+module SpaceTrader.Api exposing (Error(..), Msg(..), PagedMeta, createSurvey, dockShip, extractShip, getAllSystemsInit, getAllSystemsUpdate, getShipCooldown, getSystem, getWaypoint, moveToOrbit, myAgent, myContracts, myShips, register)
 
 import Http
 import Json.Decode
@@ -10,7 +10,9 @@ import SpaceTrader.Faction exposing (Faction)
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship exposing (Ship)
+import SpaceTrader.Ship.Cargo
 import SpaceTrader.Ship.Cooldown
+import SpaceTrader.Ship.Extraction
 import SpaceTrader.Ship.Nav
 import SpaceTrader.Survey
 import SpaceTrader.System
@@ -127,6 +129,43 @@ dockShip options =
         , url = [ "my", "ships", options.shipId, "dock" ]
         , body = Http.emptyBody
         , decoder = Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode
+        }
+
+
+extractShip : { token : String, shipId : String } -> Task Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo }
+extractShip options =
+    v2_3
+        { method = "POST"
+        , token = options.token
+        , url = [ "my", "ships", options.shipId, "extract" ]
+        , body = Http.emptyBody
+        , decoder =
+            Json.Decode.map3
+                (\extraction cooldown cargo ->
+                    { extraction = extraction
+                    , cooldown = cooldown
+                    , cargo = cargo
+                    }
+                )
+                (Json.Decode.field "extraction" SpaceTrader.Ship.Extraction.decode)
+                (Json.Decode.field "cooldown" SpaceTrader.Ship.Cooldown.decode)
+                (Json.Decode.field "cargo" SpaceTrader.Ship.Cargo.decode)
+        }
+
+
+getShipCooldown : { token : String, shipId : String } -> Task Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown)
+getShipCooldown options =
+    v2_3_nobody
+        { method = "GET"
+        , token = options.token
+        , url = [ "my", "ships", options.shipId, "cooldown" ]
+        , body = Http.emptyBody
+        , decoder =
+            Json.Decode.oneOf
+                [ Json.Decode.maybe SpaceTrader.Ship.Cooldown.decode
+                , Json.Decode.null Nothing
+                ]
+        , ifNoBody = Nothing
         }
 
 
@@ -453,6 +492,34 @@ v2_3 opts =
             Http.stringResolver <|
                 jsonResolver2 <|
                     opts.decoder
+        , timeout = Nothing
+        }
+
+
+v2_3_nobody :
+    { method : String
+    , token : String
+    , body : Http.Body
+    , url : List String
+    , decoder : Json.Decode.Decoder a
+    , ifNoBody : a
+    }
+    -> Task Error a
+v2_3_nobody opts =
+    Http.task
+        { method = opts.method
+        , headers = [ Http.header "Authorization" ("Bearer " ++ opts.token) ]
+        , url = toUrl (baseUri :: opts.url)
+        , body = opts.body
+        , resolver =
+            Http.stringResolver <|
+                \response ->
+                    case response of
+                        Http.GoodStatus_ _ "" ->
+                            Ok opts.ifNoBody
+
+                        _ ->
+                            jsonResolver2 opts.decoder response
         , timeout = Nothing
         }
 
