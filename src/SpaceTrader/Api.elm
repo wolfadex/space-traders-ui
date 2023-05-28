@@ -155,7 +155,7 @@ extractShip options =
 
 getShipCooldown : { token : String, shipId : String } -> Task Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown)
 getShipCooldown options =
-    v2_3
+    v2_3_nobody
         { method = "GET"
         , token = options.token
         , url = [ "my", "ships", options.shipId, "cooldown" ]
@@ -165,6 +165,7 @@ getShipCooldown options =
                 [ Json.Decode.maybe SpaceTrader.Ship.Cooldown.decode
                 , Json.Decode.null Nothing
                 ]
+        , ifNoBody = Nothing
         }
 
 
@@ -491,6 +492,34 @@ v2_3 opts =
             Http.stringResolver <|
                 jsonResolver2 <|
                     opts.decoder
+        , timeout = Nothing
+        }
+
+
+v2_3_nobody :
+    { method : String
+    , token : String
+    , body : Http.Body
+    , url : List String
+    , decoder : Json.Decode.Decoder a
+    , ifNoBody : a
+    }
+    -> Task Error a
+v2_3_nobody opts =
+    Http.task
+        { method = opts.method
+        , headers = [ Http.header "Authorization" ("Bearer " ++ opts.token) ]
+        , url = toUrl (baseUri :: opts.url)
+        , body = opts.body
+        , resolver =
+            Http.stringResolver <|
+                \response ->
+                    case response of
+                        Http.GoodStatus_ _ "" ->
+                            Ok opts.ifNoBody
+
+                        _ ->
+                            jsonResolver2 opts.decoder response
         , timeout = Nothing
         }
 
