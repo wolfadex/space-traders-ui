@@ -235,6 +235,8 @@ type Msg
     | ShipOrbitResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
     | ShipExtractRequested String
     | ShipExtractResponded String (Result SpaceTrader.Api.Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo })
+    | ShipCooldownRequested String
+    | ShipCooldownResponded String (Result SpaceTrader.Api.Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown))
     | ShipMoveRequested String
     | SystemsLoadRequested
     | SystemsLongRequestMsg (Result Http.Error (SpaceTrader.Api.Msg SpaceTrader.System.System))
@@ -424,6 +426,35 @@ update ({ model } as opts) =
                                                     { ship
                                                         | cooldown = Just cooldown
                                                         , cargo = cargo
+                                                    }
+                                                )
+                                            )
+                                            model.myShips
+                                }
+                                    |> Update.succeed
+                            )
+
+                ShipCooldownRequested id ->
+                    model
+                        |> Update.succeed
+                        |> Update.withRequest (ShipCooldownResponded id)
+                            (SpaceTrader.Api.getShipCooldown
+                                { token = model.accessToken
+                                , shipId = id
+                                }
+                            )
+
+                ShipCooldownResponded id response ->
+                    model
+                        |> Update.withResponse response
+                            (\cooldown ->
+                                { model
+                                    | myShips =
+                                        Dict.update id
+                                            (Maybe.map
+                                                (\ship ->
+                                                    { ship
+                                                        | cooldown = cooldown
                                                     }
                                                 )
                                             )
@@ -976,6 +1007,7 @@ view shared model =
                                 , onOrbit = ShipOrbitRequested
                                 , onMove = ShipMoveRequested
                                 , onExtract = ShipExtractRequested
+                                , onRefreshCooldown = ShipCooldownRequested
                                 }
                             )
                         |> Html.div

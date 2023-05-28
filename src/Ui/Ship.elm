@@ -6,6 +6,7 @@ import Route
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
+import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Nav.Status
 import Ui
 import Ui.Button
@@ -18,6 +19,7 @@ view :
     , onOrbit : String -> msg
     , onMove : String -> msg
     , onExtract : String -> msg
+    , onRefreshCooldown : String -> msg
     }
     -> SpaceTrader.Ship.Ship
     -> Html msg
@@ -82,7 +84,12 @@ view opts ship =
           else
             Ui.none
         , if ship.nav.status == SpaceTrader.Ship.Nav.Status.InOrbit then
-            Ui.Button.default [] { label = Html.text "Extract", onClick = Just <| opts.onExtract ship.id }
+            case ship.cooldown of
+                Just _ ->
+                    Ui.Button.default [] { label = Html.text "Refresh Cooldown", onClick = Just <| opts.onRefreshCooldown ship.id }
+
+                Nothing ->
+                    Ui.Button.default [] { label = Html.text "Extract", onClick = Just <| opts.onExtract ship.id }
 
           else
             Ui.none

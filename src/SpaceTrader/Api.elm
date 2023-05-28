@@ -1,4 +1,4 @@
-module SpaceTrader.Api exposing (Error(..), Msg(..), PagedMeta, createSurvey, dockShip, extractShip, getAllSystemsInit, getAllSystemsUpdate, getSystem, getWaypoint, moveToOrbit, myAgent, myContracts, myShips, register)
+module SpaceTrader.Api exposing (Error(..), Msg(..), PagedMeta, createSurvey, dockShip, extractShip, getAllSystemsInit, getAllSystemsUpdate, getShipCooldown, getSystem, getWaypoint, moveToOrbit, myAgent, myContracts, myShips, register)
 
 import Http
 import Json.Decode
@@ -150,6 +150,21 @@ extractShip options =
                 (Json.Decode.field "extraction" SpaceTrader.Ship.Extraction.decode)
                 (Json.Decode.field "cooldown" SpaceTrader.Ship.Cooldown.decode)
                 (Json.Decode.field "cargo" SpaceTrader.Ship.Cargo.decode)
+        }
+
+
+getShipCooldown : { token : String, shipId : String } -> Task Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown)
+getShipCooldown options =
+    v2_3
+        { method = "GET"
+        , token = options.token
+        , url = [ "my", "ships", options.shipId, "cooldown" ]
+        , body = Http.emptyBody
+        , decoder =
+            Json.Decode.oneOf
+                [ Json.Decode.maybe SpaceTrader.Ship.Cooldown.decode
+                , Json.Decode.null Nothing
+                ]
         }
 
 
