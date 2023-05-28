@@ -79,17 +79,25 @@ view opts ship =
                 ship.nav.status
             ]
         , if ship.nav.status == SpaceTrader.Ship.Nav.Status.InOrbit then
-            Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Action:" ]
+            Html.span
+                [ Html.Attributes.style "font-weight" "bold" ]
+                [ Html.text "Action:" ]
 
           else
             Ui.none
         , if ship.nav.status == SpaceTrader.Ship.Nav.Status.InOrbit then
             case ship.cooldown of
                 Just _ ->
-                    Ui.Button.default [] { label = Html.text "Refresh Cooldown", onClick = Just <| opts.onRefreshCooldown ship.id }
+                    Ui.Button.default []
+                        { label = Html.text "Refresh Cooldown"
+                        , onClick = Just <| opts.onRefreshCooldown ship.id
+                        }
 
                 Nothing ->
-                    Ui.Button.default [] { label = Html.text "Extract", onClick = Just <| opts.onExtract ship.id }
+                    Ui.Button.default []
+                        { label = Html.text "Extract"
+                        , onClick = Just <| opts.onExtract ship.id
+                        }
 
           else
             Ui.none
