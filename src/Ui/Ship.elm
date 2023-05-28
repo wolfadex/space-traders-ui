@@ -93,9 +93,9 @@ view opts ship =
             [ Html.Attributes.style "font-weight" "bold" ]
             [ Html.text "Actions:" ]
         , Html.div [ Ui.grid, Ui.gap 0.5 ]
-            [ case ship.nav.status of
+            (case ship.nav.status of
                 SpaceTrader.Ship.Nav.Status.InOrbit ->
-                    Ui.Button.default []
+                    [ Ui.Button.default []
                         { label =
                             Html.text <|
                                 case ship.cooldown of
@@ -120,12 +120,7 @@ view opts ship =
                                 Nothing ->
                                     Just <| opts.onExtract ship.id
                         }
-
-                _ ->
-                    Ui.none
-            , case ship.nav.status of
-                SpaceTrader.Ship.Nav.Status.InOrbit ->
-                    Form.renderHtml
+                    , Form.renderHtml
                         { submitting = False
                         , state = opts.transitForm
                         , toMsg = opts.onTransitFormMsg ship.id
@@ -137,10 +132,20 @@ view opts ship =
                         , Ui.gap 1
                         ]
                         (transitForm opts.transitableWaypoints)
+                    ]
 
-                _ ->
-                    Ui.none
-            ]
+                SpaceTrader.Ship.Nav.Status.InTransit ->
+                    [ Html.text
+                        ("Arriving at "
+                            ++ SpaceTrader.Point.Waypoint.toShortLabel ship.nav.route.destination.symbol
+                            ++ " in "
+                            ++ Time.Distance.inWords ship.nav.route.arrival opts.currentTime
+                        )
+                    ]
+
+                SpaceTrader.Ship.Nav.Status.Docked ->
+                    []
+            )
         , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Html.text "Cargo:" ]
         , Html.span [] [ Ui.Ship.Cargo.view ship.cargo ]
         ]
