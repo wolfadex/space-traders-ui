@@ -5,11 +5,11 @@ import SpaceTrader.Ship.Nav.Status exposing (Status(..))
 import Ui.Button
 
 
-view : { a | onDock : msg, onOrbit : msg, onMove : msg } -> SpaceTrader.Ship.Nav.Status.Status -> Html msg
+view : { a | onDock : msg, onOrbit : msg } -> SpaceTrader.Ship.Nav.Status.Status -> Html msg
 view otps status =
-    Ui.Button.multi [] <|
-        case status of
-            Docked ->
+    case status of
+        Docked ->
+            Ui.Button.multi []
                 [ { label = Html.text "Docked"
                   , onClick = otps.onDock
                   , selected = True
@@ -20,7 +20,8 @@ view otps status =
                   }
                 ]
 
-            InOrbit ->
+        InOrbit ->
+            Ui.Button.multi []
                 [ { label = Html.text "Dock"
                   , onClick = otps.onDock
                   , selected = False
@@ -29,19 +30,7 @@ view otps status =
                   , onClick = otps.onOrbit
                   , selected = True
                   }
-                , { label = Html.text "Move"
-                  , onClick = otps.onMove
-                  , selected = False
-                  }
                 ]
 
-            InTransit ->
-                [ { label = Html.text "Orbit"
-                  , onClick = otps.onOrbit
-                  , selected = False
-                  }
-                , { label = Html.text "In Transit"
-                  , onClick = otps.onMove
-                  , selected = True
-                  }
-                ]
+        InTransit ->
+            Html.span [] [ Html.text "In transit..." ]

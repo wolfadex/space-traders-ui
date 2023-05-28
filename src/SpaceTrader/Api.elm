@@ -7,6 +7,7 @@ module SpaceTrader.Api exposing
     , extractShip
     , getAllSystemsInit
     , getAllSystemsUpdate
+    , getShip
     , getShipCooldown
     , getSystem
     , getWaypoint
@@ -14,6 +15,7 @@ module SpaceTrader.Api exposing
     , myAgent
     , myContracts
     , myShips
+    , navigateShip
     , register
     )
 
@@ -30,6 +32,7 @@ import SpaceTrader.Ship exposing (Ship)
 import SpaceTrader.Ship.Cargo
 import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Extraction
+import SpaceTrader.Ship.Fuel
 import SpaceTrader.Ship.Nav
 import SpaceTrader.Survey
 import SpaceTrader.System
@@ -143,6 +146,55 @@ dockShip options =
         |> withMethodPost
         |> withToken options.token
         |> sendRequest
+
+
+navigateShip :
+    { token : String
+    , shipId : String
+    , destination : SpaceTrader.Point.Waypoint.Waypoint
+    }
+    -> Task Error { nav : SpaceTrader.Ship.Nav.Nav, fuel : SpaceTrader.Ship.Fuel.Fuel }
+navigateShip options =
+    newV2
+        { url = [ "my", "ships", options.shipId, "navigate" ]
+        , decoder =
+            Json.Decode.map2
+                (\nav fuel ->
+                    { nav = nav
+                    , fuel = fuel
+                    }
+                )
+                (Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode)
+                (Json.Decode.field "fuel" SpaceTrader.Ship.Fuel.decode)
+        }
+        |> withMethodPost
+        |> withToken options.token
+        |> withBody
+            (Json.Encode.object
+                [ ( "waypointSymbol", SpaceTrader.Point.Waypoint.encode options.destination )
+                ]
+            )
+        |> sendRequest
+
+
+getShip :
+    { token : String
+    , shipId : String
+    }
+    -> Task Error SpaceTrader.Ship.Ship
+getShip options =
+    Task.map2
+        (\ship cooldown ->
+            { ship | cooldown = cooldown }
+        )
+        (newV2
+            { url = [ "my", "ships", options.shipId ]
+            , decoder = SpaceTrader.Ship.decode
+            }
+            |> withToken options.token
+            |> sendRequest
+        )
+        (getShipCooldown { token = options.token, shipId = options.shipId })
 
 
 extractShip : { token : String, shipId : String } -> Task Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo }
