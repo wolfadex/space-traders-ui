@@ -42,7 +42,7 @@ view cargo =
             |> List.map Ui.Ship.Cargo.Item.view
             |> Html.div
                 [ Ui.grid
-                , Html.Attributes.style "grid-template-columns" "1fr 1fr"
+                , Html.Attributes.style "grid-template-columns" "repeat(auto-fill, minmax(8rem, 1fr))"
                 , Ui.gap 1
                 ]
         ]

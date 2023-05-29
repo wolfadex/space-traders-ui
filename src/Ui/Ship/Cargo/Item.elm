@@ -18,7 +18,7 @@ view item =
     --     , units : Int
     --     }
     Html.div [ Html.Attributes.title item.description ]
-        [ Html.span []
+        [ Html.span [ Html.Attributes.style "white-space" "nowrap" ]
             [ item.symbol
                 |> String.replace "_" " "
                 |> String.toLower
