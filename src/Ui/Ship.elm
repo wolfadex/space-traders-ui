@@ -5,7 +5,9 @@ import Form.Field
 import Form.Validation
 import Html exposing (Html)
 import Html.Attributes
+import Id exposing (Id)
 import Route
+import SpaceTrader.Id exposing (ShipId)
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
@@ -22,15 +24,15 @@ import Util.Time
 
 
 view :
-    { onDock : String -> msg
-    , onOrbit : String -> msg
-    , onMove : String -> Ui.Form.Submission String TransitForm -> msg
-    , onExtract : String -> msg
-    , onRefresh : String -> msg
-    , onRefreshCooldown : String -> msg
+    { onDock : ShipId -> msg
+    , onOrbit : ShipId -> msg
+    , onMove : ShipId -> Ui.Form.Submission String TransitForm -> msg
+    , onExtract : ShipId -> msg
+    , onRefresh : ShipId -> msg
+    , onRefreshCooldown : ShipId -> msg
     , currentTime : Time.Posix
     , transitForm : Form.Model
-    , onTransitFormMsg : String -> Form.Msg msg -> msg
+    , onTransitFormMsg : ShipId -> Form.Msg msg -> msg
     , transitableWaypoints : List SpaceTrader.Point.Waypoint.Waypoint
     }
     -> SpaceTrader.Ship.Ship
@@ -50,7 +52,7 @@ view opts ship =
             , Ui.gap 0.5
             , Html.Attributes.style "grid-template-columns" "3fr 1fr"
             ]
-            [ Html.span [] [ Ui.text ship.id ]
+            [ Html.span [] [ Ui.text (Id.toLabel ship.id) ]
             , Ui.Button.small [ Html.Attributes.style "padding" "0 0.5rem" ]
                 { label = Ui.text "Refresh"
                 , onClick = Just (opts.onRefresh ship.id)
@@ -125,7 +127,7 @@ view opts ship =
                         , state = opts.transitForm
                         , toMsg = opts.onTransitFormMsg ship.id
                         }
-                        (Form.options ("ship-transit-form-" ++ ship.id)
+                        (Form.options ("ship-transit-form-" ++ Id.toString ship.id)
                             |> Form.withOnSubmit (opts.onMove ship.id)
                         )
                         [ Ui.grid

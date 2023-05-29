@@ -2,13 +2,14 @@ module Page.Game exposing (Model, Msg(..), init, update, view, withTab)
 
 import Cacheable exposing (Cacheable(..))
 import Color
-import Dict exposing (Dict)
 import Form
 import FormatNumber
 import FormatNumber.Locales
 import Html exposing (Html)
 import Html.Attributes
 import Http
+import Id
+import Id.Dict exposing (IdDict)
 import Json.Decode
 import Json.Encode
 import Length exposing (Meters)
@@ -25,6 +26,7 @@ import Shared
 import SpaceTrader.Agent
 import SpaceTrader.Api
 import SpaceTrader.Contract
+import SpaceTrader.Id exposing (ContractId, ContractIdKey, ShipId, ShipIdKey)
 import SpaceTrader.Point.System
 import SpaceTrader.Point.SystemDict as SystemDict exposing (SystemDict)
 import SpaceTrader.Point.Waypoint
@@ -57,8 +59,8 @@ type alias Model =
     , tab : Route.GameTab
     , agent : RemoteData SpaceTrader.Agent.Agent
     , waypoints : WaypointDict (RemoteData SpaceTrader.Waypoint.Waypoint)
-    , myContracts : Dict String SpaceTrader.Contract.Contract
-    , myShips : Dict String ( SpaceTrader.Ship.Ship, Form.Model )
+    , myContracts : IdDict ContractIdKey SpaceTrader.Contract.Contract
+    , myShips : IdDict ShipIdKey ( SpaceTrader.Ship.Ship, Form.Model )
     , surveys : WaypointDict (List SpaceTrader.Survey.Survey)
 
     -- cached data
@@ -107,8 +109,8 @@ init opts =
             Just agent ->
                 Loaded agent
     , waypoints = WaypointDict.empty
-    , myContracts = Dict.empty
-    , myShips = Dict.empty
+    , myContracts = Id.Dict.empty
+    , myShips = Id.Dict.empty
     , surveys = WaypointDict.empty
     , systems =
         case opts.systems of
@@ -226,28 +228,28 @@ type Msg
     | PitchPressed Float
     | SystemClicked SpaceTrader.Point.System.System
       -- game
-    | CreateSurveyRequested { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : String }
+    | CreateSurveyRequested { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : ShipId }
     | SurveyResponded SpaceTrader.Point.Waypoint.Waypoint (Result SpaceTrader.Api.Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown ))
     | AgentResponded (Result SpaceTrader.Api.Error SpaceTrader.Agent.Agent)
     | MyContractsResponded (Result SpaceTrader.Api.Error (List SpaceTrader.Contract.Contract))
     | MyShipsResponded (Result SpaceTrader.Api.Error (List SpaceTrader.Ship.Ship))
     | WaypointResponded SpaceTrader.Point.Waypoint.Waypoint (Result SpaceTrader.Api.Error SpaceTrader.Waypoint.Waypoint)
-    | ShipDockRequested String
-    | ShipDockResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
-    | ShipOrbitRequested String
-    | ShipOrbitResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
-    | ShipExtractRequested String
-    | ShipExtractResponded String (Result SpaceTrader.Api.Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo })
-    | ShipRefreshRequested String
-    | ShipRefreshResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Ship)
-    | ShipCooldownRequested String
-    | ShipCooldownResponded String (Result SpaceTrader.Api.Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown))
-    | ShipMoveRequested String (Ui.Form.Submission String Ui.Ship.TransitForm)
-    | ShipMoveResponded String (Result SpaceTrader.Api.Error { nav : SpaceTrader.Ship.Nav.Nav, fuel : SpaceTrader.Ship.Fuel.Fuel })
+    | ShipDockRequested ShipId
+    | ShipDockResponded ShipId (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
+    | ShipOrbitRequested ShipId
+    | ShipOrbitResponded ShipId (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
+    | ShipExtractRequested ShipId
+    | ShipExtractResponded ShipId (Result SpaceTrader.Api.Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo })
+    | ShipRefreshRequested ShipId
+    | ShipRefreshResponded ShipId (Result SpaceTrader.Api.Error SpaceTrader.Ship.Ship)
+    | ShipCooldownRequested ShipId
+    | ShipCooldownResponded ShipId (Result SpaceTrader.Api.Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown))
+    | ShipMoveRequested ShipId (Ui.Form.Submission String Ui.Ship.TransitForm)
+    | ShipMoveResponded ShipId (Result SpaceTrader.Api.Error { nav : SpaceTrader.Ship.Nav.Nav, fuel : SpaceTrader.Ship.Fuel.Fuel })
     | SystemsLoadRequested
     | SystemsLongRequestMsg (Result Http.Error (SpaceTrader.Api.Msg SpaceTrader.System.System))
     | SystemResponded (Result SpaceTrader.Api.Error SpaceTrader.System.System)
-    | TransitFormMsg String (Form.Msg Msg)
+    | TransitFormMsg ShipId (Form.Msg Msg)
 
 
 update :
@@ -318,7 +320,7 @@ update ({ model } as opts) =
                                             )
                                             model.surveys
                                     , myShips =
-                                        Dict.update cooldown.shipSymbol
+                                        Id.Dict.update cooldown.shipSymbol
                                             (Maybe.map
                                                 (\( ship, transitForm ) ->
                                                     ( { ship | cooldown = Just cooldown }, transitForm )
@@ -347,9 +349,9 @@ update ({ model } as opts) =
                                     | myContracts =
                                         List.foldl
                                             (\contract dict ->
-                                                Dict.insert contract.id contract dict
+                                                Id.Dict.insert contract.id contract dict
                                             )
-                                            Dict.empty
+                                            Id.Dict.empty
                                             contracts
                                 }
                                     |> Update.succeed
@@ -371,7 +373,7 @@ update ({ model } as opts) =
                             (\nav ->
                                 { model
                                     | myShips =
-                                        Dict.update id
+                                        Id.Dict.update id
                                             (Maybe.map
                                                 (\( ship, transitForm ) ->
                                                     ( { ship | nav = nav }, transitForm )
@@ -398,7 +400,7 @@ update ({ model } as opts) =
                             (\nav ->
                                 { model
                                     | myShips =
-                                        Dict.update id
+                                        Id.Dict.update id
                                             (Maybe.map
                                                 (\( ship, transitForm ) ->
                                                     ( { ship | nav = nav }, transitForm )
@@ -425,7 +427,7 @@ update ({ model } as opts) =
                             (\{ cargo, cooldown } ->
                                 { model
                                     | myShips =
-                                        Dict.update id
+                                        Id.Dict.update id
                                             (Maybe.map
                                                 (\( ship, transitForm ) ->
                                                     ( { ship | cooldown = Just cooldown, cargo = cargo }, transitForm )
@@ -452,7 +454,7 @@ update ({ model } as opts) =
                             (\ship ->
                                 { model
                                     | myShips =
-                                        Dict.update shipId
+                                        Id.Dict.update shipId
                                             (Maybe.map
                                                 (\( _, transitForm ) ->
                                                     ( ship, transitForm )
@@ -479,7 +481,7 @@ update ({ model } as opts) =
                             (\cooldown ->
                                 { model
                                     | myShips =
-                                        Dict.update id
+                                        Id.Dict.update id
                                             (Maybe.map
                                                 (\( ship, transitForm ) ->
                                                     ( { ship | cooldown = cooldown }, transitForm )
@@ -513,7 +515,7 @@ update ({ model } as opts) =
                             (\{ nav, fuel } ->
                                 { model
                                     | myShips =
-                                        Dict.update shipId
+                                        Id.Dict.update shipId
                                             (Maybe.map
                                                 (\( ship, transitForm ) ->
                                                     ( { ship | nav = nav, fuel = fuel }, transitForm )
@@ -532,9 +534,9 @@ update ({ model } as opts) =
                                     | myShips =
                                         List.foldl
                                             (\ship dict ->
-                                                Dict.insert ship.id ( ship, Form.init ) dict
+                                                Id.Dict.insert ship.id ( ship, Form.init ) dict
                                             )
-                                            Dict.empty
+                                            Id.Dict.empty
                                             ships
                                 }
                                     |> Update.succeed
@@ -696,7 +698,7 @@ update ({ model } as opts) =
                         |> Update.succeed
 
                 TransitFormMsg shipId msg_ ->
-                    case Dict.get shipId model.myShips of
+                    case Id.Dict.get shipId model.myShips of
                         Nothing ->
                             model
                                 |> Update.succeed
@@ -707,7 +709,7 @@ update ({ model } as opts) =
                                     Form.update msg_ transitForm
                             in
                             { model
-                                | myShips = Dict.insert shipId ( ship, newTransitForm ) model.myShips
+                                | myShips = Id.Dict.insert shipId ( ship, newTransitForm ) model.myShips
                             }
                                 |> Update.succeed
                                 |> Update.withCmd formCmd
@@ -1048,7 +1050,7 @@ view shared model =
             [ case model.tab of
                 Route.Ships ->
                     model.myShips
-                        |> Dict.values
+                        |> Id.Dict.values
                         |> List.map
                             (\( ship, transitForm ) ->
                                 Ui.Ship.view
@@ -1080,7 +1082,7 @@ view shared model =
 
                 Route.Contracts ->
                     model.myContracts
-                        |> Dict.values
+                        |> Id.Dict.values
                         |> List.map
                             (Ui.Contract.view
                                 { timeZone = shared.timeZone
@@ -1188,7 +1190,7 @@ viewSystem settings model maybeSystemId =
                 Ui.System.view
                     { myShips =
                         model.myShips
-                            |> Dict.values
+                            |> Id.Dict.values
                             |> List.map Tuple.first
                     , onCreateSurveyClicked = CreateSurveyRequested
                     }
@@ -1240,7 +1242,7 @@ viewWaypoint model waypointId =
                     shipsHere : List SpaceTrader.Ship.Ship
                     shipsHere =
                         model.myShips
-                            |> Dict.values
+                            |> Id.Dict.values
                             |> List.filterMap
                                 (\( ship, _ ) ->
                                     if ship.nav.waypoint == waypoint.id then
@@ -1279,7 +1281,7 @@ viewWaypoint model waypointId =
                                     |> List.map
                                         (\ship ->
                                             Html.li []
-                                                [ Ui.text ship.id ]
+                                                [ Ui.text (Id.toLabel ship.id) ]
                                         )
                                     |> Html.ul []
                         ]

@@ -20,12 +20,14 @@ module SpaceTrader.Api exposing
     )
 
 import Http
+import Id
 import Json.Decode
 import Json.Encode
 import Process
 import SpaceTrader.Agent exposing (Agent)
 import SpaceTrader.Contract exposing (Contract)
 import SpaceTrader.Faction exposing (Faction)
+import SpaceTrader.Id exposing (ShipId)
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship exposing (Ship)
@@ -126,10 +128,10 @@ myShips options =
         |> sendRequest
 
 
-moveToOrbit : { token : String, shipId : String } -> Task Error SpaceTrader.Ship.Nav.Nav
+moveToOrbit : { token : String, shipId : ShipId } -> Task Error SpaceTrader.Ship.Nav.Nav
 moveToOrbit options =
     newV2
-        { url = [ "my", "ships", options.shipId, "orbit" ]
+        { url = [ "my", "ships", Id.toString options.shipId, "orbit" ]
         , decoder = Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode
         }
         |> withMethodPost
@@ -137,10 +139,10 @@ moveToOrbit options =
         |> sendRequest
 
 
-dockShip : { token : String, shipId : String } -> Task Error SpaceTrader.Ship.Nav.Nav
+dockShip : { token : String, shipId : ShipId } -> Task Error SpaceTrader.Ship.Nav.Nav
 dockShip options =
     newV2
-        { url = [ "my", "ships", options.shipId, "dock" ]
+        { url = [ "my", "ships", Id.toString options.shipId, "dock" ]
         , decoder = Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode
         }
         |> withMethodPost
@@ -150,13 +152,13 @@ dockShip options =
 
 navigateShip :
     { token : String
-    , shipId : String
+    , shipId : ShipId
     , destination : SpaceTrader.Point.Waypoint.Waypoint
     }
     -> Task Error { nav : SpaceTrader.Ship.Nav.Nav, fuel : SpaceTrader.Ship.Fuel.Fuel }
 navigateShip options =
     newV2
-        { url = [ "my", "ships", options.shipId, "navigate" ]
+        { url = [ "my", "ships", Id.toString options.shipId, "navigate" ]
         , decoder =
             Json.Decode.map2
                 (\nav fuel ->
@@ -179,7 +181,7 @@ navigateShip options =
 
 getShip :
     { token : String
-    , shipId : String
+    , shipId : ShipId
     }
     -> Task Error SpaceTrader.Ship.Ship
 getShip options =
@@ -188,7 +190,7 @@ getShip options =
             { ship | cooldown = cooldown }
         )
         (newV2
-            { url = [ "my", "ships", options.shipId ]
+            { url = [ "my", "ships", Id.toString options.shipId ]
             , decoder = SpaceTrader.Ship.decode
             }
             |> withToken options.token
@@ -197,10 +199,10 @@ getShip options =
         (getShipCooldown { token = options.token, shipId = options.shipId })
 
 
-extractShip : { token : String, shipId : String } -> Task Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo }
+extractShip : { token : String, shipId : ShipId } -> Task Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo }
 extractShip options =
     newV2
-        { url = [ "my", "ships", options.shipId, "extract" ]
+        { url = [ "my", "ships", Id.toString options.shipId, "extract" ]
         , decoder =
             Json.Decode.map3
                 (\extraction cooldown cargo ->
@@ -218,12 +220,12 @@ extractShip options =
         |> sendRequest
 
 
-getShipCooldown : { token : String, shipId : String } -> Task Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown)
+getShipCooldown : { token : String, shipId : ShipId } -> Task Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown)
 getShipCooldown options =
     v2_3_nobody
         { method = "GET"
         , token = options.token
-        , url = [ "my", "ships", options.shipId, "cooldown" ]
+        , url = [ "my", "ships", Id.toString options.shipId, "cooldown" ]
         , body = Http.emptyBody
         , decoder =
             Json.Decode.oneOf
@@ -290,10 +292,10 @@ getWaypoint options =
         |> sendRequest
 
 
-createSurvey : { token : String, shipId : String } -> Task Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown )
+createSurvey : { token : String, shipId : ShipId } -> Task Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown )
 createSurvey options =
     newV2
-        { url = [ "my", "ships", options.shipId, "survey" ]
+        { url = [ "my", "ships", Id.toString options.shipId, "survey" ]
         , decoder =
             Json.Decode.map2 Tuple.pair
                 (Json.Decode.field "surveys" (Json.Decode.list SpaceTrader.Survey.decode))
