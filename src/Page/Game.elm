@@ -1,4 +1,12 @@
-module Page.Game exposing (Model, Msg(..), init, update, view, withTab)
+module Page.Game exposing
+    ( CacheableSystems
+    , Model
+    , Msg(..)
+    , init
+    , update
+    , view
+    , withTab
+    )
 
 import Cacheable exposing (Cacheable(..))
 import Color
@@ -61,7 +69,7 @@ type alias Model =
     , agent : RemoteData SpaceTrader.Agent.Agent
     , waypoints : WaypointDict (RemoteData SpaceTrader.Waypoint.Waypoint)
     , myContracts : IdDict ContractIdKey SpaceTrader.Contract.Contract
-    , myShips : IdDict ShipIdKey ( RemoteData SpaceTrader.Ship.Ship, Form.Model )
+    , myShips : IdDict ShipIdKey ShipDetails
     , surveys : WaypointDict (List SpaceTrader.Survey.Survey)
 
     -- cached data
@@ -74,6 +82,13 @@ type alias Model =
     , eyeHeight : Float
     , seed : Random.Seed
     , systems3d : SystemDict ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
+    }
+
+
+type alias ShipDetails =
+    { ship : RemoteData SpaceTrader.Ship.Ship
+    , transitModel : Form.Model
+    , cargoSellModel : Form.Model
     }
 
 
@@ -255,6 +270,9 @@ type Msg
     | SystemsLongRequestMsg (Result Http.Error (SpaceTrader.Api.Msg SpaceTrader.System.System))
     | SystemResponded (Result SpaceTrader.Api.Error SpaceTrader.System.System)
     | TransitFormMsg ShipId (Form.Msg Msg)
+    | CargoSellFormMsg ShipId (Form.Msg Msg)
+    | CargoSellRequested ShipId (Ui.Form.Submission String Ui.Ship.CargoSellForm)
+    | CargoSellResponded ShipId (Result SpaceTrader.Api.Error { agent : SpaceTrader.Agent.Agent, cargo : SpaceTrader.Ship.Cargo.Cargo })
 
 
 update :
@@ -327,12 +345,13 @@ update ({ model } as opts) =
                                     , myShips =
                                         Id.Dict.update cooldown.shipSymbol
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( RemoteData.map
-                                                        (\s -> { s | cooldown = Just cooldown })
-                                                        ship
-                                                    , transitForm
-                                                    )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | cooldown = Just cooldown })
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -384,12 +403,13 @@ update ({ model } as opts) =
                                     | myShips =
                                         Id.Dict.update id
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( RemoteData.map
-                                                        (\s -> { s | nav = nav })
-                                                        ship
-                                                    , transitForm
-                                                    )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | nav = nav })
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -415,12 +435,13 @@ update ({ model } as opts) =
                                     | myShips =
                                         Id.Dict.update id
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( RemoteData.map
-                                                        (\s -> { s | nav = nav })
-                                                        ship
-                                                    , transitForm
-                                                    )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | nav = nav })
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -446,12 +467,13 @@ update ({ model } as opts) =
                                     | myShips =
                                         Id.Dict.update id
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( RemoteData.map
-                                                        (\s -> { s | cooldown = Just cooldown, cargo = cargo })
-                                                        ship
-                                                    , transitForm
-                                                    )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | cooldown = Just cooldown, cargo = cargo })
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -464,10 +486,11 @@ update ({ model } as opts) =
                         | myShips =
                             Id.Dict.update shipId
                                 (Maybe.map
-                                    (\( ship, transitForm ) ->
-                                        ( RemoteData.refresh ship
-                                        , transitForm
-                                        )
+                                    (\details ->
+                                        { details
+                                            | ship =
+                                                RemoteData.refresh details.ship
+                                        }
                                     )
                                 )
                                 model.myShips
@@ -488,8 +511,10 @@ update ({ model } as opts) =
                                     | myShips =
                                         Id.Dict.update shipId
                                             (Maybe.map
-                                                (\( _, transitForm ) ->
-                                                    ( Loaded ship, transitForm )
+                                                (\details ->
+                                                    { details
+                                                        | ship = Loaded ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -515,12 +540,13 @@ update ({ model } as opts) =
                                     | myShips =
                                         Id.Dict.update id
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( RemoteData.map
-                                                        (\s -> { s | cooldown = cooldown })
-                                                        ship
-                                                    , transitForm
-                                                    )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | cooldown = cooldown })
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -547,19 +573,20 @@ update ({ model } as opts) =
                                     | myShips =
                                         Id.Dict.update shipId
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( RemoteData.map
-                                                        (\s ->
-                                                            let
-                                                                nav : SpaceTrader.Ship.Nav.Nav
-                                                                nav =
-                                                                    s.nav
-                                                            in
-                                                            { s | nav = { nav | flightMode = flightMode } }
-                                                        )
-                                                        ship
-                                                    , transitForm
-                                                    )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s ->
+                                                                    let
+                                                                        nav : SpaceTrader.Ship.Nav.Nav
+                                                                        nav =
+                                                                            s.nav
+                                                                    in
+                                                                    { s | nav = { nav | flightMode = flightMode } }
+                                                                )
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -592,12 +619,13 @@ update ({ model } as opts) =
                                     | myShips =
                                         Id.Dict.update shipId
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( RemoteData.map
-                                                        (\s -> { s | nav = nav, fuel = fuel })
-                                                        ship
-                                                    , transitForm
-                                                    )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | nav = nav, fuel = fuel })
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -613,7 +641,12 @@ update ({ model } as opts) =
                                     | myShips =
                                         List.foldl
                                             (\ship dict ->
-                                                Id.Dict.insert ship.id ( Loaded ship, Form.init ) dict
+                                                Id.Dict.insert ship.id
+                                                    { ship = Loaded ship
+                                                    , transitModel = Form.init
+                                                    , cargoSellModel = Form.init
+                                                    }
+                                                    dict
                                             )
                                             Id.Dict.empty
                                             ships
@@ -782,16 +815,77 @@ update ({ model } as opts) =
                             model
                                 |> Update.succeed
 
-                        Just ( ship, transitForm ) ->
+                        Just details ->
                             let
-                                ( newTransitForm, formCmd ) =
-                                    Form.update msg_ transitForm
+                                ( newTransitModel, formCmd ) =
+                                    Form.update msg_ details.transitModel
                             in
                             { model
-                                | myShips = Id.Dict.insert shipId ( ship, newTransitForm ) model.myShips
+                                | myShips = Id.Dict.insert shipId { details | transitModel = newTransitModel } model.myShips
                             }
                                 |> Update.succeed
                                 |> Update.withCmd formCmd
+
+                CargoSellFormMsg shipId msg_ ->
+                    case Id.Dict.get shipId model.myShips of
+                        Nothing ->
+                            model
+                                |> Update.succeed
+
+                        Just details ->
+                            let
+                                ( newCargoSellModel, formCmd ) =
+                                    Form.update msg_ details.cargoSellModel
+                            in
+                            { model
+                                | myShips = Id.Dict.insert shipId { details | cargoSellModel = newCargoSellModel } model.myShips
+                            }
+                                |> Update.succeed
+                                |> Update.withCmd formCmd
+
+                CargoSellRequested shipId { parsed } ->
+                    case parsed of
+                        Form.Valid toSell ->
+                            model
+                                |> Update.succeed
+                                |> Update.withRequest (CargoSellResponded shipId)
+                                    (SpaceTrader.Api.sellCargo
+                                        { token = model.accessToken
+                                        , shipId = shipId
+                                        , item = toSell.item
+                                        , quantity = toSell.quantity
+                                        }
+                                    )
+
+                        Form.Invalid _ _ ->
+                            model
+                                |> Update.succeed
+
+                CargoSellResponded shipId response ->
+                    model
+                        |> Update.withResponse response
+                            (\{ agent, cargo } ->
+                                { model
+                                    | agent = Loaded agent
+                                    , myShips =
+                                        Id.Dict.update
+                                            shipId
+                                            (Maybe.map
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s ->
+                                                                    { s | cargo = cargo }
+                                                                )
+                                                                details.ship
+                                                    }
+                                                )
+                                            )
+                                            model.myShips
+                                }
+                                    |> Update.succeed
+                            )
 
 
 withTab : { tab : Maybe Route.GameTab, model : Model, toMsg : Msg -> msg, toModel : Model -> model } -> Update model msg
@@ -1260,7 +1354,7 @@ viewSystem settings model maybeSystemId =
                     { myShips =
                         model.myShips
                             |> Id.Dict.values
-                            |> List.filterMap (Tuple.first >> RemoteData.toMaybe)
+                            |> List.filterMap (.ship >> RemoteData.toMaybe)
                     , onCreateSurveyClicked = CreateSurveyRequested
                     }
                     system
@@ -1270,7 +1364,7 @@ viewSystem settings model maybeSystemId =
                     { myShips =
                         model.myShips
                             |> Id.Dict.values
-                            |> List.filterMap (Tuple.first >> RemoteData.toMaybe)
+                            |> List.filterMap (.ship >> RemoteData.toMaybe)
                     , onCreateSurveyClicked = CreateSurveyRequested
                     }
                     system
@@ -1288,8 +1382,8 @@ viewWaypoint model waypointId =
                     model.myShips
                         |> Id.Dict.values
                         |> List.filterMap
-                            (\( shipData, _ ) ->
-                                case RemoteData.toMaybe shipData of
+                            (\details ->
+                                case RemoteData.toMaybe details.ship of
                                     Nothing ->
                                         Nothing
 
@@ -1420,8 +1514,8 @@ viewShips _ model =
     model.myShips
         |> Id.Dict.values
         |> List.map
-            (\( shipData, _ ) ->
-                case shipData of
+            (\details ->
+                case details.ship of
                     Loading ->
                         Ui.text "Loading ship..."
 
@@ -1445,8 +1539,8 @@ viewShips _ model =
 viewShipDetails : Shared.Model -> Model -> ShipId -> Html Msg
 viewShipDetails shared model shipId =
     let
-        viewDetails : SpaceTrader.Ship.Ship -> Form.Model -> Html Msg
-        viewDetails ship transitForm =
+        viewDetails : SpaceTrader.Ship.Ship -> ShipDetails -> Html Msg
+        viewDetails ship details =
             Ui.Ship.view
                 { onDock = ShipDockRequested
                 , onOrbit = ShipOrbitRequested
@@ -1456,7 +1550,7 @@ viewShipDetails shared model shipId =
                 , onRefreshCooldown = ShipCooldownRequested
                 , onFlightModeSelected = FlightModeSelected
                 , currentTime = shared.currentTime
-                , transitForm = transitForm
+                , transitForm = details.transitModel
                 , onTransitFormMsg = TransitFormMsg
                 , transitableWaypoints =
                     model.systems
@@ -1465,6 +1559,9 @@ viewShipDetails shared model shipId =
                         |> Maybe.map .waypoints
                         |> Maybe.withDefault []
                         |> List.map .symbol
+                , cargoSellForm = details.cargoSellModel
+                , onCargoSellFormMsg = CargoSellFormMsg
+                , onCargoSell = CargoSellRequested
                 }
                 ship
     in
@@ -1475,15 +1572,17 @@ viewShipDetails shared model shipId =
             Nothing ->
                 Ui.text "Ship not found"
 
-            Just ( Loading, _ ) ->
-                Ui.text "Quantizing ship data..."
+            Just details ->
+                case details.ship of
+                    Loading ->
+                        Ui.text "Quantizing ship data..."
 
-            Just ( Failure _, _ ) ->
-                Ui.text "Failed to quantize ship data"
+                    Failure _ ->
+                        Ui.text "Failed to quantize ship data"
 
-            Just ( Loaded ship, transitForm ) ->
-                viewDetails ship transitForm
+                    Loaded ship ->
+                        viewDetails ship details
 
-            Just ( Refreshing ship, transitForm ) ->
-                viewDetails ship transitForm
+                    Refreshing ship ->
+                        viewDetails ship details
         )

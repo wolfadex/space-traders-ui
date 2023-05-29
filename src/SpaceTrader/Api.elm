@@ -17,6 +17,7 @@ module SpaceTrader.Api exposing
     , myShips
     , navigateShip
     , register
+    , sellCargo
     , setFlightMode
     )
 
@@ -33,6 +34,7 @@ import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship exposing (Ship)
 import SpaceTrader.Ship.Cargo
+import SpaceTrader.Ship.Cargo.Item
 import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Extraction
 import SpaceTrader.Ship.Fuel
@@ -192,6 +194,37 @@ navigateShip options =
         |> withBody
             (Json.Encode.object
                 [ ( "waypointSymbol", SpaceTrader.Point.Waypoint.encode options.destination )
+                ]
+            )
+        |> sendRequest
+
+
+sellCargo :
+    { token : String
+    , shipId : ShipId
+    , item : SpaceTrader.Ship.Cargo.Item.Item
+    , quantity : Int
+    }
+    -> Task Error { agent : SpaceTrader.Agent.Agent, cargo : SpaceTrader.Ship.Cargo.Cargo }
+sellCargo options =
+    newV2
+        { url = [ "my", "ships", Id.toString options.shipId, "sell" ]
+        , decoder =
+            Json.Decode.map2
+                (\agent cargo ->
+                    { agent = agent
+                    , cargo = cargo
+                    }
+                )
+                (Json.Decode.field "agent" SpaceTrader.Agent.decode)
+                (Json.Decode.field "cargo" SpaceTrader.Ship.Cargo.decode)
+        }
+        |> withMethodPost
+        |> withToken options.token
+        |> withBody
+            (Json.Encode.object
+                [ ( "symbol", Json.Encode.string options.item.symbol )
+                , ( "units", Json.Encode.int options.quantity )
                 ]
             )
         |> sendRequest

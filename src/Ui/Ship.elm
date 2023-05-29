@@ -1,5 +1,6 @@
 module Ui.Ship exposing
-    ( TransitForm
+    ( CargoSellForm
+    , TransitForm
     , view
     , viewBrief
     )
@@ -15,6 +16,7 @@ import SpaceTrader.Id exposing (ShipId)
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
+import SpaceTrader.Ship.Cargo.Item
 import SpaceTrader.Ship.Nav.FlightMode
 import SpaceTrader.Ship.Nav.Status
 import Time
@@ -85,6 +87,9 @@ view :
     , transitForm : Form.Model
     , onTransitFormMsg : ShipId -> Form.Msg msg -> msg
     , transitableWaypoints : List SpaceTrader.Point.Waypoint.Waypoint
+    , cargoSellForm : Form.Model
+    , onCargoSellFormMsg : ShipId -> Form.Msg msg -> msg
+    , onCargoSell : ShipId -> Ui.Form.Submission String CargoSellForm -> msg
     }
     -> SpaceTrader.Ship.Ship
     -> Html msg
@@ -204,10 +209,33 @@ view opts ship =
                         ]
 
                     SpaceTrader.Ship.Nav.Status.Docked ->
-                        []
+                        [ Ui.Button.default []
+                            { label = Ui.text "Orbit"
+                            , onClick = Just (opts.onOrbit ship.id)
+                            }
+                        ]
                 )
         , labeled "Cargo" <|
-            Html.span [] [ Ui.Ship.Cargo.view ship.cargo ]
+            Html.div [ Ui.grid, Ui.gap 1 ]
+                [ Ui.Ship.Cargo.view ship.cargo
+                , Html.div
+                    [ Html.Attributes.style "width" "100%"
+                    , Html.Attributes.style "border-bottom" "1px solid"
+                    ]
+                    []
+                , Form.renderHtml
+                    { submitting = False
+                    , state = opts.cargoSellForm
+                    , toMsg = opts.onCargoSellFormMsg ship.id
+                    }
+                    (Form.options ("ship-cargo-sell-form-" ++ Id.toString ship.id)
+                        |> Form.withOnSubmit (opts.onCargoSell ship.id)
+                    )
+                    [ Ui.grid
+                    , Ui.gap 1
+                    ]
+                    (cargoSellForm ship.cargo.inventory)
+                ]
         ]
 
 
@@ -261,4 +289,81 @@ transitForm transitableWaypoints =
                 )
                 (\_ -> "Invalid")
                 |> Form.Field.required "Select a destination"
+            )
+
+
+type alias CargoSellForm =
+    { item : SpaceTrader.Ship.Cargo.Item.Item
+    , quantity : Int
+    }
+
+
+cargoSellForm : List SpaceTrader.Ship.Cargo.Item.Item -> Form.HtmlForm String CargoSellForm input msg
+cargoSellForm inventory =
+    (\item quantity ->
+        { combine =
+            Form.Validation.succeed CargoSellForm
+                |> Form.Validation.andMap item
+                |> Form.Validation.andMap
+                    (Form.Validation.map2
+                        (\itm quantityValue ->
+                            let
+                                maxQuantity : Int
+                                maxQuantity =
+                                    inventory
+                                        |> List.filter (\i -> i.symbol == itm.symbol)
+                                        |> List.head
+                                        |> Maybe.map .units
+                                        |> Maybe.withDefault 0
+                            in
+                            Form.Validation.succeed quantityValue
+                                |> Form.Validation.withErrorIf (quantityValue < 1) quantity "Must be greather than 0"
+                                |> Form.Validation.withErrorIf (quantityValue > maxQuantity)
+                                    quantity
+                                    ("Can't sell more than " ++ String.fromInt maxQuantity ++ " " ++ itm.name)
+                        )
+                        item
+                        quantity
+                        |> Form.Validation.andThen identity
+                    )
+        , view =
+            \formState ->
+                List.concat
+                    [ Ui.Form.Field.select { toString = SpaceTrader.Ship.Cargo.Item.toLabel }
+                        formState
+                        "Item"
+                        item
+                    , Ui.Form.Field.text
+                        { formState = formState
+                        , label = "Quantity"
+                        , field = quantity
+                        , hint = Nothing
+                        }
+                    , Ui.Form.Field.submit
+                        { label =
+                            if formState.submitting then
+                                "Selling..."
+
+                            else
+                                "Sell"
+                        , disabled = formState.submitting
+                        }
+                    ]
+        }
+    )
+        |> Form.form
+        |> Form.field "item"
+            (Form.Field.select
+                (List.map (\item -> ( item.symbol, item ))
+                    inventory
+                )
+                (\_ -> "Invalid")
+                |> Form.Field.required "Select an item to sell"
+            )
+        |> Form.field "quantity"
+            (Form.Field.int
+                { invalid =
+                    \_ -> "Must be an integer greater than 0"
+                }
+                |> Form.Field.required "Specify a quantity to sell"
             )
