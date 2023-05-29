@@ -37,6 +37,7 @@ import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Extraction
 import SpaceTrader.Ship.Fuel
 import SpaceTrader.Ship.Nav
+import SpaceTrader.Ship.Nav.FlightMode
 import SpaceTrader.Survey
 import SpaceTrader.System
 import SpaceTrader.Waypoint
@@ -246,6 +247,8 @@ type Msg
     | ShipRefreshResponded ShipId (Result SpaceTrader.Api.Error SpaceTrader.Ship.Ship)
     | ShipCooldownRequested ShipId
     | ShipCooldownResponded ShipId (Result SpaceTrader.Api.Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown))
+    | FlightModeSelected ShipId SpaceTrader.Ship.Nav.FlightMode.FlightMode
+    | FlightModeResponded ShipId (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.FlightMode.FlightMode)
     | ShipMoveRequested ShipId (Ui.Form.Submission String Ui.Ship.TransitForm)
     | ShipMoveResponded ShipId (Result SpaceTrader.Api.Error { nav : SpaceTrader.Ship.Nav.Nav, fuel : SpaceTrader.Ship.Fuel.Fuel })
     | SystemsLoadRequested
@@ -515,6 +518,44 @@ update ({ model } as opts) =
                                                 (\( ship, transitForm ) ->
                                                     ( RemoteData.map
                                                         (\s -> { s | cooldown = cooldown })
+                                                        ship
+                                                    , transitForm
+                                                    )
+                                                )
+                                            )
+                                            model.myShips
+                                }
+                                    |> Update.succeed
+                            )
+
+                FlightModeSelected shipId flightMode ->
+                    model
+                        |> Update.succeed
+                        |> Update.withRequest (FlightModeResponded shipId)
+                            (SpaceTrader.Api.setFlightMode
+                                { token = model.accessToken
+                                , shipId = shipId
+                                , flightMode = flightMode
+                                }
+                            )
+
+                FlightModeResponded shipId response ->
+                    model
+                        |> Update.withResponse response
+                            (\flightMode ->
+                                { model
+                                    | myShips =
+                                        Id.Dict.update shipId
+                                            (Maybe.map
+                                                (\( ship, transitForm ) ->
+                                                    ( RemoteData.map
+                                                        (\s ->
+                                                            let
+                                                                nav =
+                                                                    s.nav
+                                                            in
+                                                            { s | nav = { nav | flightMode = flightMode } }
+                                                        )
                                                         ship
                                                     , transitForm
                                                     )
@@ -1408,6 +1449,7 @@ viewShipDetails shared model shipId =
                 , onExtract = ShipExtractRequested
                 , onRefresh = ShipRefreshRequested
                 , onRefreshCooldown = ShipCooldownRequested
+                , onFlightModeSelected = FlightModeSelected
                 , currentTime = shared.currentTime
                 , transitForm = transitForm
                 , onTransitFormMsg = TransitFormMsg

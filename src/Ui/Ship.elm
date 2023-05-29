@@ -15,6 +15,7 @@ import SpaceTrader.Id exposing (ShipId)
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
+import SpaceTrader.Ship.Nav.FlightMode
 import SpaceTrader.Ship.Nav.Status
 import Time
 import Time.Distance
@@ -78,6 +79,7 @@ view :
     , onMove : ShipId -> Ui.Form.Submission String TransitForm -> msg
     , onExtract : ShipId -> msg
     , onRefresh : ShipId -> msg
+    , onFlightModeSelected : ShipId -> SpaceTrader.Ship.Nav.FlightMode.FlightMode -> msg
     , onRefreshCooldown : ShipId -> msg
     , currentTime : Time.Posix
     , transitForm : Form.Model
@@ -91,6 +93,7 @@ view opts ship =
         [ Ui.gap 0.5
         , Html.Attributes.style "display" "flex"
         , Html.Attributes.style "flex-direction" "column"
+        , Html.Attributes.style "max-width" "40rem"
         ]
         [ Html.div
             [ Ui.grid
@@ -131,8 +134,21 @@ view opts ship =
             |> SpaceTrader.Ship.Nav.Status.prettyPrint
             |> Ui.text
             |> labeled "Status"
+        , SpaceTrader.Ship.Nav.FlightMode.allModes
+            |> List.map
+                (\mode ->
+                    { label =
+                        mode
+                            |> SpaceTrader.Ship.Nav.FlightMode.toLabel
+                            |> Ui.text
+                    , onClick = opts.onFlightModeSelected ship.id mode
+                    , selected = ship.nav.flightMode == mode
+                    }
+                )
+            |> Ui.Button.multi []
+            |> labeled "Flight mode"
         , labeled "Actions" <|
-            Html.div [ Ui.grid, Ui.gap 0.5, Html.Attributes.style "max-width" "30rem" ]
+            Html.div [ Ui.grid, Ui.gap 0.5, Html.Attributes.style "max-width" "20rem" ]
                 (case ship.nav.status of
                     SpaceTrader.Ship.Nav.Status.InOrbit ->
                         [ Ui.Button.default []
@@ -191,7 +207,7 @@ view opts ship =
                         []
                 )
         , labeled "Cargo" <|
-            Html.span [ Html.Attributes.style "max-width" "30rem" ] [ Ui.Ship.Cargo.view ship.cargo ]
+            Html.span [] [ Ui.Ship.Cargo.view ship.cargo ]
         ]
 
 
@@ -200,7 +216,7 @@ labeled label content =
     Html.div
         [ Ui.grid
         , Ui.gap 1
-        , Html.Attributes.style "grid-template-columns" "5.5rem 1fr"
+        , Html.Attributes.style "grid-template-columns" "6.5rem 1fr"
         ]
         [ Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text (label ++ ":") ]
         , content

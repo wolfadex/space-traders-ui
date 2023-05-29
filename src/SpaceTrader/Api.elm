@@ -17,6 +17,7 @@ module SpaceTrader.Api exposing
     , myShips
     , navigateShip
     , register
+    , setFlightMode
     )
 
 import Http
@@ -36,6 +37,7 @@ import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Extraction
 import SpaceTrader.Ship.Fuel
 import SpaceTrader.Ship.Nav
+import SpaceTrader.Ship.Nav.FlightMode
 import SpaceTrader.Survey
 import SpaceTrader.System
 import SpaceTrader.Waypoint
@@ -147,6 +149,22 @@ dockShip options =
         }
         |> withMethodPost
         |> withToken options.token
+        |> sendRequest
+
+
+setFlightMode : { token : String, shipId : ShipId, flightMode : SpaceTrader.Ship.Nav.FlightMode.FlightMode } -> Task Error SpaceTrader.Ship.Nav.FlightMode.FlightMode
+setFlightMode options =
+    newV2
+        { url = [ "my", "ships", Id.toString options.shipId, "nav" ]
+        , decoder = Json.Decode.field "flightMode" SpaceTrader.Ship.Nav.FlightMode.decode
+        }
+        |> withMethodPatch
+        |> withToken options.token
+        |> withBody
+            (Json.Encode.object
+                [ ( "flightMode", SpaceTrader.Ship.Nav.FlightMode.encode options.flightMode )
+                ]
+            )
         |> sendRequest
 
 
@@ -590,6 +608,11 @@ newV2 options =
 withMethodPost : Config a -> Config a
 withMethodPost (Config config) =
     Config { config | method = "POST" }
+
+
+withMethodPatch : Config a -> Config a
+withMethodPatch (Config config) =
+    Config { config | method = "PATCH" }
 
 
 withBody : Json.Encode.Value -> Config a -> Config a
