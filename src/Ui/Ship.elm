@@ -23,7 +23,6 @@ import Ui.Button
 import Ui.Form
 import Ui.Form.Field
 import Ui.Ship.Cargo
-import Ui.Ship.Nav.Status
 import Util.Time
 
 
