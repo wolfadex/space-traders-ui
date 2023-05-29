@@ -3,6 +3,7 @@ module Ui.System.Waypoint exposing (view)
 import Html exposing (Html)
 import Html.Attributes
 import Route
+import SpaceTrader.Id exposing (ShipId)
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
 import SpaceTrader.System.Waypoint
@@ -13,7 +14,7 @@ import Ui.Waypoint.Type
 
 view :
     { myShips : List SpaceTrader.Ship.Ship
-    , onCreateSurveyClicked : { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : String } -> msg
+    , onCreateSurveyClicked : { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : ShipId } -> msg
     }
     -> SpaceTrader.System.Waypoint.Waypoint
     -> Html msg

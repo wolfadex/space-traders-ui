@@ -2,6 +2,7 @@ module Ui.System exposing (view)
 
 import Html exposing (Html)
 import Html.Attributes
+import SpaceTrader.Id exposing (ShipId)
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import SpaceTrader.Ship
@@ -13,7 +14,7 @@ import Ui.System.Waypoint
 
 view :
     { myShips : List SpaceTrader.Ship.Ship
-    , onCreateSurveyClicked : { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : String } -> msg
+    , onCreateSurveyClicked : { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : ShipId } -> msg
     }
     -> SpaceTrader.System.System
     -> Html msg

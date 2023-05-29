@@ -1,18 +1,27 @@
-module Page.Game exposing (Model, Msg(..), init, update, view, withTab)
+module Page.Game exposing
+    ( CacheableSystems
+    , Model
+    , Msg(..)
+    , init
+    , update
+    , view
+    , withTab
+    )
 
 import Cacheable exposing (Cacheable(..))
 import Color
-import Dict exposing (Dict)
 import Form
 import FormatNumber
 import FormatNumber.Locales
 import Html exposing (Html)
 import Html.Attributes
 import Http
+import Id
+import Id.Dict exposing (IdDict)
 import Json.Decode
 import Json.Encode
 import Length exposing (Meters)
-import Point2d exposing (Point2d)
+import Point2d
 import Point3d exposing (Point3d)
 import Port
 import Quantity
@@ -25,6 +34,7 @@ import Shared
 import SpaceTrader.Agent
 import SpaceTrader.Api
 import SpaceTrader.Contract
+import SpaceTrader.Id exposing (ContractId, ContractIdKey, ShipId, ShipIdKey)
 import SpaceTrader.Point.System
 import SpaceTrader.Point.SystemDict as SystemDict exposing (SystemDict)
 import SpaceTrader.Point.Waypoint
@@ -35,6 +45,7 @@ import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Extraction
 import SpaceTrader.Ship.Fuel
 import SpaceTrader.Ship.Nav
+import SpaceTrader.Ship.Nav.FlightMode
 import SpaceTrader.Survey
 import SpaceTrader.System
 import SpaceTrader.Waypoint
@@ -57,8 +68,8 @@ type alias Model =
     , tab : Route.GameTab
     , agent : RemoteData SpaceTrader.Agent.Agent
     , waypoints : WaypointDict (RemoteData SpaceTrader.Waypoint.Waypoint)
-    , myContracts : Dict String SpaceTrader.Contract.Contract
-    , myShips : Dict String ( SpaceTrader.Ship.Ship, Form.Model )
+    , myContracts : IdDict ContractIdKey SpaceTrader.Contract.Contract
+    , myShips : IdDict ShipIdKey ShipDetails
     , surveys : WaypointDict (List SpaceTrader.Survey.Survey)
 
     -- cached data
@@ -71,6 +82,13 @@ type alias Model =
     , eyeHeight : Float
     , seed : Random.Seed
     , systems3d : SystemDict ( Point3d Meters Shared.LightYear, Scene3d.Entity Shared.ScaledViewPoint )
+    }
+
+
+type alias ShipDetails =
+    { ship : RemoteData SpaceTrader.Ship.Ship
+    , transitModel : Form.Model
+    , cargoSellModel : Form.Model
     }
 
 
@@ -98,7 +116,9 @@ init opts =
             initSystems (Random.initialSeed 0) opts.systems
     in
     { accessToken = opts.accessToken
-    , tab = Maybe.withDefault Route.Ships opts.tab
+    , tab =
+        opts.tab
+            |> Maybe.withDefault (Route.Ships { id = Nothing })
     , agent =
         case opts.agent of
             Nothing ->
@@ -107,8 +127,8 @@ init opts =
             Just agent ->
                 Loaded agent
     , waypoints = WaypointDict.empty
-    , myContracts = Dict.empty
-    , myShips = Dict.empty
+    , myContracts = Id.Dict.empty
+    , myShips = Id.Dict.empty
     , surveys = WaypointDict.empty
     , systems =
         case opts.systems of
@@ -152,7 +172,7 @@ init opts =
         |> (\updatedModel ->
                 case opts.tab of
                     Nothing ->
-                        Update.withEffect (Update.RouteModifyRequested (Route.Game { tab = Just Route.Ships })) updatedModel
+                        Update.withEffect (Update.RouteModifyRequested (Route.Game { tab = Just (Route.Ships { id = Nothing }) })) updatedModel
 
                     Just _ ->
                         updatedModel
@@ -226,28 +246,33 @@ type Msg
     | PitchPressed Float
     | SystemClicked SpaceTrader.Point.System.System
       -- game
-    | CreateSurveyRequested { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : String }
+    | CreateSurveyRequested { waypointId : SpaceTrader.Point.Waypoint.Waypoint, shipId : ShipId }
     | SurveyResponded SpaceTrader.Point.Waypoint.Waypoint (Result SpaceTrader.Api.Error ( List SpaceTrader.Survey.Survey, SpaceTrader.Ship.Cooldown.Cooldown ))
     | AgentResponded (Result SpaceTrader.Api.Error SpaceTrader.Agent.Agent)
     | MyContractsResponded (Result SpaceTrader.Api.Error (List SpaceTrader.Contract.Contract))
     | MyShipsResponded (Result SpaceTrader.Api.Error (List SpaceTrader.Ship.Ship))
     | WaypointResponded SpaceTrader.Point.Waypoint.Waypoint (Result SpaceTrader.Api.Error SpaceTrader.Waypoint.Waypoint)
-    | ShipDockRequested String
-    | ShipDockResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
-    | ShipOrbitRequested String
-    | ShipOrbitResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
-    | ShipExtractRequested String
-    | ShipExtractResponded String (Result SpaceTrader.Api.Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo })
-    | ShipRefreshRequested String
-    | ShipRefreshResponded String (Result SpaceTrader.Api.Error SpaceTrader.Ship.Ship)
-    | ShipCooldownRequested String
-    | ShipCooldownResponded String (Result SpaceTrader.Api.Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown))
-    | ShipMoveRequested String (Ui.Form.Submission String Ui.Ship.TransitForm)
-    | ShipMoveResponded String (Result SpaceTrader.Api.Error { nav : SpaceTrader.Ship.Nav.Nav, fuel : SpaceTrader.Ship.Fuel.Fuel })
+    | ShipDockRequested ShipId
+    | ShipDockResponded ShipId (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
+    | ShipOrbitRequested ShipId
+    | ShipOrbitResponded ShipId (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.Nav)
+    | ShipExtractRequested ShipId
+    | ShipExtractResponded ShipId (Result SpaceTrader.Api.Error { extraction : SpaceTrader.Ship.Extraction.Extraction, cooldown : SpaceTrader.Ship.Cooldown.Cooldown, cargo : SpaceTrader.Ship.Cargo.Cargo })
+    | ShipRefreshRequested ShipId
+    | ShipRefreshResponded ShipId (Result SpaceTrader.Api.Error SpaceTrader.Ship.Ship)
+    | ShipCooldownRequested ShipId
+    | ShipCooldownResponded ShipId (Result SpaceTrader.Api.Error (Maybe SpaceTrader.Ship.Cooldown.Cooldown))
+    | FlightModeSelected ShipId SpaceTrader.Ship.Nav.FlightMode.FlightMode
+    | FlightModeResponded ShipId (Result SpaceTrader.Api.Error SpaceTrader.Ship.Nav.FlightMode.FlightMode)
+    | ShipMoveRequested ShipId (Ui.Form.Submission String Ui.Ship.TransitForm)
+    | ShipMoveResponded ShipId (Result SpaceTrader.Api.Error { nav : SpaceTrader.Ship.Nav.Nav, fuel : SpaceTrader.Ship.Fuel.Fuel })
     | SystemsLoadRequested
     | SystemsLongRequestMsg (Result Http.Error (SpaceTrader.Api.Msg SpaceTrader.System.System))
     | SystemResponded (Result SpaceTrader.Api.Error SpaceTrader.System.System)
-    | TransitFormMsg String (Form.Msg Msg)
+    | TransitFormMsg ShipId (Form.Msg Msg)
+    | CargoSellFormMsg ShipId (Form.Msg Msg)
+    | CargoSellRequested ShipId (Ui.Form.Submission String Ui.Ship.CargoSellForm)
+    | CargoSellResponded ShipId (Result SpaceTrader.Api.Error { agent : SpaceTrader.Agent.Agent, cargo : SpaceTrader.Ship.Cargo.Cargo })
 
 
 update :
@@ -318,10 +343,15 @@ update ({ model } as opts) =
                                             )
                                             model.surveys
                                     , myShips =
-                                        Dict.update cooldown.shipSymbol
+                                        Id.Dict.update cooldown.shipSymbol
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( { ship | cooldown = Just cooldown }, transitForm )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | cooldown = Just cooldown })
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -347,9 +377,9 @@ update ({ model } as opts) =
                                     | myContracts =
                                         List.foldl
                                             (\contract dict ->
-                                                Dict.insert contract.id contract dict
+                                                Id.Dict.insert contract.id contract dict
                                             )
-                                            Dict.empty
+                                            Id.Dict.empty
                                             contracts
                                 }
                                     |> Update.succeed
@@ -371,10 +401,15 @@ update ({ model } as opts) =
                             (\nav ->
                                 { model
                                     | myShips =
-                                        Dict.update id
+                                        Id.Dict.update id
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( { ship | nav = nav }, transitForm )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | nav = nav })
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -398,10 +433,15 @@ update ({ model } as opts) =
                             (\nav ->
                                 { model
                                     | myShips =
-                                        Dict.update id
+                                        Id.Dict.update id
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( { ship | nav = nav }, transitForm )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | nav = nav })
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -425,10 +465,15 @@ update ({ model } as opts) =
                             (\{ cargo, cooldown } ->
                                 { model
                                     | myShips =
-                                        Dict.update id
+                                        Id.Dict.update id
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( { ship | cooldown = Just cooldown, cargo = cargo }, transitForm )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | cooldown = Just cooldown, cargo = cargo })
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -437,7 +482,19 @@ update ({ model } as opts) =
                             )
 
                 ShipRefreshRequested shipId ->
-                    model
+                    { model
+                        | myShips =
+                            Id.Dict.update shipId
+                                (Maybe.map
+                                    (\details ->
+                                        { details
+                                            | ship =
+                                                RemoteData.refresh details.ship
+                                        }
+                                    )
+                                )
+                                model.myShips
+                    }
                         |> Update.succeed
                         |> Update.withRequest (ShipRefreshResponded shipId)
                             (SpaceTrader.Api.getShip
@@ -452,10 +509,12 @@ update ({ model } as opts) =
                             (\ship ->
                                 { model
                                     | myShips =
-                                        Dict.update shipId
+                                        Id.Dict.update shipId
                                             (Maybe.map
-                                                (\( _, transitForm ) ->
-                                                    ( ship, transitForm )
+                                                (\details ->
+                                                    { details
+                                                        | ship = Loaded ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -479,10 +538,55 @@ update ({ model } as opts) =
                             (\cooldown ->
                                 { model
                                     | myShips =
-                                        Dict.update id
+                                        Id.Dict.update id
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( { ship | cooldown = cooldown }, transitForm )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | cooldown = cooldown })
+                                                                details.ship
+                                                    }
+                                                )
+                                            )
+                                            model.myShips
+                                }
+                                    |> Update.succeed
+                            )
+
+                FlightModeSelected shipId flightMode ->
+                    model
+                        |> Update.succeed
+                        |> Update.withRequest (FlightModeResponded shipId)
+                            (SpaceTrader.Api.setFlightMode
+                                { token = model.accessToken
+                                , shipId = shipId
+                                , flightMode = flightMode
+                                }
+                            )
+
+                FlightModeResponded shipId response ->
+                    model
+                        |> Update.withResponse response
+                            (\flightMode ->
+                                { model
+                                    | myShips =
+                                        Id.Dict.update shipId
+                                            (Maybe.map
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s ->
+                                                                    let
+                                                                        nav : SpaceTrader.Ship.Nav.Nav
+                                                                        nav =
+                                                                            s.nav
+                                                                    in
+                                                                    { s | nav = { nav | flightMode = flightMode } }
+                                                                )
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -513,10 +617,15 @@ update ({ model } as opts) =
                             (\{ nav, fuel } ->
                                 { model
                                     | myShips =
-                                        Dict.update shipId
+                                        Id.Dict.update shipId
                                             (Maybe.map
-                                                (\( ship, transitForm ) ->
-                                                    ( { ship | nav = nav, fuel = fuel }, transitForm )
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s -> { s | nav = nav, fuel = fuel })
+                                                                details.ship
+                                                    }
                                                 )
                                             )
                                             model.myShips
@@ -532,9 +641,14 @@ update ({ model } as opts) =
                                     | myShips =
                                         List.foldl
                                             (\ship dict ->
-                                                Dict.insert ship.id ( ship, Form.init ) dict
+                                                Id.Dict.insert ship.id
+                                                    { ship = Loaded ship
+                                                    , transitModel = Form.init
+                                                    , cargoSellModel = Form.init
+                                                    }
+                                                    dict
                                             )
-                                            Dict.empty
+                                            Id.Dict.empty
                                             ships
                                 }
                                     |> Update.succeed
@@ -696,21 +810,82 @@ update ({ model } as opts) =
                         |> Update.succeed
 
                 TransitFormMsg shipId msg_ ->
-                    case Dict.get shipId model.myShips of
+                    case Id.Dict.get shipId model.myShips of
                         Nothing ->
                             model
                                 |> Update.succeed
 
-                        Just ( ship, transitForm ) ->
+                        Just details ->
                             let
-                                ( newTransitForm, formCmd ) =
-                                    Form.update msg_ transitForm
+                                ( newTransitModel, formCmd ) =
+                                    Form.update msg_ details.transitModel
                             in
                             { model
-                                | myShips = Dict.insert shipId ( ship, newTransitForm ) model.myShips
+                                | myShips = Id.Dict.insert shipId { details | transitModel = newTransitModel } model.myShips
                             }
                                 |> Update.succeed
                                 |> Update.withCmd formCmd
+
+                CargoSellFormMsg shipId msg_ ->
+                    case Id.Dict.get shipId model.myShips of
+                        Nothing ->
+                            model
+                                |> Update.succeed
+
+                        Just details ->
+                            let
+                                ( newCargoSellModel, formCmd ) =
+                                    Form.update msg_ details.cargoSellModel
+                            in
+                            { model
+                                | myShips = Id.Dict.insert shipId { details | cargoSellModel = newCargoSellModel } model.myShips
+                            }
+                                |> Update.succeed
+                                |> Update.withCmd formCmd
+
+                CargoSellRequested shipId { parsed } ->
+                    case parsed of
+                        Form.Valid toSell ->
+                            model
+                                |> Update.succeed
+                                |> Update.withRequest (CargoSellResponded shipId)
+                                    (SpaceTrader.Api.sellCargo
+                                        { token = model.accessToken
+                                        , shipId = shipId
+                                        , item = toSell.item
+                                        , quantity = toSell.quantity
+                                        }
+                                    )
+
+                        Form.Invalid _ _ ->
+                            model
+                                |> Update.succeed
+
+                CargoSellResponded shipId response ->
+                    model
+                        |> Update.withResponse response
+                            (\{ agent, cargo } ->
+                                { model
+                                    | agent = Loaded agent
+                                    , myShips =
+                                        Id.Dict.update
+                                            shipId
+                                            (Maybe.map
+                                                (\details ->
+                                                    { details
+                                                        | ship =
+                                                            RemoteData.map
+                                                                (\s ->
+                                                                    { s | cargo = cargo }
+                                                                )
+                                                                details.ship
+                                                    }
+                                                )
+                                            )
+                                            model.myShips
+                                }
+                                    |> Update.succeed
+                            )
 
 
 withTab : { tab : Maybe Route.GameTab, model : Model, toMsg : Msg -> msg, toModel : Model -> model } -> Update model msg
@@ -970,35 +1145,22 @@ view shared model =
                         Ui.text "Failed to load agent"
 
                     Loaded agent ->
-                        Html.div
-                            [ Ui.grid
-                            ]
-                            [ Html.span [ Html.Attributes.style "color" "var(--blue-light)" ]
-                                [ Ui.text agent.callsign ]
-                            , Html.div
-                                []
-                                [ Html.span
-                                    [ Html.Attributes.style "color" "var(--blue-light)"
-                                    , Html.Attributes.style "font-weight" "bold"
-                                    ]
-                                    [ Ui.text "Credits: " ]
-                                , Html.span
-                                    [ Html.Attributes.style "color" "var(--blue-light)"
-                                    ]
-                                    [ agent.credits
-                                        |> toFloat
-                                        |> FormatNumber.format FormatNumber.Locales.usLocale
-                                        |> (++) "₩"
-                                        |> Ui.text
-                                    ]
-                                ]
-                            ]
+                        viewAgent agent
+
+                    Refreshing agent ->
+                        viewAgent agent
                 ]
             , Ui.navLink
                 { label = "Ships"
-                , route = Route.Game { tab = Just Route.Ships }
+                , route = Route.fromNoShip
                 }
-                (model.tab == Route.Ships)
+                (case model.tab of
+                    Route.Ships _ ->
+                        True
+
+                    _ ->
+                        False
+                )
             , Ui.navLink
                 { label = "Contracts"
                 , route = Route.Game { tab = Just Route.Contracts }
@@ -1046,41 +1208,17 @@ view shared model =
             , Html.Attributes.style "overflow-y" "auto"
             ]
             [ case model.tab of
-                Route.Ships ->
-                    model.myShips
-                        |> Dict.values
-                        |> List.map
-                            (\( ship, transitForm ) ->
-                                Ui.Ship.view
-                                    { onDock = ShipDockRequested
-                                    , onOrbit = ShipOrbitRequested
-                                    , onMove = ShipMoveRequested
-                                    , onExtract = ShipExtractRequested
-                                    , onRefresh = ShipRefreshRequested
-                                    , onRefreshCooldown = ShipCooldownRequested
-                                    , currentTime = shared.currentTime
-                                    , transitForm = transitForm
-                                    , onTransitFormMsg = TransitFormMsg
-                                    , transitableWaypoints =
-                                        model.systems
-                                            |> Cacheable.get SystemDict.get ship.nav.system
-                                            |> Maybe.andThen RemoteData.toMaybe
-                                            |> Maybe.map .waypoints
-                                            |> Maybe.withDefault []
-                                            |> List.map .symbol
-                                    }
-                                    ship
-                            )
-                        |> Html.div
-                            [ Ui.grid
-                            , Html.Attributes.style "grid-template-columns" "1fr 1fr"
-                            , Ui.gap 1
-                            ]
-                        |> viewContent Nothing "My Ships"
+                Route.Ships details ->
+                    case details.id of
+                        Nothing ->
+                            viewShips shared model
+
+                        Just shipId ->
+                            viewShipDetails shared model shipId
 
                 Route.Contracts ->
                     model.myContracts
-                        |> Dict.values
+                        |> Id.Dict.values
                         |> List.map
                             (Ui.Contract.view
                                 { timeZone = shared.timeZone
@@ -1104,6 +1242,33 @@ view shared model =
 
                         Just (Route.ViewWaypoint waypointId) ->
                             viewWaypoint model waypointId
+            ]
+        ]
+
+
+viewAgent : SpaceTrader.Agent.Agent -> Html Msg
+viewAgent agent =
+    Html.div
+        [ Ui.grid
+        ]
+        [ Html.span [ Html.Attributes.style "color" "var(--blue-light)" ]
+            [ Ui.text agent.callsign ]
+        , Html.div
+            []
+            [ Html.span
+                [ Html.Attributes.style "color" "var(--blue-light)"
+                , Html.Attributes.style "font-weight" "bold"
+                ]
+                [ Ui.text "Credits: " ]
+            , Html.span
+                [ Html.Attributes.style "color" "var(--blue-light)"
+                ]
+                [ agent.credits
+                    |> toFloat
+                    |> FormatNumber.format FormatNumber.Locales.usLocale
+                    |> (++) "₩"
+                    |> Ui.text
+                ]
             ]
         ]
 
@@ -1188,8 +1353,18 @@ viewSystem settings model maybeSystemId =
                 Ui.System.view
                     { myShips =
                         model.myShips
-                            |> Dict.values
-                            |> List.map Tuple.first
+                            |> Id.Dict.values
+                            |> List.filterMap (.ship >> RemoteData.toMaybe)
+                    , onCreateSurveyClicked = CreateSurveyRequested
+                    }
+                    system
+
+            Just (Refreshing system) ->
+                Ui.System.view
+                    { myShips =
+                        model.myShips
+                            |> Id.Dict.values
+                            |> List.filterMap (.ship >> RemoteData.toMaybe)
                     , onCreateSurveyClicked = CreateSurveyRequested
                     }
                     system
@@ -1198,21 +1373,101 @@ viewSystem settings model maybeSystemId =
 
 viewWaypoint : Model -> SpaceTrader.Point.Waypoint.Waypoint -> Html Msg
 viewWaypoint model waypointId =
-    viewContent
-        (Just
-            (Route.Game
-                { tab =
-                    Just
-                        (Route.Waypoints
-                            { id =
-                                waypointId
-                                    |> SpaceTrader.Point.Waypoint.toSystem
-                                    |> Route.ViewSystem
-                                    |> Just
-                            }
+    let
+        viewDetails : SpaceTrader.Waypoint.Waypoint -> Html Msg
+        viewDetails waypoint =
+            let
+                shipsHere : List SpaceTrader.Ship.Ship
+                shipsHere =
+                    model.myShips
+                        |> Id.Dict.values
+                        |> List.filterMap
+                            (\details ->
+                                case RemoteData.toMaybe details.ship of
+                                    Nothing ->
+                                        Nothing
+
+                                    Just ship ->
+                                        if ship.nav.waypoint == waypoint.id then
+                                            Just ship
+
+                                        else
+                                            Nothing
+                            )
+            in
+            Html.div
+                [ Ui.grid
+                , Ui.gap 1
+                ]
+                [ Html.span []
+                    [ Ui.text <| SpaceTrader.Waypoint.Type.toLabel waypoint.type_ ]
+                , waypoint.traits
+                    |> List.map
+                        (\trait ->
+                            Html.li [ Html.Attributes.style "max-width" "35rem" ]
+                                [ Html.dl []
+                                    [ Html.dt [ Html.Attributes.style "font-weight" "bold" ]
+                                        [ Ui.text (trait.name ++ ": ") ]
+                                    , Html.dd [] [ Ui.text trait.description ]
+                                    ]
+                                ]
                         )
-                }
-            )
+                    |> Html.ul []
+                , Html.div []
+                    [ Html.span [] [ Ui.text "My ships here:" ]
+                    , case shipsHere of
+                        [] ->
+                            Ui.text " None"
+
+                        _ ->
+                            shipsHere
+                                |> List.map
+                                    (\ship ->
+                                        Html.li []
+                                            [ Ui.link []
+                                                { label = Ui.text (Id.toLabel ship.id)
+                                                , route = Route.fromShip ship.id
+                                                }
+                                            ]
+                                    )
+                                |> Html.ul []
+                    ]
+                , Html.span []
+                    [ Ui.text
+                        ("Faction: "
+                            ++ (case waypoint.faction of
+                                    Nothing ->
+                                        "None"
+
+                                    Just faction ->
+                                        faction
+                               )
+                        )
+                    ]
+                , Html.span []
+                    [ Ui.text "Orbitals:" ]
+                , waypoint.orbitals
+                    |> List.map
+                        (\orbital ->
+                            Html.li
+                                []
+                                [ Ui.link []
+                                    { label =
+                                        orbital
+                                            |> SpaceTrader.Point.Waypoint.toLabel
+                                            |> Ui.text
+                                    , route = Route.fromWaypoint orbital
+                                    }
+                                ]
+                        )
+                    |> Html.ul []
+                ]
+    in
+    viewContent
+        (waypointId
+            |> SpaceTrader.Point.Waypoint.toSystem
+            |> Route.fromSystem
+            |> Just
         )
         ("Waypoint: " ++ SpaceTrader.Point.Waypoint.toShortLabel waypointId)
         (case WaypointDict.get waypointId model.waypoints of
@@ -1226,93 +1481,10 @@ viewWaypoint model waypointId =
                 Ui.text "Failed to load waypoint data"
 
             Just (Loaded waypoint) ->
-                -- { id : SpaceTrader.Point.Waypoint.Waypoint
-                -- , type_ : SpaceTrader.Waypoint.Type.Type
-                -- , system : SpaceTrader.Point.System.System
-                -- , x : Int
-                -- , y : Int
-                -- , orbitals : List String
-                -- , traits : List Trait
-                -- , faction : Maybe String
-                -- , chart : Maybe Chart
-                -- }
-                let
-                    shipsHere : List SpaceTrader.Ship.Ship
-                    shipsHere =
-                        model.myShips
-                            |> Dict.values
-                            |> List.filterMap
-                                (\( ship, _ ) ->
-                                    if ship.nav.waypoint == waypoint.id then
-                                        Just ship
+                viewDetails waypoint
 
-                                    else
-                                        Nothing
-                                )
-                in
-                Html.div
-                    [ Ui.grid
-                    , Ui.gap 1
-                    ]
-                    [ Html.span []
-                        [ Ui.text <| SpaceTrader.Waypoint.Type.toLabel waypoint.type_ ]
-                    , waypoint.traits
-                        |> List.map
-                            (\trait ->
-                                Html.li [ Html.Attributes.style "max-width" "35rem" ]
-                                    [ Html.dl []
-                                        [ Html.dt [ Html.Attributes.style "font-weight" "bold" ]
-                                            [ Ui.text (trait.name ++ ": ") ]
-                                        , Html.dd [] [ Ui.text trait.description ]
-                                        ]
-                                    ]
-                            )
-                        |> Html.ul []
-                    , Html.div []
-                        [ Html.span [] [ Ui.text "My ships here:" ]
-                        , case shipsHere of
-                            [] ->
-                                Ui.text " None"
-
-                            _ ->
-                                shipsHere
-                                    |> List.map
-                                        (\ship ->
-                                            Html.li []
-                                                [ Ui.text ship.id ]
-                                        )
-                                    |> Html.ul []
-                        ]
-                    , Html.span []
-                        [ Ui.text
-                            ("Faction: "
-                                ++ (case waypoint.faction of
-                                        Nothing ->
-                                            "None"
-
-                                        Just faction ->
-                                            faction
-                                   )
-                            )
-                        ]
-                    , Html.span []
-                        [ Ui.text "Orbitals:" ]
-                    , waypoint.orbitals
-                        |> List.map
-                            (\orbital ->
-                                Html.li
-                                    []
-                                    [ Ui.link []
-                                        { label =
-                                            orbital
-                                                |> SpaceTrader.Point.Waypoint.toLabel
-                                                |> Ui.text
-                                        , route = Route.fromWaypoint orbital
-                                        }
-                                    ]
-                            )
-                        |> Html.ul []
-                    ]
+            Just (Refreshing waypoint) ->
+                viewDetails waypoint
         )
 
 
@@ -1335,3 +1507,82 @@ viewContent backRoute title content =
             ]
         , content
         ]
+
+
+viewShips : Shared.Model -> Model -> Html Msg
+viewShips _ model =
+    model.myShips
+        |> Id.Dict.values
+        |> List.map
+            (\details ->
+                case details.ship of
+                    Loading ->
+                        Ui.text "Loading ship..."
+
+                    Failure error ->
+                        Ui.text ("Failed to load ship: " ++ error)
+
+                    Loaded ship ->
+                        Ui.Ship.viewBrief ship
+
+                    Refreshing ship ->
+                        Ui.Ship.viewBrief ship
+            )
+        |> Html.div
+            [ Ui.grid
+            , Html.Attributes.style "grid-template-columns" "1fr 1fr"
+            , Ui.gap 1
+            ]
+        |> viewContent Nothing "My Ships"
+
+
+viewShipDetails : Shared.Model -> Model -> ShipId -> Html Msg
+viewShipDetails shared model shipId =
+    let
+        viewDetails : SpaceTrader.Ship.Ship -> ShipDetails -> Html Msg
+        viewDetails ship details =
+            Ui.Ship.view
+                { onDock = ShipDockRequested
+                , onOrbit = ShipOrbitRequested
+                , onMove = ShipMoveRequested
+                , onExtract = ShipExtractRequested
+                , onRefresh = ShipRefreshRequested
+                , onRefreshCooldown = ShipCooldownRequested
+                , onFlightModeSelected = FlightModeSelected
+                , currentTime = shared.currentTime
+                , transitForm = details.transitModel
+                , onTransitFormMsg = TransitFormMsg
+                , transitableWaypoints =
+                    model.systems
+                        |> Cacheable.get SystemDict.get ship.nav.system
+                        |> Maybe.andThen RemoteData.toMaybe
+                        |> Maybe.map .waypoints
+                        |> Maybe.withDefault []
+                        |> List.map .symbol
+                , cargoSellForm = details.cargoSellModel
+                , onCargoSellFormMsg = CargoSellFormMsg
+                , onCargoSell = CargoSellRequested
+                }
+                ship
+    in
+    viewContent
+        (Just Route.fromNoShip)
+        ("Ship: " ++ Id.toLabel shipId)
+        (case Id.Dict.get shipId model.myShips of
+            Nothing ->
+                Ui.text "Ship not found"
+
+            Just details ->
+                case details.ship of
+                    Loading ->
+                        Ui.text "Quantizing ship data..."
+
+                    Failure _ ->
+                        Ui.text "Failed to quantize ship data"
+
+                    Loaded ship ->
+                        viewDetails ship details
+
+                    Refreshing ship ->
+                        viewDetails ship details
+        )

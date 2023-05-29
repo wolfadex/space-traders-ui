@@ -1,14 +1,16 @@
 module SpaceTrader.Contract exposing (Contract, Type(..), decode, prettyPrintType)
 
+import Id
 import Iso8601
 import Json.Decode
 import SpaceTrader.Contract.Term exposing (Term)
 import SpaceTrader.Faction
+import SpaceTrader.Id exposing (ContractId)
 import Time
 
 
 type alias Contract =
-    { id : String
+    { id : ContractId
     , factionGroup : SpaceTrader.Faction.Group
     , type_ : Type
     , terms : Term
@@ -21,7 +23,7 @@ type alias Contract =
 decode : Json.Decode.Decoder Contract
 decode =
     Json.Decode.map7 Contract
-        (Json.Decode.field "id" Json.Decode.string)
+        (Json.Decode.field "id" Id.decode)
         (Json.Decode.field "factionSymbol" SpaceTrader.Faction.decodeGroup)
         (Json.Decode.field "type" decodeType)
         (Json.Decode.field "terms" SpaceTrader.Contract.Term.decode)

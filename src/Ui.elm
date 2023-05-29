@@ -175,10 +175,12 @@ monthToString month =
 progress : List (Html.Attribute msg) -> { max : Float, current : Float } -> Html msg
 progress attr opt =
     Html.div
-        [ Html.Attributes.style "width" "100%"
-        , Html.Attributes.style "height" "1.5rem"
-        , Html.Attributes.style "border" "0.125rem solid"
-        ]
+        ([ Html.Attributes.style "width" "100%"
+         , Html.Attributes.style "height" "1.5rem"
+         , Html.Attributes.style "border" "0.125rem solid"
+         ]
+            ++ attr
+        )
         [ Html.div
             [ Html.Attributes.style "width" (String.fromFloat (opt.current / opt.max * 100) ++ "%")
             , Html.Attributes.style "height" "100%"

@@ -36,7 +36,7 @@ prettyPrint status =
             "In transit"
 
         InOrbit ->
-            "In orbit"
+            "Orbiting"
 
         Docked ->
             "Docked"

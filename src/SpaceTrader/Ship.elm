@@ -1,7 +1,12 @@
-module SpaceTrader.Ship exposing (Ship, decode)
+module SpaceTrader.Ship exposing
+    ( Ship
+    , decode
+    )
 
+import Id
 import Json.Decode
 import Json.Decode.Extra
+import SpaceTrader.Id exposing (ShipId)
 import SpaceTrader.Ship.Cargo exposing (Cargo)
 import SpaceTrader.Ship.Cooldown
 import SpaceTrader.Ship.Crew exposing (Crew)
@@ -16,7 +21,7 @@ import SpaceTrader.Ship.Registration exposing (Registration)
 
 
 type alias Ship =
-    { id : String
+    { id : ShipId
     , registration : Registration
     , nav : Nav
     , crew : Crew
@@ -34,7 +39,7 @@ type alias Ship =
 decode : Json.Decode.Decoder Ship
 decode =
     Json.Decode.succeed Ship
-        |> Json.Decode.Extra.andMap (Json.Decode.field "symbol" Json.Decode.string)
+        |> Json.Decode.Extra.andMap (Json.Decode.field "symbol" Id.decode)
         |> Json.Decode.Extra.andMap (Json.Decode.field "registration" SpaceTrader.Ship.Registration.decode)
         |> Json.Decode.Extra.andMap (Json.Decode.field "nav" SpaceTrader.Ship.Nav.decode)
         |> Json.Decode.Extra.andMap (Json.Decode.field "crew" SpaceTrader.Ship.Crew.decode)

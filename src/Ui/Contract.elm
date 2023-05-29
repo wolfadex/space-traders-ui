@@ -7,6 +7,7 @@ import SpaceTrader.Contract
 import SpaceTrader.Faction
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
+import String.Extra
 import Time
 import Time.Distance
 import Ui
@@ -61,7 +62,11 @@ view { timeZone, currentTime } contract =
                                 Html.li []
                                     [ important (String.fromInt good.unitsRequired)
                                     , Ui.text " units of "
-                                    , important good.tradeSymbol
+                                    , good.tradeSymbol
+                                        |> String.replace "_" " "
+                                        |> String.toLower
+                                        |> String.Extra.toTitleCase
+                                        |> important
                                     , Html.br [] []
                                     , Ui.text "and deliver them to "
                                     , let

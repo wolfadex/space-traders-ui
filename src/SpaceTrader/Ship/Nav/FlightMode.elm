@@ -1,6 +1,14 @@
-module SpaceTrader.Ship.Nav.FlightMode exposing (FlightMode(..), decode, default)
+module SpaceTrader.Ship.Nav.FlightMode exposing
+    ( FlightMode(..)
+    , allModes
+    , decode
+    , default
+    , encode
+    , toLabel
+    )
 
 import Json.Decode
+import Json.Encode
 
 
 type FlightMode
@@ -36,3 +44,41 @@ decode =
                     _ ->
                         Json.Decode.fail ("Unknown flight mode: " ++ str)
             )
+
+
+encode : FlightMode -> Json.Encode.Value
+encode flightMode =
+    Json.Encode.string <|
+        case flightMode of
+            Drift ->
+                "DRIFT"
+
+            Stealth ->
+                "STEALTH"
+
+            Cruise ->
+                "CRUISE"
+
+            Burn ->
+                "BURN"
+
+
+toLabel : FlightMode -> String
+toLabel flightMode =
+    case flightMode of
+        Drift ->
+            "Drift"
+
+        Stealth ->
+            "Stealth"
+
+        Cruise ->
+            "Cruise"
+
+        Burn ->
+            "Burn"
+
+
+allModes : List FlightMode
+allModes =
+    [ Drift, Stealth, Cruise, Burn ]

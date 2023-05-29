@@ -3,12 +3,16 @@ module Route exposing
     , Route(..)
     , WaypointDetail(..)
     , fromAppUrl
+    , fromNoShip
+    , fromShip
     , fromSystem
     , fromWaypoint
     , toUrlString
     )
 
 import AppUrl exposing (AppUrl)
+import Id
+import SpaceTrader.Id exposing (ShipId)
 import SpaceTrader.Point.System
 import SpaceTrader.Point.Waypoint
 import Util.Maybe
@@ -21,7 +25,7 @@ type Route
 
 
 type GameTab
-    = Ships
+    = Ships { id : Maybe ShipId }
     | Contracts
     | Waypoints { id : Maybe WaypointDetail }
 
@@ -41,6 +45,16 @@ fromWaypoint waypoint =
     Game { tab = Just (Waypoints { id = Just (ViewWaypoint waypoint) }) }
 
 
+fromShip : ShipId -> Route
+fromShip shipId =
+    Game { tab = Just (Ships { id = Just shipId }) }
+
+
+fromNoShip : Route
+fromNoShip =
+    Game { tab = Just (Ships { id = Nothing }) }
+
+
 fromAppUrl : AppUrl -> Route
 fromAppUrl url =
     case url.path of
@@ -51,8 +65,19 @@ fromAppUrl url =
             Game
                 { tab =
                     case rest of
-                        [ "ships" ] ->
-                            Just Ships
+                        "ships" :: rest_ ->
+                            Ships
+                                { id =
+                                    case rest_ of
+                                        [ id ] ->
+                                            id
+                                                |> Id.fromString
+                                                |> Just
+
+                                        _ ->
+                                            Nothing
+                                }
+                                |> Just
 
                         [ "contracts" ] ->
                             Just Contracts
@@ -96,8 +121,17 @@ toUrlString route =
                         Nothing ->
                             Nothing
 
-                        Just Ships ->
-                            Just [ "ships" ]
+                        Just (Ships { id }) ->
+                            [ Just "ships"
+                            , case id of
+                                Nothing ->
+                                    Nothing
+
+                                Just shipId ->
+                                    Just (Id.toString shipId)
+                            ]
+                                |> List.filterMap identity
+                                |> Just
 
                         Just Contracts ->
                             Just [ "contracts" ]

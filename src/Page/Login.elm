@@ -159,7 +159,7 @@ update ({ model } as opts) =
                 TokenCopyAcknowledged ->
                     model
                         |> Update.succeed
-                        |> Update.withEffect (Update.RouteChangeRequested (Route.Game { tab = Just Route.Ships }))
+                        |> Update.withEffect (Update.RouteChangeRequested Route.fromNoShip)
 
                 -- login
                 LoginFormMsg msg_ ->
