@@ -551,6 +551,7 @@ update ({ model } as opts) =
                                                     ( RemoteData.map
                                                         (\s ->
                                                             let
+                                                                nav : SpaceTrader.Ship.Nav.Nav
                                                                 nav =
                                                                     s.nav
                                                             in
