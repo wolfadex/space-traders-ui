@@ -5,7 +5,7 @@ import Html.Attributes
 import Route
 import SpaceTrader.Id exposing (ShipId)
 import SpaceTrader.Point.Waypoint
-import SpaceTrader.Ship exposing (Ship)
+import SpaceTrader.Ship
 import SpaceTrader.System.Waypoint
 import Ui
 import Ui.Button

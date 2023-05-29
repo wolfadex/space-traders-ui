@@ -3,7 +3,7 @@ module SpaceTrader.Ship exposing
     , decode
     )
 
-import Id exposing (Id)
+import Id
 import Json.Decode
 import Json.Decode.Extra
 import SpaceTrader.Id exposing (ShipId)

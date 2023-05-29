@@ -9,7 +9,7 @@ import Form.Field
 import Form.Validation
 import Html exposing (Html)
 import Html.Attributes
-import Id exposing (Id)
+import Id
 import Route
 import SpaceTrader.Id exposing (ShipId)
 import SpaceTrader.Point.System
@@ -27,21 +27,8 @@ import Ui.Ship.Nav.Status
 import Util.Time
 
 
-viewBrief :
-    { onDock : ShipId -> msg
-    , onOrbit : ShipId -> msg
-    , onMove : ShipId -> Ui.Form.Submission String TransitForm -> msg
-    , onExtract : ShipId -> msg
-    , onRefresh : ShipId -> msg
-    , onRefreshCooldown : ShipId -> msg
-    , currentTime : Time.Posix
-    , transitForm : Form.Model
-    , onTransitFormMsg : ShipId -> Form.Msg msg -> msg
-    , transitableWaypoints : List SpaceTrader.Point.Waypoint.Waypoint
-    }
-    -> SpaceTrader.Ship.Ship
-    -> Html msg
-viewBrief opts ship =
+viewBrief : SpaceTrader.Ship.Ship -> Html msg
+viewBrief ship =
     Html.div
         [ Html.Attributes.style "border" "0.125rem solid"
         , Html.Attributes.style "border-radius" "0.25rem"

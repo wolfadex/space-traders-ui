@@ -13,7 +13,7 @@ import Id.Dict exposing (IdDict)
 import Json.Decode
 import Json.Encode
 import Length exposing (Meters)
-import Point2d exposing (Point2d)
+import Point2d
 import Point3d exposing (Point3d)
 import Port
 import Quantity
@@ -1370,34 +1370,11 @@ viewContent backRoute title content =
 
 
 viewShips : Shared.Model -> Model -> Html Msg
-viewShips shared model =
+viewShips _ model =
     model.myShips
         |> Id.Dict.values
         |> List.map
-            (\( shipData, transitForm ) ->
-                let
-                    viewShip : SpaceTrader.Ship.Ship -> Html Msg
-                    viewShip ship =
-                        Ui.Ship.viewBrief
-                            { onDock = ShipDockRequested
-                            , onOrbit = ShipOrbitRequested
-                            , onMove = ShipMoveRequested
-                            , onExtract = ShipExtractRequested
-                            , onRefresh = ShipRefreshRequested
-                            , onRefreshCooldown = ShipCooldownRequested
-                            , currentTime = shared.currentTime
-                            , transitForm = transitForm
-                            , onTransitFormMsg = TransitFormMsg
-                            , transitableWaypoints =
-                                model.systems
-                                    |> Cacheable.get SystemDict.get ship.nav.system
-                                    |> Maybe.andThen RemoteData.toMaybe
-                                    |> Maybe.map .waypoints
-                                    |> Maybe.withDefault []
-                                    |> List.map .symbol
-                            }
-                            ship
-                in
+            (\( shipData, _ ) ->
                 case shipData of
                     Loading ->
                         Ui.text "Loading ship..."
@@ -1406,10 +1383,10 @@ viewShips shared model =
                         Ui.text ("Failed to load ship: " ++ error)
 
                     Loaded ship ->
-                        viewShip ship
+                        Ui.Ship.viewBrief ship
 
                     Refreshing ship ->
-                        viewShip ship
+                        Ui.Ship.viewBrief ship
             )
         |> Html.div
             [ Ui.grid

@@ -2,7 +2,7 @@ module Ui exposing
     ( none, text, header
     , progress, dateTime
     , link, externalLink, navLink
-    , grid, gap, align, justify, withColumn, withRow
+    , grid, gap, align, justify
     , column, row
     )
 
@@ -26,7 +26,7 @@ module Ui exposing
 
 ## Layout
 
-@docs grid, gap, align, justify, withColumn, withRow
+@docs grid, gap, align, justify
 
 
 ## TODO
@@ -92,16 +92,6 @@ align =
 gap : Float -> Html.Attribute msg
 gap f =
     Html.Attributes.style "gap" (String.fromFloat f ++ "rem")
-
-
-withColumn : Int -> Html.Attribute msg
-withColumn n =
-    Html.Attributes.style "grid-column" (String.fromInt n)
-
-
-withRow : Int -> Html.Attribute msg
-withRow n =
-    Html.Attributes.style "grid-row" (String.fromInt n)
 
 
 dateTime : Time.Zone -> Time.Posix -> String
