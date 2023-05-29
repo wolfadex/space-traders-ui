@@ -1,4 +1,8 @@
-module Ui.Ship exposing (TransitForm, view)
+module Ui.Ship exposing
+    ( TransitForm
+    , view
+    , viewBrief
+    )
 
 import Form
 import Form.Field
@@ -23,7 +27,7 @@ import Ui.Ship.Nav.Status
 import Util.Time
 
 
-view :
+viewBrief :
     { onDock : ShipId -> msg
     , onOrbit : ShipId -> msg
     , onMove : ShipId -> Ui.Form.Submission String TransitForm -> msg
@@ -37,7 +41,7 @@ view :
     }
     -> SpaceTrader.Ship.Ship
     -> Html msg
-view opts ship =
+viewBrief opts ship =
     Html.div
         [ Html.Attributes.style "border" "0.125rem solid"
         , Html.Attributes.style "border-radius" "0.25rem"
@@ -47,21 +51,9 @@ view opts ship =
         , Html.Attributes.style "grid-template-columns" "5.5rem 1fr"
         ]
         [ Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text "ID:" ]
-        , Html.div
-            [ Ui.grid
-            , Ui.gap 0.5
-            , Html.Attributes.style "grid-template-columns" "3fr 1fr"
-            ]
-            [ Html.span [] [ Ui.text (Id.toLabel ship.id) ]
-            , Ui.Button.small [ Html.Attributes.style "padding" "0 0.5rem" ]
-                { label = Ui.text "Refresh"
-                , onClick = Just (opts.onRefresh ship.id)
-                }
-            ]
-        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text "Fuel:" ]
-        , Ui.progress []
-            { max = toFloat ship.fuel.capacity
-            , current = toFloat ship.fuel.current
+        , Ui.link []
+            { label = Ui.text (Id.toLabel ship.id)
+            , route = Route.fromShip ship.id
             }
         , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text "Waypoint:" ]
         , Html.span []
@@ -80,6 +72,89 @@ view opts ship =
                         |> Ui.text
                 , route = Route.fromWaypoint ship.nav.waypoint
                 }
+            ]
+        , Html.span
+            [ Html.Attributes.style "font-weight" "bold"
+            ]
+            [ Ui.text "Fuel:" ]
+        , Ui.progress []
+            { max = toFloat ship.fuel.capacity
+            , current = toFloat ship.fuel.current
+            }
+        , Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text "Cargo:" ]
+        , Html.span [] [ Ui.Ship.Cargo.viewBrief ship.cargo ]
+        ]
+
+
+view :
+    { onDock : ShipId -> msg
+    , onOrbit : ShipId -> msg
+    , onMove : ShipId -> Ui.Form.Submission String TransitForm -> msg
+    , onExtract : ShipId -> msg
+    , onRefresh : ShipId -> msg
+    , onRefreshCooldown : ShipId -> msg
+    , currentTime : Time.Posix
+    , transitForm : Form.Model
+    , onTransitFormMsg : ShipId -> Form.Msg msg -> msg
+    , transitableWaypoints : List SpaceTrader.Point.Waypoint.Waypoint
+    }
+    -> SpaceTrader.Ship.Ship
+    -> Html msg
+view opts ship =
+    Html.div
+        [ Ui.gap 0.5
+        , Html.Attributes.style "display" "flex"
+        , Html.Attributes.style "flex-direction" "column"
+        ]
+        [ Html.div
+            [ Ui.grid
+            , Ui.gap 1
+            , Html.Attributes.style "grid-template-columns" "5.5rem 1fr"
+            ]
+            [ Ui.Button.small
+                [ Html.Attributes.style "padding" "0 0.5rem"
+                ]
+                { label = Ui.text "Refresh"
+                , onClick = Just (opts.onRefresh ship.id)
+                }
+            ]
+        , Html.div
+            [ Ui.grid
+            , Ui.gap 1
+            , Html.Attributes.style "grid-template-columns" "5.5rem 1fr"
+            ]
+            [ Html.span
+                [ Html.Attributes.style "font-weight" "bold"
+                ]
+                [ Ui.text "Fuel:" ]
+            , Ui.progress []
+                { max = toFloat ship.fuel.capacity
+                , current = toFloat ship.fuel.current
+                }
+            ]
+        , Html.div
+            [ Ui.grid
+            , Ui.gap 1
+            , Html.Attributes.style "grid-template-columns" "5.5rem 1fr"
+            ]
+            [ Html.span [ Html.Attributes.style "font-weight" "bold" ] [ Ui.text "Waypoint:" ]
+            , Html.span []
+                [ Ui.link []
+                    { label =
+                        ship.nav.system
+                            |> SpaceTrader.Point.System.toLabel
+                            |> Ui.text
+                    , route = Route.fromSystem ship.nav.system
+                    }
+                , Ui.text "-"
+                , Ui.link []
+                    { label =
+                        ship.nav.waypoint
+                            |> SpaceTrader.Point.Waypoint.toShortLabel
+                            |> Ui.text
+                    , route = Route.fromWaypoint ship.nav.waypoint
+                    }
+                ]
             ]
         , Html.div
             [ Html.Attributes.style "grid-column" "1 / 3" ]

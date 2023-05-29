@@ -1,10 +1,25 @@
-module Ui.Ship.Cargo exposing (view)
+module Ui.Ship.Cargo exposing
+    ( view
+    , viewBrief
+    )
 
 import Html exposing (Html)
 import Html.Attributes
 import SpaceTrader.Ship.Cargo
 import Ui
 import Ui.Ship.Cargo.Item
+
+
+viewBrief :
+    SpaceTrader.Ship.Cargo.Cargo
+    -> Html msg
+viewBrief cargo =
+    Html.div []
+        [ Ui.progress []
+            { max = toFloat cargo.capacity
+            , current = toFloat cargo.units
+            }
+        ]
 
 
 view :
