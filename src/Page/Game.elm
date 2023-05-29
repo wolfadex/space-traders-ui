@@ -1330,7 +1330,11 @@ viewWaypoint model waypointId =
                                 |> List.map
                                     (\ship ->
                                         Html.li []
-                                            [ Ui.text (Id.toLabel ship.id) ]
+                                            [ Ui.link []
+                                                { label = Ui.text (Id.toLabel ship.id)
+                                                , route = Route.fromShip ship.id
+                                                }
+                                            ]
                                     )
                                 |> Html.ul []
                     ]
