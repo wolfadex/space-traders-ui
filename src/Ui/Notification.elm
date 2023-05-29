@@ -3,6 +3,7 @@ module Ui.Notification exposing (Notification(..), Style(..), TimedNotification(
 import Html exposing (Html)
 import Html.Attributes
 import Time
+import Ui
 
 
 type Notification
@@ -63,7 +64,7 @@ view (TimedNotification notification) =
                    )
             )
         ]
-        [ Html.text notification.message ]
+        [ Ui.text notification.message ]
 
 
 isUnexpired : Time.Posix -> TimedNotification -> Bool

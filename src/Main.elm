@@ -390,10 +390,7 @@ view : Model -> Browser.Document Msg
 view model =
     { title = "SpaceTrader"
     , body =
-        [ --     Shared.viewHeader model.shared
-          --     |> Html.map SharedMsg
-          -- ,
-          case model.page of
+        [ case model.page of
             Login m ->
                 Page.Login.view m
                     |> Html.map LoginMsg
@@ -416,9 +413,9 @@ view model =
             , Html.Attributes.style "right" "0"
             ]
             [ Html.span [ Html.Attributes.style "color" "var(--blue)" ]
-                [ Html.text "A UI for "
+                [ Ui.text "A UI for "
                 , Ui.externalLink []
-                    { label = Html.text "SpaceTraders"
+                    { label = Ui.text "SpaceTraders"
                     , link = "https://spacetraders.io/"
                     }
                 ]
@@ -427,7 +424,7 @@ view model =
                 ]
                 { label =
                     Html.span [ Html.Attributes.style "color" "var(--blue-light)" ]
-                        [ Html.text "Frontend repo"
+                        [ Ui.text "Frontend repo"
                         , Svg.svg
                             [ Svg.Attributes.width "18"
                             , Svg.Attributes.height "16"

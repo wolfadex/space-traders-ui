@@ -44,6 +44,7 @@ import SpaceTrader.Point.System
 import Svg exposing (Svg)
 import Svg.Attributes
 import Svg.Events
+import Ui
 import Ui.Button
 import Viewpoint3d
 
@@ -880,7 +881,7 @@ navButton :
 navButton opts =
     case opts.onClick of
         Nothing ->
-            Html.text ""
+            Ui.none
 
         Just onClick ->
             Ui.Button.small
@@ -891,13 +892,13 @@ navButton opts =
                 , Html.Attributes.title opts.hint
                 ]
                 { onClick = Just onClick
-                , label = Html.text opts.label
+                , label = Ui.text opts.label
                 }
 
 
 spaceCss : Html msg
 spaceCss =
-    Html.node "style" [] [ Html.text """
+    Html.node "style" [] [ Ui.text """
 .galactic-label * {
   opacity: 0;
   cursor: pointer;

@@ -30,7 +30,7 @@ view options config =
         [ Ui.header.three
             [ Html.Attributes.style "border-bottom" "0.125rem solid "
             ]
-            [ Html.text options.title ]
+            [ Ui.text options.title ]
         , Form.renderHtml
             { submitting = options.submitting
             , state = options.model

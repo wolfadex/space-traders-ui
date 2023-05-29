@@ -16,6 +16,7 @@ import NoConfusingPrefixOperator
 import NoDebug.Log
 import NoDebug.TodoOrToString
 import NoExposingEverything
+import NoFunctionOutsideOfModules
 import NoImportingEverything
 import NoMissingTypeAnnotation
 import NoMissingTypeAnnotationInLetIn
@@ -41,6 +42,20 @@ config =
     , NoDebug.TodoOrToString.rule
         |> Rule.ignoreErrorsForDirectories [ "tests/" ]
     , NoExposingEverything.rule
+    , NoFunctionOutsideOfModules.rule
+        [ ( [ "Html.text"
+            , "Html.a"
+            , "Html.h1"
+            , "Html.h2"
+            , "Html.h3"
+            , "Html.h4"
+            , "Html.h5"
+            , "Html.h6"
+            ]
+          , [ "Ui" ]
+          )
+        , ( [ "Html.button" ], [ "Ui.Button", "Ui.Form.Field" ] )
+        ]
     , NoImportingEverything.rule []
     , NoMissingTypeAnnotation.rule
     , NoMissingTypeAnnotationInLetIn.rule

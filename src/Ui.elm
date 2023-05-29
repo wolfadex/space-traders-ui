@@ -1,17 +1,39 @@
 module Ui exposing
-    ( align
-    , column
-    , dateTime
-    , externalLink
-    , gap
-    , grid
-    , header
-    , justify
-    , link
-    , none
-    , progress
-    , row
+    ( none, text, header
+    , progress, dateTime
+    , link, externalLink, navLink
+    , grid, gap, align, justify
+    , column, row
     )
+
+{-|
+
+
+## Common
+
+@docs none, text, header
+
+
+## Special
+
+@docs progress, dateTime
+
+
+## Links
+
+@docs link, externalLink, navLink
+
+
+## Layout
+
+@docs grid, gap, align, justify
+
+
+## TODO
+
+@docs column, row
+
+-}
 
 import Html exposing (Html)
 import Html.Attributes
@@ -150,20 +172,6 @@ monthToString month =
             "December"
 
 
-header :
-    { one : List (Html.Attribute msg) -> List (Html msg) -> Html msg
-    , two : List (Html.Attribute msg) -> List (Html msg) -> Html msg
-    , three : List (Html.Attribute msg) -> List (Html msg) -> Html msg
-    , four : List (Html.Attribute msg) -> List (Html msg) -> Html msg
-    }
-header =
-    { one = \attr -> Html.h1 (Html.Attributes.style "margin" "0" :: attr)
-    , two = \attr -> Html.h2 (Html.Attributes.style "margin" "0" :: attr)
-    , three = \attr -> Html.h3 (Html.Attributes.style "margin" "0" :: attr)
-    , four = \attr -> Html.h4 (Html.Attributes.style "margin" "0" :: attr)
-    }
-
-
 progress : List (Html.Attribute msg) -> { max : Float, current : Float } -> Html msg
 progress attr opt =
     Html.div
@@ -205,6 +213,52 @@ externalLink attr opts =
         [ opts.label ]
 
 
+{-| A specially styled link for internal links in the left nav
+-}
+navLink : { label : String, route : Route } -> Bool -> Html msg
+navLink opts focused =
+    Html.a
+        [ Html.Attributes.classList
+            [ ( "nav-button", True )
+            , ( "nav-button-focused", focused )
+            ]
+        , Html.Attributes.href (Route.toUrlString opts.route)
+        , grid
+        ]
+        [ Html.div [ Html.Attributes.class "nav-button-top", justify.end ] []
+        , Html.div
+            [ Html.Attributes.class "nav-button-middle"
+            , grid
+            ]
+            [ Html.span
+                [ Html.Attributes.style "font-size" "1rem" ]
+                [ text opts.label ]
+            ]
+        , Html.div [ Html.Attributes.class "nav-button-bottom", justify.end ] []
+        ]
+
+
 none : Html msg
 none =
     Html.text ""
+
+
+{-| If you want to show nothing, use `Ui.none` instead.
+-}
+text : String -> Html msg
+text =
+    Html.text
+
+
+header :
+    { one : List (Html.Attribute msg) -> List (Html msg) -> Html msg
+    , two : List (Html.Attribute msg) -> List (Html msg) -> Html msg
+    , three : List (Html.Attribute msg) -> List (Html msg) -> Html msg
+    , four : List (Html.Attribute msg) -> List (Html msg) -> Html msg
+    }
+header =
+    { one = \attr -> Html.h1 (Html.Attributes.style "margin" "0" :: attr)
+    , two = \attr -> Html.h2 (Html.Attributes.style "margin" "0" :: attr)
+    , three = \attr -> Html.h3 (Html.Attributes.style "margin" "0" :: attr)
+    , four = \attr -> Html.h4 (Html.Attributes.style "margin" "0" :: attr)
+    }

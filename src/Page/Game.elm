@@ -925,29 +925,6 @@ scalePointInLightYearsToOne point =
         }
 
 
-navLink : { label : String, route : Route } -> Bool -> Html Msg
-navLink opts focused =
-    Html.a
-        [ Html.Attributes.classList
-            [ ( "nav-button", True )
-            , ( "nav-button-focused", focused )
-            ]
-        , Html.Attributes.href (Route.toUrlString opts.route)
-        , Ui.grid
-        ]
-        [ Html.div [ Html.Attributes.class "nav-button-top", Ui.justify.end ] []
-        , Html.div
-            [ Html.Attributes.class "nav-button-middle"
-            , Ui.grid
-            ]
-            [ Html.span
-                [ Html.Attributes.style "font-size" "1rem" ]
-                [ Html.text opts.label ]
-            ]
-        , Html.div [ Html.Attributes.class "nav-button-bottom", Ui.justify.end ] []
-        ]
-
-
 view : Shared.Model -> Model -> Html Msg
 view shared model =
     Html.div
@@ -977,7 +954,7 @@ view shared model =
                 , Html.Attributes.style "text-align" "center"
                 , Html.Attributes.style "-webkit-text-stroke" "0.1rem var(--yellow)"
                 ]
-                [ Html.text "SpaceTraders" ]
+                [ Ui.text "SpaceTraders" ]
             , Html.div
                 [ Ui.align.center
                 , Html.Attributes.style "padding" "1rem"
@@ -987,24 +964,24 @@ view shared model =
                 ]
                 [ case model.agent of
                     Loading ->
-                        Html.text "Loading agent..."
+                        Ui.text "Loading agent..."
 
                     Failure _ ->
-                        Html.text "Failed to load agent"
+                        Ui.text "Failed to load agent"
 
                     Loaded agent ->
                         Html.div
                             [ Ui.grid
                             ]
                             [ Html.span [ Html.Attributes.style "color" "var(--blue-light)" ]
-                                [ Html.text agent.callsign ]
+                                [ Ui.text agent.callsign ]
                             , Html.div
                                 []
                                 [ Html.span
                                     [ Html.Attributes.style "color" "var(--blue-light)"
                                     , Html.Attributes.style "font-weight" "bold"
                                     ]
-                                    [ Html.text "Credits: " ]
+                                    [ Ui.text "Credits: " ]
                                 , Html.span
                                     [ Html.Attributes.style "color" "var(--blue-light)"
                                     ]
@@ -1012,22 +989,22 @@ view shared model =
                                         |> toFloat
                                         |> FormatNumber.format FormatNumber.Locales.usLocale
                                         |> (++) "₩"
-                                        |> Html.text
+                                        |> Ui.text
                                     ]
                                 ]
                             ]
                 ]
-            , navLink
+            , Ui.navLink
                 { label = "Ships"
                 , route = Route.Game { tab = Just Route.Ships }
                 }
                 (model.tab == Route.Ships)
-            , navLink
+            , Ui.navLink
                 { label = "Contracts"
                 , route = Route.Game { tab = Just Route.Contracts }
                 }
                 (model.tab == Route.Contracts)
-            , navLink
+            , Ui.navLink
                 { label = "Waypoints"
                 , route = Route.Game { tab = Just (Route.Waypoints { id = Nothing }) }
                 }
@@ -1049,14 +1026,14 @@ view shared model =
                     [ Html.Attributes.style "float" "right"
                     , Html.Attributes.style "color" "var(--blue-light)"
                     ]
-                    { label = Html.text "Settings"
+                    { label = Ui.text "Settings"
                     , onClick = Just SettingsClicked
                     }
                 , Ui.Button.default
                     [ Html.Attributes.style "float" "right"
                     , Html.Attributes.style "color" "var(--blue-light)"
                     ]
-                    { label = Html.text "Logout"
+                    { label = Ui.text "Logout"
                     , onClick = Just LogoutClicked
                     }
                 ]
@@ -1164,13 +1141,13 @@ viewSystem settings model maybeSystemId =
             Uncached ->
                 Ui.Button.default
                     []
-                    { label = Html.text "Load Systems"
+                    { label = Ui.text "Load Systems"
                     , onClick = Just SystemsLoadRequested
                     }
 
             Caching { current, max } ->
                 Ui.row []
-                    [ Html.text "Loading Systems..."
+                    [ Ui.text "Loading Systems..."
                     , Ui.progress []
                         { max = toFloat max
                         , current = toFloat current
@@ -1179,10 +1156,10 @@ viewSystem settings model maybeSystemId =
 
             Cached _ ->
                 Ui.row []
-                    [ Html.text "Systems Loaded & Cached"
+                    [ Ui.text "Systems Loaded & Cached"
                     , Ui.Button.default
                         []
-                        { label = Html.text "Reload Systems"
+                        { label = Ui.text "Reload Systems"
                         , onClick = Just SystemsLoadRequested
                         }
                     ]
@@ -1199,13 +1176,13 @@ viewSystem settings model maybeSystemId =
           in
           case selectedSystem of
             Nothing ->
-                Html.text ""
+                Ui.none
 
             Just Loading ->
-                Html.text "Loading System..."
+                Ui.text "Loading System..."
 
             Just (Failure error) ->
-                Html.text ("Failed to load system: " ++ error)
+                Ui.text ("Failed to load system: " ++ error)
 
             Just (Loaded system) ->
                 Ui.System.view
@@ -1240,13 +1217,13 @@ viewWaypoint model waypointId =
         ("Waypoint: " ++ SpaceTrader.Point.Waypoint.toShortLabel waypointId)
         (case WaypointDict.get waypointId model.waypoints of
             Nothing ->
-                Html.text "Waypoint not found"
+                Ui.text "Waypoint not found"
 
             Just Loading ->
-                Html.text "Gathering waypoints data..."
+                Ui.text "Gathering waypoints data..."
 
             Just (Failure _) ->
-                Html.text "Failed to load waypoint data"
+                Ui.text "Failed to load waypoint data"
 
             Just (Loaded waypoint) ->
                 -- { id : SpaceTrader.Point.Waypoint.Waypoint
@@ -1278,36 +1255,36 @@ viewWaypoint model waypointId =
                     , Ui.gap 1
                     ]
                     [ Html.span []
-                        [ Html.text <| SpaceTrader.Waypoint.Type.toLabel waypoint.type_ ]
+                        [ Ui.text <| SpaceTrader.Waypoint.Type.toLabel waypoint.type_ ]
                     , waypoint.traits
                         |> List.map
                             (\trait ->
                                 Html.li [ Html.Attributes.style "max-width" "35rem" ]
                                     [ Html.dl []
                                         [ Html.dt [ Html.Attributes.style "font-weight" "bold" ]
-                                            [ Html.text (trait.name ++ ": ") ]
-                                        , Html.dd [] [ Html.text trait.description ]
+                                            [ Ui.text (trait.name ++ ": ") ]
+                                        , Html.dd [] [ Ui.text trait.description ]
                                         ]
                                     ]
                             )
                         |> Html.ul []
                     , Html.div []
-                        [ Html.span [] [ Html.text "My ships here:" ]
+                        [ Html.span [] [ Ui.text "My ships here:" ]
                         , case shipsHere of
                             [] ->
-                                Html.text " None"
+                                Ui.text " None"
 
                             _ ->
                                 shipsHere
                                     |> List.map
                                         (\ship ->
                                             Html.li []
-                                                [ Html.text ship.id ]
+                                                [ Ui.text ship.id ]
                                         )
                                     |> Html.ul []
                         ]
                     , Html.span []
-                        [ Html.text
+                        [ Ui.text
                             ("Faction: "
                                 ++ (case waypoint.faction of
                                         Nothing ->
@@ -1319,7 +1296,7 @@ viewWaypoint model waypointId =
                             )
                         ]
                     , Html.span []
-                        [ Html.text "Orbitals:" ]
+                        [ Ui.text "Orbitals:" ]
                     , waypoint.orbitals
                         |> List.map
                             (\orbital ->
@@ -1329,7 +1306,7 @@ viewWaypoint model waypointId =
                                         { label =
                                             orbital
                                                 |> SpaceTrader.Point.Waypoint.toLabel
-                                                |> Html.text
+                                                |> Ui.text
                                         , route = Route.fromWaypoint orbital
                                         }
                                     ]
@@ -1349,12 +1326,12 @@ viewContent backRoute title content =
                 |> Maybe.map
                     (\route ->
                         Ui.link [ Html.Attributes.style "margin-right" "1rem" ]
-                            { label = Html.text "<"
+                            { label = Ui.text "<"
                             , route = route
                             }
                     )
                 |> Maybe.withDefault Ui.none
-            , Html.text title
+            , Ui.text title
             ]
         , content
         ]

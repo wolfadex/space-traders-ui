@@ -26,12 +26,12 @@ view opts waypoint =
             { label =
                 waypoint.symbol
                     |> SpaceTrader.Point.Waypoint.toShortLabel
-                    |> Html.text
+                    |> Ui.text
             , route = Route.fromWaypoint waypoint.symbol
             }
-        , Html.text <| Ui.Waypoint.Type.view waypoint.type_
+        , Ui.text <| Ui.Waypoint.Type.view waypoint.type_
         , Ui.Button.default [ Html.Attributes.style "width" "fit-content" ]
-            { label = Html.text "Create survey"
+            { label = Ui.text "Create survey"
             , onClick =
                 let
                     shipsHere =
